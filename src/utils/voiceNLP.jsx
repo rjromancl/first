@@ -1,0 +1,138 @@
+/**
+ * voiceNLP.jsx
+ *
+ * Thin adapter layer between VoiceAgent and Gemini.
+ *
+ * parseVoiceInput() is still the single public API consumed by VoiceAgent —
+ * the only change from the original contract is that it is now async and
+ * the history array (Gemini multi-turn context) is passed as a third arg.
+ *
+ * TTS helpers (speak / stopSpeaking / getAvailableVoices) are unchanged.
+ */
+
+import { sendToGemini } from '../services/geminiService';
+
+// ─── Main async parser ────────────────────────────────────────────
+/**
+ * @param {string}   text               Raw transcript / typed text from the user
+ * @param {object}   conversationContext Legacy context object (kept for compat)
+ * @param {Array}    geminiHistory       [{role:'user'|'model', text:'...'}] multi-turn history
+ * @returns {Promise<{intent, entities, response, passengerField}>}
+ */
+export async function parseVoiceInput(text, conversationContext = {}, geminiHistory = []) {
+  if (!text || !text.trim()) {
+    return {
+      intent: 'HELP',
+      entities: {},
+      passengerField: null,
+      response: {
+        text: "I didn't catch that — could you say it again, or tap a quick reply below?",
+        quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Help'],
+        action: null,
+      },
+    };
+  }
+
+  const result = await sendToGemini(text, geminiHistory);
+
+  return {
+    intent:         result.intent,
+    entities:       result.entities       || {},
+    passengerField: result.passengerField || null,
+    response: {
+      text:         result.text,
+      quickReplies: result.quickReplies   || [],
+      action:       result.action         || null,
+    },
+  };
+}
+
+// ─── Text-to-Speech ───────────────────────────────────────────────
+/**
+ * Pick the best available TTS voice.
+ * On first page load getVoices() often returns [] because the browser
+ * hasn't loaded the list yet — this helper waits for voiceschanged if
+ * the list is empty, with a 2 s timeout fallback.
+ */
+function getPreferredVoice(lang) {
+  return new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+
+    const pick = () => {
+      const voices = synth.getVoices();
+      const preferred =
+        voices.find(v => v.lang.startsWith('en-GB') && /female|samantha|karen|victoria/i.test(v.name)) ||
+        voices.find(v => v.lang.startsWith('en-GB')) ||
+        voices.find(v => v.lang.startsWith('en-US') && /female|samantha|karen|victoria/i.test(v.name)) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        voices[0] ||
+        null;
+      return preferred;
+    };
+
+    const immediate = pick();
+    if (immediate) { resolve(immediate); return; }
+
+    // Voices not loaded yet — wait for the event (Chrome, Edge)
+    let timer;
+    const onVoicesChanged = () => {
+      clearTimeout(timer);
+      synth.removeEventListener('voiceschanged', onVoicesChanged);
+      resolve(pick());
+    };
+    synth.addEventListener('voiceschanged', onVoicesChanged);
+
+    // Safety timeout — resolve with null so TTS still runs (browser picks default)
+    timer = setTimeout(() => {
+      synth.removeEventListener('voiceschanged', onVoicesChanged);
+      resolve(pick() ?? null);
+    }, 2000);
+  });
+}
+
+export function speak(text, {
+  rate   = 0.95,
+  pitch  = 1.0,
+  volume = 1.0,
+  lang   = 'en-GB',
+  voice  = null,
+} = {}) {
+  return new Promise(async (resolve, reject) => {
+    if (!window.speechSynthesis) {
+      reject(new Error('Speech synthesis not supported'));
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance    = new SpeechSynthesisUtterance(text);
+    utterance.rate     = rate;
+    utterance.pitch    = pitch;
+    utterance.volume   = volume;
+    utterance.lang     = lang;
+
+    // Use caller-supplied voice, or wait for the best available one
+    const selectedVoice = voice ?? await getPreferredVoice(lang);
+    if (selectedVoice) utterance.voice = selectedVoice;
+
+    utterance.onend   = resolve;
+    utterance.onerror = (e) => {
+      // 'interrupted' fires when cancel() is called — treat as resolved, not error
+      if (e.error === 'interrupted' || e.error === 'canceled') {
+        resolve();
+      } else {
+        reject(e);
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+export function stopSpeaking() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+export function getAvailableVoices() {
+  return window.speechSynthesis?.getVoices() || [];
+}

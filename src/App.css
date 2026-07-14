@@ -1,0 +1,22 @@
+/* ===== App Layout ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Page Transitions ===== */
+.app__body > * {
+  animation: pageFadeIn 0.25s ease;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

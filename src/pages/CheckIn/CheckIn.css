@@ -1,0 +1,100 @@
+/* ===== Check-In Page ===== */
+.checkin { min-height: 100vh; background: var(--ba-light-grey); }
+.checkin__content { padding: 32px 20px 60px; max-width: 600px; margin: 0 auto; }
+
+.checkin__form-card, .checkin__review-card, .checkin__success-card {
+  padding: 32px;
+}
+
+.checkin__form-card h2, .checkin__review-card h2, .checkin__success-card h2 {
+  font-size: 22px; font-weight: 700; color: var(--ba-dark-blue);
+  margin-bottom: 8px;
+}
+
+.checkin__form-card > p, .checkin__review-card > p {
+  font-size: 14px; color: var(--ba-text-light); margin-bottom: 24px;
+}
+
+.checkin__form { display: flex; flex-direction: column; gap: 16px; }
+
+.checkin__error {
+  padding: 10px 14px; background: #fdecea; color: var(--ba-red);
+  border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+}
+
+.checkin__demo {
+  margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--ba-border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.checkin__demo strong { font-size: 12px; color: var(--ba-text-light); }
+
+.checkin__demo button {
+  padding: 8px 12px; background: var(--ba-light-blue); color: var(--ba-blue);
+  border: none; border-radius: var(--radius-sm); font-size: 12px;
+  font-weight: 600; cursor: pointer; text-align: left;
+}
+
+.checkin__flight-info {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--ba-light-blue); padding: 20px;
+  border-radius: var(--radius-md); margin-bottom: 24px;
+}
+
+.checkin__row {
+  display: flex; justify-content: space-between;
+  font-size: 14px; border-bottom: 1px solid var(--ba-border);
+  padding-bottom: 10px;
+}
+
+.checkin__row:last-child { border-bottom: none; padding-bottom: 0; }
+.checkin__row span { color: var(--ba-text-light); }
+.checkin__row strong { color: var(--ba-text); font-weight: 600; }
+
+.checkin__actions { display: flex; gap: 12px; }
+
+/* Success / Boarding Pass */
+.checkin__success-icon {
+  width: 72px; height: 72px; background: var(--ba-blue); color: var(--ba-white);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.checkin__success-card { text-align: center; }
+.checkin__success-card > p { color: var(--ba-text-light); margin-bottom: 24px; }
+
+.checkin__bp-preview {
+  background: var(--ba-white); border: 1.5px solid var(--ba-border);
+  border-radius: var(--radius-md); overflow: hidden; text-align: left;
+  max-width: 420px; margin: 0 auto 24px; box-shadow: var(--shadow-md);
+}
+
+.checkin__bp-header {
+  background: linear-gradient(135deg, var(--ba-dark-blue), var(--ba-blue));
+  padding: 16px 20px; color: var(--ba-white);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.checkin__bp-header strong { font-size: 16px; }
+.checkin__bp-header span { font-size: 13px; opacity: 0.8; }
+
+.checkin__bp-info {
+  padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+
+.checkin__bp-info div { display: flex; flex-direction: column; gap: 3px; }
+.checkin__bp-info span { font-size: 11px; color: var(--ba-text-light); text-transform: uppercase; font-weight: 600; }
+.checkin__bp-info strong { font-size: 16px; color: var(--ba-dark-blue); }
+
+.checkin__bp-barcode {
+  height: 60px; margin: 0 20px 20px;
+  background: repeating-linear-gradient(
+    90deg, #333 0, #333 2px, #fff 2px, #fff 5px,
+    #333 5px, #333 8px, #fff 8px, #fff 12px
+  );
+  border-radius: 2px;
+}
+
+.checkin__bp-actions {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}

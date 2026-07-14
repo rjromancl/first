@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+mobile/node_modules/
+
+# Build output
+build/
+dist/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db

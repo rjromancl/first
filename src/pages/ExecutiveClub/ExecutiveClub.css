@@ -1,0 +1,191 @@
+/* ===== Executive Club Page ===== */
+.exclub { min-height: 100vh; background: var(--ba-light-grey); }
+
+.exclub__hero {
+  position: relative; padding: 80px 0;
+  background: url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1400&q=80') center/cover no-repeat;
+}
+
+.exclub__hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(0,26,58,0.92) 0%, rgba(7,90,170,0.8) 100%);
+}
+
+.exclub__hero-content {
+  position: relative; z-index: 1; color: var(--ba-white); text-align: center;
+}
+
+.exclub__hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 14px; background: rgba(200,169,81,0.2);
+  border: 1px solid rgba(200,169,81,0.4); border-radius: 20px;
+  color: var(--ba-gold); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+}
+
+.exclub__hero-content h1 {
+  font-size: 44px; font-weight: 800; margin-bottom: 16px;
+}
+
+.exclub__hero-content p {
+  font-size: 17px; color: rgba(255,255,255,0.8); margin-bottom: 32px;
+}
+
+.exclub__hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+.exclub__member-info {
+  display: flex; align-items: center; gap: 14px; justify-content: center;
+  flex-wrap: wrap; padding: 16px 24px;
+  background: rgba(255,255,255,0.1); border-radius: var(--radius-md);
+  backdrop-filter: blur(8px); display: inline-flex;
+}
+
+.exclub__member-info strong { color: var(--ba-white); font-size: 16px; }
+.exclub__avios-count {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--ba-gold); font-size: 15px; font-weight: 700;
+}
+
+.exclub__content { padding: 0 20px 60px; }
+
+/* Tiers */
+.exclub__tier-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+}
+
+.exclub__tier-card { overflow: hidden; }
+
+.exclub__tier-header {
+  padding: 20px; text-align: center; color: var(--ba-white);
+}
+
+.exclub__tier-header h3 {
+  font-size: 22px; font-weight: 700; margin: 8px 0 4px;
+}
+
+.exclub__tier-header span {
+  font-size: 12px; opacity: 0.8;
+}
+
+.exclub__tier-body { padding: 20px; }
+.exclub__tier-avios {
+  font-size: 13px; font-weight: 600; color: var(--ba-blue);
+  margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--ba-border);
+}
+
+.exclub__tier-perks {
+  list-style: none; display: flex; flex-direction: column; gap: 8px;
+}
+
+.exclub__tier-perks li {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--ba-text);
+}
+
+/* Partners */
+.exclub__partners-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+
+.exclub__partner-card {
+  padding: 20px; display: flex; flex-direction: column; gap: 8px;
+}
+
+.exclub__partner-card h4 {
+  font-size: 16px; font-weight: 700; color: var(--ba-dark-blue);
+}
+
+.exclub__partner-card p {
+  font-size: 13px; color: var(--ba-text-light);
+}
+
+.exclub__partner-examples {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+/* Calculator */
+.exclub__calc {
+  padding: 32px; display: flex; flex-direction: column; gap: 24px;
+  background: linear-gradient(135deg, var(--ba-dark-blue), var(--ba-blue));
+  color: var(--ba-white);
+}
+
+.exclub__calc-text h2 {
+  font-size: 24px; font-weight: 700; margin-bottom: 8px;
+}
+
+.exclub__calc-text p {
+  font-size: 14px; opacity: 0.8;
+}
+
+.exclub__calc .form-label {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+.exclub__calc .form-control {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+  color: var(--ba-white);
+}
+
+.exclub__calc-form {
+  display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+}
+
+.exclub__calc-form .form-group { flex: 1; min-width: 140px; }
+
+.exclub__calc-result {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; background: rgba(200,169,81,0.15);
+  border: 1px solid rgba(200,169,81,0.3); border-radius: var(--radius-md);
+  color: var(--ba-white); font-size: 15px;
+}
+
+.exclub__calc-result strong {
+  font-size: 28px; font-weight: 800; color: var(--ba-gold);
+}
+
+/* Spend */
+.exclub__spend-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+}
+
+.exclub__spend-card {
+  padding: 24px; text-align: center;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+
+.exclub__spend-avios { width: fit-content; }
+
+.exclub__spend-card h3 {
+  font-size: 16px; font-weight: 700; color: var(--ba-dark-blue);
+}
+
+.exclub__spend-card p {
+  font-size: 13px; color: var(--ba-text-light); line-height: 1.5;
+}
+
+/* Join CTA */
+.exclub__join-cta {
+  text-align: center; padding: 60px 20px;
+  background: linear-gradient(135deg, var(--ba-dark-blue), var(--ba-blue));
+  border-radius: var(--radius-lg); color: var(--ba-white); margin-top: 48px;
+}
+
+.exclub__join-cta h2 { font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+.exclub__join-cta p { font-size: 16px; opacity: 0.8; margin-bottom: 28px; }
+
+@media (max-width: 1024px) {
+  .exclub__tier-grid { grid-template-columns: repeat(2, 1fr); }
+  .exclub__partners-grid { grid-template-columns: repeat(2, 1fr); }
+  .exclub__spend-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .exclub__hero-content h1 { font-size: 28px; }
+  .exclub__tier-grid { grid-template-columns: 1fr; }
+  .exclub__calc-form { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .exclub__partners-grid { grid-template-columns: 1fr; }
+  .exclub__spend-grid { grid-template-columns: 1fr; }
+}
