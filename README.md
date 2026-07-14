@@ -1,6 +1,6 @@
-# British Airways Full-Stack App
+#  Full-Stack App
 
-A complete British Airways flight booking and management application with a React/Vite frontend, Node.js/Express backend, Amadeus API integration, and an intelligent voice assistant.
+A complete ind Airways flight booking and management application with a React/Vite frontend, Node.js/Express backend, Amadeus API integration, and an intelligent voice assistant.
 
 ---
 
@@ -11,7 +11,7 @@ You need two terminals — one for the backend, one for the frontend.
 ### Terminal 1 — Backend (Express + Amadeus)
 
 ```bash
-cd british-airways-app/backend
+cd ind-airways-app/backend
 npm install
 # Add your Amadeus keys to .env (see Configuration below)
 node src/server.js
@@ -21,7 +21,7 @@ node src/server.js
 ### Terminal 2 — Frontend (React + Vite)
 
 ```bash
-cd british-airways-app
+cd ind-airways-app
 npm install
 npm start
 # App opens at http://localhost:3000
@@ -61,7 +61,7 @@ REACT_APP_API_URL=http://localhost:4000/api
 ## Project Structure
 
 ```
-british-airways-app/
+ind-airways-app/
 ├── backend/                          Express/Node.js API server
 │   └── src/
 │       ├── config/                   amadeus.js · cache.js · logger.js
@@ -163,7 +163,7 @@ Click **Ask BA** in the header. Speak or type naturally:
 - "I want to upgrade to Business Class"
 - "Show me destinations in Asia"
 
-The agent understands **15 intent categories**, extracts entities (airports, dates, cabin class, flight numbers), maintains multi-turn conversation context, navigates the app automatically, and speaks responses using the Web Speech API (British English voice).
+The agent understands **15 intent categories**, extracts entities (airports, dates, cabin class, flight numbers), maintains multi-turn conversation context, navigates the app automatically, and speaks responses using the Web Speech API (ind English voice).
 
 ---
 
@@ -191,7 +191,7 @@ The agent understands **15 intent categories**, extracts entities (airports, dat
 
 ```bash
 # Build frontend
-cd british-airways-app
+cd ind-airways-app
 npm run build
 # Output in build/ — serve with any static host
 
