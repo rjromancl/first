@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "British Airways",
+    "slug": "british-airways-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#075AAA"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.britishairways.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#075AAA"
+      },
+      "package": "com.britishairways.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
