@@ -24,8 +24,9 @@ import './VoiceAgent.css';
 // ── Constants ────────────────────────────────────────────────────
 const WELCOME = {
   id: 'welcome', role: 'agent', timestamp: new Date(),
-  text: "Hello! I'm your British Airways assistant. I can book flights, handle check-in, track flights and collect your travel details by voice. Try saying: Book London to New York for Christmas in business class.",
-  quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Destinations'],
+  text: "Hello! I'm your British Airways assistant. Would you like to book a flight in one shot, or shall I guide you step by step?",
+  quickReplies: ['One shot', 'Step by step'],
+  twoOptions: true,
 };
 
 const PAX_FIELDS = [
@@ -117,7 +118,7 @@ export default function VoiceAgent() {
   const [paxData,       setPaxData]       = useState({});
   const [currentField,  setCurrentField]  = useState(null);
   const [currentQ,      setCurrentQ]      = useState('');
-  const [awaitingTwoOpt,setAwaitingTwoOpt]= useState(false);
+  const [awaitingTwoOpt,setAwaitingTwoOpt]= useState(true); // true from start — welcome asks one-shot vs step-by-step
 
   // Refs
   const messagesEndRef  = useRef(null);
