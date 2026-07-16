@@ -24,7 +24,7 @@ import './VoiceAgent.css';
 // ── Constants ────────────────────────────────────────────────────
 const WELCOME = {
   id: 'welcome', role: 'agent', timestamp: new Date(),
-  text: "Hello! I'm your British Airways assistant. Would you like to book a flight in one shot, or shall I guide you step by step?",
+  text: "Hello! I'm your British Airways assistant. Would you like to book in one shot — saying your flight AND personal details in one go — or step by step?",
   quickReplies: ['One shot', 'Step by step'],
   twoOptions: true,
 };
@@ -275,6 +275,38 @@ export default function VoiceAgent() {
           || PAX_FIELDS.find(f => f.key === nextKey)?.q
           || `Please tell me your ${nextKey}.`;
         await askNextField(nextKey, nextQ);
+        return;
+      }
+
+      // FULL_BOOKING — one-shot: flight + passenger details in one utterance
+      // Navigate to /book with everything pre-filled, auto-trigger search + jump to step 3
+      if (response.action?.type === 'FULL_BOOKING') {
+        setCollectingPax(false); setCurrentField(null); setCurrentQ(''); setPaxData({});
+        const navState = {
+          prefillPassenger: response.action.passenger,
+          from:       entities.from         || '',
+          to:         entities.to           || '',
+          departDate: entities.departureDate || '',
+          returnDate: entities.returnDate   || '',
+          adults:     entities.adults       || 1,
+          cabin:      entities.cabin        || 'economy',
+          tripType:   entities.tripType     || 'return',
+          autoSearch: true,    // tells BookFlight to auto-trigger search
+          jumpToStep: 3,       // jump to passenger details after search
+        };
+        setSearchParams({
+          tripType:   entities.tripType     || 'return',
+          from:       entities.from         || '',
+          to:         entities.to           || '',
+          departDate: entities.departureDate || '',
+          returnDate: entities.returnDate   || '',
+          adults:     entities.adults       || 1,
+          cabin:      entities.cabin        || 'economy',
+        });
+        if (mountedRef.current) setIsProcessing(false);
+        addAgentMsg(response.text, response.quickReplies);
+        await speakMessage(response.text);
+        if (mountedRef.current) navigate('/book', { state: navState });
         return;
       }
 

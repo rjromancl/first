@@ -73,24 +73,29 @@ export default function BookFlight() {
           setTo(s.to);
           setDepartDate(s.departDate);
           if (s.returnDate) setReturnDate(s.returnDate);
-          if (s.adults)    setAdults(s.adults);
+          if (s.adults)    setAdults(Number(s.adults));
           if (s.cabin)     setCabin(s.cabin);
           if (s.tripType)  setTripType(s.tripType);
-          setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 400);
+          // FULL_BOOKING: auto-search, then jump to step 3 after results
+          if (s.autoSearch) {
+            setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 400);
+          } else {
+            setStep(3);
+          }
         } else {
           setStep(3);
         }
       }
     }
-    // Pre-fill search fields from voice agent navigation (even without passenger)
+    // Pre-fill search fields from voice agent navigation (no passenger)
     if (!s.prefillPassenger) {
-      if (s.from)      setFrom(s.from);
-      if (s.to)        setTo(s.to);
+      if (s.from)       setFrom(s.from);
+      if (s.to)         setTo(s.to);
       if (s.departDate) setDepartDate(s.departDate);
       if (s.returnDate) setReturnDate(s.returnDate);
-      if (s.adults)    setAdults(s.adults);
-      if (s.cabin)     setCabin(s.cabin);
-      if (s.tripType)  setTripType(s.tripType);
+      if (s.adults)     setAdults(Number(s.adults));
+      if (s.cabin)      setCabin(s.cabin);
+      if (s.tripType)   setTripType(s.tripType);
     }
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,9 +154,14 @@ export default function BookFlight() {
     }
   };
 
+  // jumpToStep ref — set by voice FULL_BOOKING to skip to passenger step after flight select
+  const jumpToStepRef = useRef(location.state?.jumpToStep || null);
+
   const handleSelectFlight = (flight) => {
     setSelectedFlight(flight);
-    setStep(3);
+    const nextStep = jumpToStepRef.current || 3;
+    jumpToStepRef.current = null; // consume it
+    setStep(nextStep);
     window.scrollTo(0, 0);
   };
 
