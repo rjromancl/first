@@ -696,3 +696,68 @@
   font-weight: 600;
   margin-top: -4px;
 }
+
+/* ===== Two-Option Buttons ===== */
+.va-two-options {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.va-two-option-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  background: var(--ba-blue);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(7,90,170,0.25);
+}
+
+.va-two-option-btn:hover:not(:disabled) {
+  background: var(--ba-dark-blue);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(7,90,170,0.35);
+}
+
+.va-two-option-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Current question indicator ===== */
+.va-pax-current-question {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(7,90,170,0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ba-blue);
+}
+
+.va-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ba-blue);
+  animation: pulse-dot 1s ease infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
