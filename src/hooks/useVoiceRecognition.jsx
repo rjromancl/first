@@ -39,7 +39,11 @@ export function useVoiceRecognition({
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
   useEffect(() => { onErrorRef.current  = onError;  }, [onError]);
 
-  const recognizerRef = useRef(null);
+  const recognizerRef  = useRef(null);
+  const continuousRef  = useRef(continuous);   // tracks latest continuous flag
+  const abortedRef     = useRef(false);         // true when user explicitly aborted
+
+  useEffect(() => { continuousRef.current = continuous; }, [continuous]);
 
   // Re-create the recognizer only when lang or continuous changes
   useEffect(() => {
@@ -61,7 +65,13 @@ export function useVoiceRecognition({
     recognizer.maxAlternatives  = 1;
 
     recognizer.onstart = () => setIsListening(true);
-    recognizer.onend   = () => setIsListening(false);
+    recognizer.onend   = () => {
+      setIsListening(false);
+      // Auto-restart if continuous mode is on and we haven't been aborted
+      if (continuousRef.current && !abortedRef.current) {
+        try { recognizer.start(); } catch (_) {}
+      }
+    };
 
     recognizer.onresult = (event) => {
       const current = event.resultIndex;
@@ -84,27 +94,30 @@ export function useVoiceRecognition({
     recognizerRef.current = recognizer;
 
     return () => {
+      abortedRef.current = true;
       try { recognizer.abort(); } catch (_) {}
     };
   }, [lang, continuous]); // intentionally excludes onResult/onError — handled via refs
 
   const startListening = useCallback(() => {
     if (!recognizerRef.current) return;
+    abortedRef.current = false;
     try {
       recognizerRef.current.start();
     } catch (e) {
-      // InvalidStateError = already started; safe to ignore
       if (e.name !== 'InvalidStateError') console.warn('[useVoiceRecognition] start error:', e);
     }
-  }, []); // stable — never needs to change
+  }, []);
 
   const stopListening = useCallback(() => {
     if (!recognizerRef.current) return;
+    abortedRef.current = true;
     try { recognizerRef.current.stop(); } catch (_) {}
   }, []);
 
   const abortListening = useCallback(() => {
     if (!recognizerRef.current) return;
+    abortedRef.current = true;
     try {
       recognizerRef.current.abort();
       setIsListening(false);

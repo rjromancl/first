@@ -97,35 +97,51 @@ export function speak(text, {
   lang   = 'en-GB',
   voice  = null,
 } = {}) {
-  return new Promise(async (resolve, reject) => {
-    if (!window.speechSynthesis) {
-      reject(new Error('Speech synthesis not supported'));
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const utterance    = new SpeechSynthesisUtterance(text);
-    utterance.rate     = rate;
-    utterance.pitch    = pitch;
-    utterance.volume   = volume;
-    utterance.lang     = lang;
-
-    // Use caller-supplied voice, or wait for the best available one
-    const selectedVoice = voice ?? await getPreferredVoice(lang);
-    if (selectedVoice) utterance.voice = selectedVoice;
-
-    utterance.onend   = resolve;
-    utterance.onerror = (e) => {
-      // 'interrupted' fires when cancel() is called — treat as resolved, not error
-      if (e.error === 'interrupted' || e.error === 'canceled') {
-        resolve();
-      } else {
-        reject(e);
+  // Get the preferred voice first, then speak — avoids async-in-Promise antipattern
+  return getPreferredVoice(lang).then((selectedVoice) => {
+    return new Promise((resolve, reject) => {
+      if (!window.speechSynthesis) {
+        reject(new Error('Speech synthesis not supported'));
+        return;
       }
-    };
 
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.cancel();
+
+      const utterance    = new SpeechSynthesisUtterance(text);
+      utterance.rate     = rate;
+      utterance.pitch    = pitch;
+      utterance.volume   = volume;
+      utterance.lang     = lang;
+
+      const finalVoice = voice ?? selectedVoice;
+      if (finalVoice) utterance.voice = finalVoice;
+
+      utterance.onend   = resolve;
+      utterance.onerror = (e) => {
+        // 'interrupted' / 'canceled' fires when cancel() is called — treat as resolved
+        if (e.error === 'interrupted' || e.error === 'canceled' || e.error === 'cancelled') {
+          resolve();
+        } else {
+          // Log but still resolve so the app keeps working
+          console.warn('[speak] TTS error:', e.error);
+          resolve();
+        }
+      };
+
+      window.speechSynthesis.speak(utterance);
+
+      // iOS/Chrome bug: synthesis silently stops if the tab is backgrounded.
+      // Resuming every 10s keeps it alive.
+      const keepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(keepAlive);
+        }
+      }, 10000);
+
+      utterance.onend = () => { clearInterval(keepAlive); resolve(); };
+    });
   });
 }
 

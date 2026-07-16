@@ -36,7 +36,13 @@ const aviosRoutes       = require('../backend/src/routes/aviosRoutes');
 
 const app = express();
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+// Disable helmet's CSP — Vercel adds its own headers and CSP blocks
+// the browser from calling generativelanguage.googleapis.com (Gemini).
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: false,
+}));
 app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
