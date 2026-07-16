@@ -26,3 +26,8 @@ npm-debug.log*
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Local test scripts (may contain API keys)
+test-flow.ps1
+test-*.ps1
+*.ps1
