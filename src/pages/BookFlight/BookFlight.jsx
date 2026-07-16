@@ -40,7 +40,7 @@ export default function BookFlight() {
   const [to, setTo] = useState(urlParams.get('to') || searchParams.to || '');
   const [departDate, setDepartDate] = useState(searchParams.departDate || '');
   const [returnDate, setReturnDate] = useState(searchParams.returnDate || '');
-  const [adults, setAdults] = useState(searchParams.adults || 1);
+  const [adults, setAdults] = useState(Number(searchParams.adults) || 1);
   const [cabin, setCabin] = useState(urlParams.get('cabin') || searchParams.cabin || 'economy');
   const [flights, setFlights] = useState([]);
   const [selectedFlight, setSelectedFlight] = useState(null);
@@ -66,10 +66,8 @@ export default function BookFlight() {
     if (!s) return;
     if (s.prefillPassenger) {
       setPassenger(prev => ({ ...prev, ...s.prefillPassenger }));
-      // Jump straight to passenger step if all core fields present
       const pf = s.prefillPassenger;
       if (pf.firstName && pf.lastName && pf.email) {
-        // If we also have flight search params, trigger search first
         if (s.from && s.to && s.departDate) {
           setFrom(s.from);
           setTo(s.to);
@@ -77,14 +75,23 @@ export default function BookFlight() {
           if (s.returnDate) setReturnDate(s.returnDate);
           if (s.adults)    setAdults(s.adults);
           if (s.cabin)     setCabin(s.cabin);
-          // Auto-search so user lands on step 2 immediately
+          if (s.tripType)  setTripType(s.tripType);
           setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 400);
         } else {
-          setStep(3); // jump straight to passenger details
+          setStep(3);
         }
       }
     }
-    // Clear state so a refresh doesn't re-apply it
+    // Pre-fill search fields from voice agent navigation (even without passenger)
+    if (!s.prefillPassenger) {
+      if (s.from)      setFrom(s.from);
+      if (s.to)        setTo(s.to);
+      if (s.departDate) setDepartDate(s.departDate);
+      if (s.returnDate) setReturnDate(s.returnDate);
+      if (s.adults)    setAdults(s.adults);
+      if (s.cabin)     setCabin(s.cabin);
+      if (s.tripType)  setTripType(s.tripType);
+    }
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

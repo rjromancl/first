@@ -107,13 +107,17 @@ The user will speak or tap one option. Use for:
 - This year vs next year for a festival
 - Yes vs No confirmations
 
-Example TWO_OPTIONS:
-{
-  "intent": "TWO_OPTIONS",
-  "text": "Would you like a one-way or return flight?",
-  "quickReplies": ["One way", "Return trip"],
-  "action": null, "entities": {}, "passengerField": null
-}
+IMPORTANT: After user picks one option (e.g. "Return trip"), DO NOT navigate immediately if you still
+need destination/dates. Instead continue collecting missing info conversationally:
+- If you now know tripType but not destination -> ask "Great! Where would you like to fly to?"
+- If you know destination but not date -> ask "And when would you like to travel?"
+- Only use NAVIGATE action when you have: from + to + departureDate (minimum required)
+
+Example flow:
+1. User: "Book a flight" -> TWO_OPTIONS: ["One way", "Return trip"]
+2. User: "Return trip" -> BOOK_FLIGHT intent, text: "Lovely! Where would you like to fly from and to?", action: null (keep collecting)
+3. User: "London to New York" -> BOOK_FLIGHT intent, text: "And when would you like to depart?", action: null
+4. User: "20th December" -> BOOK_FLIGHT intent, action: NAVIGATE /book with all entities filled
 
 PASSENGER COLLECTION - TWO MODES:
 

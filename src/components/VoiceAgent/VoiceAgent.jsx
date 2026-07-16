@@ -303,16 +303,16 @@ export default function VoiceAgent() {
 
       // NAVIGATE — go to page and set search params
       if (response.action?.type === 'NAVIGATE') {
-        if (entities.from || entities.to) {
-          setSearchParams({
-            from:       entities.from         || '',
-            to:         entities.to           || '',
-            departDate: entities.departureDate || '',
-            returnDate: entities.returnDate   || '',
-            adults:     entities.adults        || 1,
-            cabin:      entities.cabin         || 'economy',
-          });
-        }
+        // Always push whatever entities we have — partial is fine, user fills the rest
+        setSearchParams({
+          tripType:   entities.tripType   || 'return',
+          from:       entities.from       || '',
+          to:         entities.to         || '',
+          departDate: entities.departureDate || '',
+          returnDate: entities.returnDate || '',
+          adults:     entities.adults     || 1,
+          cabin:      entities.cabin      || 'economy',
+        });
         if (mountedRef.current) setIsProcessing(false);
         addAgentMsg(response.text, response.quickReplies, response.action);
         pendingNavRef.current = response.action.path;
