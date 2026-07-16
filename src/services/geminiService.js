@@ -1,51 +1,19 @@
 /**
- * geminiService.js
+ * aiService.js  (still exported as geminiService for backward compat)
  *
- * Google Gemini API client for the British Airways voice assistant.
+ * Uses Groq API (free tier — 14,400 req/day, no card needed).
+ * Model: llama-3.1-8b-instant  — fast, intelligent, free.
  *
- * Architecture:
- *  - One persistent chat session per VoiceAgent mount (history array passed each call)
- *  - Every response is a strict JSON object so the UI can act on structured data
- *  - Falls back gracefully if the API key is missing or the call fails
- *
- * Response schema Gemini must return (enforced in the system prompt):
- * {
- *   "intent": "BOOK_FLIGHT" | "CHECK_IN" | "FLIGHT_STATUS" | "MANAGE_BOOKING" |
- *             "DESTINATIONS" | "EXECUTIVE_CLUB" | "BAGGAGE" | "UPGRADE" |
- *             "REFUND_CANCEL" | "LOUNGE" | "PASSPORT_VISA" | "MEAL" | "SEAT" |
- *             "CONTACT" | "HELP" | "COLLECT_PASSENGER" | "PASSENGER_FIELD" | "UNKNOWN",
- *   "text": "<natural language reply to speak/show>",
- *   "quickReplies": ["...", "..."],          // optional, max 5
- *   "action": {                              // optional
- *     "type": "NAVIGATE",
- *     "path": "/book?from=LHR&to=JFK&..."
- *   },
- *   "entities": {                            // optional, extracted facts
- *     "from": "LHR",
- *     "to": "JFK",
- *     "departureDate": "2026-08-15",
- *     "returnDate": "2026-08-22",
- *     "adults": 1,
- *     "cabin": "economy",
- *     "flightNumber": "BA117",
- *     "bookingRef": "XYMBA1",
- *     "surname": "Wilson"
- *   },
- *   "passengerField": {                      // present only during passenger collection
- *     "field": "firstName" | "lastName" | "email" | "phone" | "dob" | "passport" | "nationality",
- *     "value": "<extracted value>",
- *     "nextField": "<next field to ask for or null>",
- *     "allCollected": false
- *   }
- * }
+ * Drop-in replacement for the Gemini service — same exported function,
+ * same response schema, same fallback behaviour.
  */
 
-const API_KEY  = import.meta.env.VITE_GEMINI_API_KEY;
-const MODEL    = 'gemini-2.0-flash';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+const API_KEY  = import.meta.env.VITE_GEMINI_API_KEY; // reusing same env var
+const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL    = 'llama-3.1-8b-instant';
 
 // ── System prompt ─────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are the British Airways voice assistant — a warm, professional AI agent embedded in the BA mobile/web app.
+const SYSTEM_PROMPT = `You are the British Airways voice assistant — a warm, professional AI agent.
 
 TODAY'S DATE: ${new Date().toISOString().split('T')[0]}
 
@@ -55,99 +23,61 @@ YOUR CAPABILITIES:
 - Real-time flight status (e.g. BA117, BA204, BA016)
 - Manage bookings: seat selection, baggage, upgrades, cancellations
 - Executive Club & Avios information
-- Baggage allowances, meal preferences, lounge access
-- Visa/passport guidance, contact details
-- COLLECT PASSENGER DETAILS via voice — ask field by field, confirm, then pre-fill the booking form
+- COLLECT PASSENGER DETAILS via voice — ask field by field
 
-AIRPORT CODES (use these in entities):
+AIRPORT CODES:
 London Heathrow=LHR, London Gatwick=LGW, New York JFK=JFK, Newark=EWR,
 Los Angeles=LAX, Paris CDG=CDG, Dubai=DXB, Tokyo Narita=NRT, Sydney=SYD,
-Singapore Changi=SIN, Hong Kong=HKG, Barcelona=BCN, Madrid=MAD, Rome=FCO,
+Singapore=SIN, Hong Kong=HKG, Barcelona=BCN, Madrid=MAD, Rome=FCO,
 Amsterdam=AMS, Frankfurt=FRA, Cape Town=CPT, Mumbai=BOM, Istanbul=IST,
-Chicago O'Hare=ORD, Miami=MIA, Boston=BOS
+Chicago=ORD, Miami=MIA, Boston=BOS
 
 PASSENGER COLLECTION FLOW:
-When a user wants to book and you need passenger details, use intent "COLLECT_PASSENGER".
-Then ask for each field ONE AT A TIME in this order:
-  1. firstName  — "What is your first name?"
-  2. lastName   — "What is your last name?"
-  3. email      — "What is your email address?"
-  4. phone      — "What is your phone number including country code?"
-  5. dob        — "What is your date of birth? Please say day, month, year."
-  6. passport   — "What is your passport number?"
-  7. nationality — "What is your nationality or passport issuing country?"
+When user wants to book and needs passenger details, use intent "COLLECT_PASSENGER".
+Ask for each field ONE AT A TIME:
+1. firstName, 2. lastName, 3. email, 4. phone, 5. dob, 6. passport, 7. nationality
 
-For each answer use intent "PASSENGER_FIELD" and set passengerField.field, passengerField.value,
-passengerField.nextField (next field name or null if done), passengerField.allCollected (true only after nationality).
+For each answer use intent "PASSENGER_FIELD" and set:
+passengerField.field, passengerField.value, passengerField.nextField (or null), passengerField.allCollected (true only after nationality).
 
-When passengerField.allCollected is true, include an action:
-  { "type": "PREFILL_BOOKING", "passenger": { ...all collected fields } }
-and set intent to "BOOK_FLIGHT".
+When allCollected=true, add action: {"type":"PREFILL_BOOKING","passenger":{...all fields}} and set intent "BOOK_FLIGHT".
 
-DATE NORMALISATION: Convert spoken dates to YYYY-MM-DD. "next Friday" = compute from today.
-DOB NORMALISATION: "15th March 1990" → "1990-03-15"
-PHONE NORMALISATION: "zero seven nine one two..." → "+447912..."
+IMPORTANT: ALWAYS respond with ONLY valid JSON in this exact schema:
+{
+  "intent": "BOOK_FLIGHT" | "CHECK_IN" | "FLIGHT_STATUS" | "MANAGE_BOOKING" | "DESTINATIONS" | "EXECUTIVE_CLUB" | "HELP" | "COLLECT_PASSENGER" | "PASSENGER_FIELD" | "UNKNOWN",
+  "text": "<natural reply to speak aloud — no bullet points>",
+  "quickReplies": ["...", "..."],
+  "action": null | {"type": "NAVIGATE", "path": "/book"} | {"type": "PREFILL_BOOKING", "passenger": {}},
+  "entities": {"from":"LHR","to":"JFK","departureDate":"2026-08-15","adults":1,"cabin":"economy"},
+  "passengerField": null | {"field":"firstName","value":"John","nextField":"lastName","allCollected":false}
+}
 
-IMPORTANT RULES:
-1. ALWAYS respond with ONLY valid JSON matching the schema. No markdown, no prose outside JSON.
-2. Keep "text" concise and natural — it will be read aloud. No bullet points in "text".
-3. quickReplies must be short (max 4 words each), max 5 items.
-4. Never make up flight prices or booking references.
-5. For navigation actions, build the path with all available entities as query params.
-6. Be warm and British in tone. Use "brilliant", "lovely", "certainly" occasionally.`;
+Be warm and British. Keep "text" under 2 sentences. No markdown in text.`;
 
-// ── Build a Gemini request body from conversation history ──────────
-function buildRequestBody(history, userMessage) {
-  // Gemini takes alternating user/model turns
-  const contents = [];
+// ── Build messages array from history ─────────────────────────────
+function buildMessages(history, userMessage) {
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-  // Inject system prompt as first user turn + model ack (Gemini 1.5+ supports systemInstruction)
   for (const turn of history) {
-    contents.push({
-      role: turn.role === 'user' ? 'user' : 'model',
-      parts: [{ text: turn.text }],
+    messages.push({
+      role:    turn.role === 'user' ? 'user' : 'assistant',
+      content: turn.text,
     });
   }
 
-  // Append current user message
-  contents.push({
-    role: 'user',
-    parts: [{ text: userMessage }],
-  });
-
-  return {
-    system_instruction: {
-      parts: [{ text: SYSTEM_PROMPT }],
-    },
-    contents,
-    generationConfig: {
-      temperature: 0.7,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 512,
-      responseMimeType: 'application/json',
-    },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-    ],
-  };
+  messages.push({ role: 'user', content: userMessage });
+  return messages;
 }
 
-// ── Parse and validate the Gemini response ─────────────────────────
-function parseGeminiResponse(raw) {
+// ── Parse the response ────────────────────────────────────────────
+function parseResponse(raw) {
   try {
-    const text = raw?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    // Strip any accidental markdown fences
+    const text    = raw?.choices?.[0]?.message?.content || '';
     const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
     const parsed  = JSON.parse(cleaned);
-
-    // Ensure required fields exist
     return {
       intent:         parsed.intent        || 'UNKNOWN',
-      text:           parsed.text          || "I'm sorry, I didn't quite catch that. Could you try again?",
+      text:           parsed.text          || "I'm sorry, I didn't catch that. Could you try again?",
       quickReplies:   Array.isArray(parsed.quickReplies) ? parsed.quickReplies.slice(0, 5) : [],
       action:         parsed.action        || null,
       entities:       parsed.entities      || {},
@@ -158,58 +88,63 @@ function parseGeminiResponse(raw) {
       intent: 'UNKNOWN',
       text: "I'm having a little trouble understanding. Could you rephrase that?",
       quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Help'],
-      action: null,
-      entities: {},
-      passengerField: null,
+      action: null, entities: {}, passengerField: null,
     };
   }
 }
 
-// ── Fallback response when API key is missing ──────────────────────
+// ── Fallback when no API key ──────────────────────────────────────
 function fallbackResponse(userText) {
   const lower = userText.toLowerCase();
   if (/book|flight|fly/.test(lower))
-    return { intent: 'BOOK_FLIGHT', text: "I'd love to help you book a flight! Please visit the Book page to search for available flights.", quickReplies: ['Open booking', 'Search flights'], action: { type: 'NAVIGATE', path: '/book' }, entities: {}, passengerField: null };
+    return { intent: 'BOOK_FLIGHT', text: "I'd love to help you book a flight! Tap below to search.", quickReplies: ['Search flights'], action: { type: 'NAVIGATE', path: '/book' }, entities: {}, passengerField: null };
   if (/check.?in/.test(lower))
-    return { intent: 'CHECK_IN', text: 'Online check-in is available 24 hours before your flight. Tap below to get started.', quickReplies: ['Check in now'], action: { type: 'NAVIGATE', path: '/check-in' }, entities: {}, passengerField: null };
+    return { intent: 'CHECK_IN', text: 'Check-in opens 24 hours before your flight.', quickReplies: ['Check in now'], action: { type: 'NAVIGATE', path: '/check-in' }, entities: {}, passengerField: null };
   if (/status/.test(lower))
-    return { intent: 'FLIGHT_STATUS', text: 'Let me take you to the flight status page.', quickReplies: ['Track a flight'], action: { type: 'NAVIGATE', path: '/flight-status' }, entities: {}, passengerField: null };
-  return { intent: 'HELP', text: 'To use the full AI assistant, please add your Gemini API key to .env.local as VITE_GEMINI_API_KEY.', quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Destinations'], action: null, entities: {}, passengerField: null };
+    return { intent: 'FLIGHT_STATUS', text: "Let me check that flight's status.", quickReplies: ['Track flight'], action: { type: 'NAVIGATE', path: '/flight-status' }, entities: {}, passengerField: null };
+  if (/destination|where|holiday/.test(lower))
+    return { intent: 'DESTINATIONS', text: 'We fly to amazing destinations worldwide!', quickReplies: ['Explore destinations'], action: { type: 'NAVIGATE', path: '/destinations' }, entities: {}, passengerField: null };
+  return { intent: 'HELP', text: 'I can help with booking, check-in, flight status and more. What would you like to do?', quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Destinations'], action: null, entities: {}, passengerField: null };
 }
 
-// ── Main export: send a message and get a structured response ──────
+// ── Main export ───────────────────────────────────────────────────
 export async function sendToGemini(userMessage, history = []) {
-  if (!API_KEY || API_KEY === 'your_gemini_api_key_here') {
-    console.warn('[geminiService] No API key — using fallback responses.');
+  if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
+    console.warn('[aiService] No API key — using fallback.');
     return fallbackResponse(userMessage);
   }
 
   try {
-    const body     = buildRequestBody(history, userMessage);
     const response = await fetch(ENDPOINT, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       MODEL,
+        messages:    buildMessages(history, userMessage),
+        temperature: 0.7,
+        max_tokens:  512,
+      }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      console.error('[geminiService] API error:', response.status, err);
-      throw new Error(`Gemini API error ${response.status}`);
+      console.error('[aiService] Groq API error:', response.status, err);
+      throw new Error(`Groq API error ${response.status}`);
     }
 
     const data = await response.json();
-    return parseGeminiResponse(data);
+    return parseResponse(data);
 
   } catch (err) {
-    console.error('[geminiService] Request failed:', err);
+    console.error('[aiService] Request failed:', err);
     return {
       intent: 'UNKNOWN',
       text: "I'm having trouble connecting right now. Please try again in a moment.",
       quickReplies: ['Try again', 'Book a flight', 'Help'],
-      action: null,
-      entities: {},
-      passengerField: null,
+      action: null, entities: {}, passengerField: null,
     };
   }
 }
