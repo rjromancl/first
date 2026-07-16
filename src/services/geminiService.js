@@ -9,7 +9,7 @@
 const API_KEY  = import.meta.env.VITE_GEMINI_API_KEY;
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 // Use the larger model for better date/festival reasoning
-const MODEL    = 'llama-3.1-70b-versatile';
+const MODEL    = 'llama-3.3-70b-versatile';
 
 // ── Build current date context dynamically ────────────────────────
 function buildSystemPrompt() {
