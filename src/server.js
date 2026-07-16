@@ -117,7 +117,7 @@ app.use(errorHandler);
 
 // ─── Start ────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '4000');
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   logger.info(`BA Backend running on port ${PORT}`, {
     env: process.env.NODE_ENV || 'development',
     amadeusHostname: process.env.AMADEUS_HOSTNAME || 'test',
