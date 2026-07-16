@@ -147,15 +147,6 @@ export default function VoiceAgent() {
   // Scroll to bottom
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // Agent status
-  useEffect(() => {
-    setAgentStatus(
-      isListening  ? 'listening' :
-      isProcessing ? 'thinking'  :
-      isSpeaking   ? 'speaking'  : 'idle'
-    );
-  }, [isListening, isProcessing, isSpeaking]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Message helpers ─────────────────────────────────────────────
   const addUserMsg = useCallback((text) => {
     setMessages(p => [...p, { id: mkId(), role: 'user', text, timestamp: new Date() }]);
@@ -174,42 +165,78 @@ export default function VoiceAgent() {
     if (mountedRef.current) setIsSpeaking(false);
   }, []);
 
-  // ── Ask next passenger field ────────────────────────────────────
-  // Speaks the question then auto-starts listening
+  // ── Voice recognition callbacks (stable refs — declared BEFORE hook) ──
+  const processInputRef  = useRef(null);
+  const handleVoiceResult = useCallback((transcript) => {
+    setInterimText('');
+    processInputRef.current?.(transcript);
+  }, []);
+
+  const handleVoiceError = useCallback((error) => {
+    if (!mountedRef.current) return;
+    setAgentStatus('idle'); setInterimText('');
+    if (error === 'not-allowed') {
+      addAgentMsg('Microphone access was denied. Please allow mic access in your browser, or use text mode.', ['Switch to text']);
+    } else if (error === 'no-speech' && !handsFreeRef.current) {
+      addAgentMsg("I didn't hear anything. Tap the mic to try again.");
+    }
+  }, [addAgentMsg]);
+
+  // ── Voice recognition hook — MUST be before any effect using isListening ──
+  const {
+    isListening, transcript: liveTranscript, supported: micSupported,
+    startListening, stopListening, abortListening,
+  } = useVoiceRecognition({
+    onResult: handleVoiceResult,
+    onError:  handleVoiceError,
+    lang: 'en-GB',
+    continuous: collectingPax,
+  });
+
+  const isListeningRef = useRef(isListening);
+  useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
+  useEffect(() => { if (liveTranscript) setInterimText(liveTranscript); }, [liveTranscript]);
+
+  // Agent status — safe: isListening declared above
+  useEffect(() => {
+    setAgentStatus(
+      isListening  ? 'listening' :
+      isProcessing ? 'thinking'  :
+      isSpeaking   ? 'speaking'  : 'idle'
+    );
+  }, [isListening, isProcessing, isSpeaking]);
+
+  // ── askNextField — speaks a question then auto-starts listening ─
   const askNextField = useCallback(async (fieldKey, question) => {
     if (!mountedRef.current) return;
     setCurrentField(fieldKey);
     setCurrentQ(question);
     addAgentMsg(question);
     await speakMessage(question);
-    // After speaking, start listening automatically
     if (mountedRef.current && !isProcessingRef.current) {
       setTimeout(() => { if (mountedRef.current) startListening(); }, 400);
     }
-  }, [addAgentMsg, speakMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [addAgentMsg, speakMessage, startListening]);
 
-  // ── Core processing ─────────────────────────────────────────────
+  // ── processInput — core AI loop ─────────────────────────────────
   const processInput = useCallback(async (text) => {
     if (!text || !text.trim() || isProcessingRef.current) return;
     const trimmed = text.trim();
     if (mountedRef.current) setIsProcessing(true);
     addUserMsg(trimmed);
 
-    const history = geminiHistoryRef.current;
-    const updatedHistory = [...history, { role: 'user', text: trimmed }];
+    const updatedHistory = [...geminiHistoryRef.current, { role: 'user', text: trimmed }];
 
     try {
       const { intent, entities, response, passengerField } =
         await parseVoiceInput(trimmed, {}, updatedHistory);
-
       if (!mountedRef.current) return;
 
       setGeminiHistory([...updatedHistory, { role: 'model', text: response.text }]);
 
-      // ── COLLECT_PASSENGER: start collection flow ───────────────
+      // COLLECT_PASSENGER — start field-by-field collection
       if (intent === 'COLLECT_PASSENGER') {
-        setCollectingPax(true);
-        setPaxData({});
+        setCollectingPax(true); setPaxData({});
         if (mountedRef.current) setIsProcessing(false);
         addAgentMsg(response.text, response.quickReplies);
         await speakMessage(response.text);
@@ -217,18 +244,14 @@ export default function VoiceAgent() {
         return;
       }
 
-      // ── PASSENGER_FIELD: save field(s), ask next or complete ───
+      // PASSENGER_FIELD — save collected fields, ask next or complete
       if (intent === 'PASSENGER_FIELD' && passengerField) {
         const newData = { ...paxDataRef.current, ...(passengerField.collected || {}) };
         setPaxData(newData);
         paxDataRef.current = newData;
 
         if (passengerField.allCollected) {
-          // All fields done — navigate to booking
-          setCollectingPax(false);
-          setCurrentField(null);
-          setCurrentQ('');
-
+          setCollectingPax(false); setCurrentField(null); setCurrentQ('');
           const navState = {
             prefillPassenger: newData,
             ...(entities.from          && { from:       entities.from }),
@@ -245,15 +268,16 @@ export default function VoiceAgent() {
           return;
         }
 
-        // Ask the next field
         if (mountedRef.current) setIsProcessing(false);
         const nextKey = passengerField.nextField;
-        const nextQ   = passengerField.nextQuestion || PAX_FIELDS.find(f => f.key === nextKey)?.q || `Please tell me your ${nextKey}.`;
+        const nextQ   = passengerField.nextQuestion
+          || PAX_FIELDS.find(f => f.key === nextKey)?.q
+          || `Please tell me your ${nextKey}.`;
         await askNextField(nextKey, nextQ);
         return;
       }
 
-      // ── PREFILL_BOOKING action ─────────────────────────────────
+      // PREFILL_BOOKING — all passenger fields collected at once
       if (response.action?.type === 'PREFILL_BOOKING') {
         setCollectingPax(false); setCurrentField(null); setCurrentQ(''); setPaxData({});
         const navState = { prefillPassenger: response.action.passenger, ...entities };
@@ -264,27 +288,29 @@ export default function VoiceAgent() {
         return;
       }
 
-      // ── TWO_OPTIONS ────────────────────────────────────────────
+      // TWO_OPTIONS — show 2 large buttons AND read options aloud
       if (intent === 'TWO_OPTIONS') {
         setAwaitingTwoOpt(true);
         if (mountedRef.current) setIsProcessing(false);
         addAgentMsg(response.text, response.quickReplies, response.action);
         await speakMessage(response.text);
-        // Read the two options aloud
-        if (response.quickReplies.length === 2) {
+        if (response.quickReplies?.length === 2) {
           await speakMessage(`Say ${response.quickReplies[0]}, or ${response.quickReplies[1]}.`);
         }
         if (handsFreeRef.current) setTimeout(() => { if (mountedRef.current) startListening(); }, 300);
         return;
       }
 
-      // ── NAVIGATE ───────────────────────────────────────────────
+      // NAVIGATE — go to page and set search params
       if (response.action?.type === 'NAVIGATE') {
         if (entities.from || entities.to) {
           setSearchParams({
-            from: entities.from || '', to: entities.to || '',
-            departDate: entities.departureDate || '', returnDate: entities.returnDate || '',
-            adults: entities.adults || 1, cabin: entities.cabin || 'economy',
+            from:       entities.from         || '',
+            to:         entities.to           || '',
+            departDate: entities.departureDate || '',
+            returnDate: entities.returnDate   || '',
+            adults:     entities.adults        || 1,
+            cabin:      entities.cabin         || 'economy',
           });
         }
         if (mountedRef.current) setIsProcessing(false);
@@ -294,11 +320,10 @@ export default function VoiceAgent() {
         return;
       }
 
-      // ── Plain response ─────────────────────────────────────────
+      // Plain conversational response
       if (mountedRef.current) setIsProcessing(false);
       addAgentMsg(response.text, response.quickReplies, response.action);
       await speakMessage(response.text);
-      // In hands-free mode, auto-listen again after reply
       if (handsFreeRef.current && !collectingRef.current) {
         setTimeout(() => { if (mountedRef.current) startListening(); }, 600);
       }
@@ -311,43 +336,10 @@ export default function VoiceAgent() {
       addAgentMsg(msg, ['Try again', 'Book a flight']);
       await speakMessage(msg);
     }
-  }, [addUserMsg, addAgentMsg, speakMessage, askNextField, navigate, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [addUserMsg, addAgentMsg, speakMessage, askNextField, startListening, navigate, setSearchParams]);
 
-  // ── Wire processInput into stable voice-result ref ──────────────
-  const processInputRef = useRef(processInput);
+  // Wire processInput into the stable ref used by handleVoiceResult
   useEffect(() => { processInputRef.current = processInput; }, [processInput]);
-
-  const handleVoiceResult = useCallback((transcript) => {
-    setInterimText('');
-    processInputRef.current(transcript);
-  }, []);
-
-  const handleVoiceError = useCallback((error) => {
-    if (!mountedRef.current) return;
-    setAgentStatus('idle'); setInterimText('');
-    if (error === 'not-allowed') {
-      addAgentMsg('Microphone access was denied. Please allow mic access in your browser, or use text mode.', ['Switch to text']);
-    } else if (error === 'no-speech' && !handsFreeRef.current) {
-      addAgentMsg("I didn't hear anything. Tap the mic to try again.");
-    }
-  }, [addAgentMsg]);
-
-  // ── Voice recognition hook ──────────────────────────────────────
-  const {
-    isListening, transcript: liveTranscript, supported: micSupported,
-    startListening, stopListening, abortListening,
-  } = useVoiceRecognition({
-    onResult: handleVoiceResult,
-    onError:  handleVoiceError,
-    lang: 'en-GB',
-    continuous: collectingPax, // continuous during passenger collection
-  });
-
-  // Keep isListening in sync
-  const isListeningRef = useRef(isListening);
-  useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
-
-  useEffect(() => { if (liveTranscript) setInterimText(liveTranscript); }, [liveTranscript]);
 
   // ── On open/close ───────────────────────────────────────────────
   useEffect(() => {
