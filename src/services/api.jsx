@@ -10,8 +10,10 @@
 
 import axios from "axios";
 
+// In production on Vercel: /api routes to the serverless function on the same domain
+// In development: proxy forwards /api to localhost:4000 (see vite.config.js)
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+  import.meta.env.VITE_API_URL || "/api";
 
 // ── Axios instance ────────────────────────────────────────────────
 const http = axios.create({
