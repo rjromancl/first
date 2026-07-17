@@ -242,13 +242,56 @@ function parseResponse(raw) {
     const text    = raw?.choices?.[0]?.message?.content || '';
     const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
     const parsed  = JSON.parse(cleaned);
+
+    // ── Normalise entities — AI sometimes uses different key names ─
+    const ents = parsed.entities || {};
+    const entities = {
+      from:          ents.from          || ents.departure     || ents.origin       || '',
+      to:            ents.to            || ents.destination   || ents.arrival      || '',
+      departureDate: ents.departureDate || ents.departure_date || ents.depart_date || '',
+      returnDate:    ents.returnDate    || ents.return_date   || ents.return       || '',
+      adults:        ents.adults        || ents.num_adults    || ents.passengers   || 1,
+      cabin:         ents.cabin         || ents.class         || ents.cabinClass   || 'economy',
+      tripType:      ents.tripType      || ents.trip_type     || 'return',
+      festival:      ents.festival      || '',
+    };
+
+    // ── Normalise action — AI sometimes returns string or wrong shape
+    let action = parsed.action || null;
+    if (typeof action === 'string') {
+      // AI returned action as a bare string e.g. "FULL_BOOKING"
+      if (action === 'FULL_BOOKING' || action === 'full_booking') {
+        // Look for passenger at top level or in passengerField
+        const pax = parsed.passenger || (parsed.passengerField && parsed.passengerField.collected) || null;
+        action = pax ? { type: 'FULL_BOOKING', passenger: normalisePax(pax) } : { type: 'NAVIGATE', path: '/book' };
+      } else {
+        action = null;
+      }
+    } else if (action && action.type === 'FULL_BOOKING' && !action.passenger) {
+      // Action object exists but passenger is at top level
+      const pax = parsed.passenger || null;
+      if (pax) action.passenger = normalisePax(pax);
+    }
+
+    // ── Normalise passengerField ───────────────────────────────────
+    let passengerField = parsed.passengerField || null;
+    if (!passengerField && parsed.passenger && (!action || action.type !== 'FULL_BOOKING')) {
+      // Passenger data at top level but no FULL_BOOKING — treat as collected fields
+      passengerField = {
+        collected: normalisePax(parsed.passenger),
+        nextField: null,
+        nextQuestion: null,
+        allCollected: true,
+      };
+    }
+
     return {
       intent:         parsed.intent        || 'UNKNOWN',
       text:           parsed.text          || "I'm sorry, I didn't catch that. Could you try again?",
       quickReplies:   Array.isArray(parsed.quickReplies) ? parsed.quickReplies.slice(0, 5) : [],
-      action:         parsed.action        || null,
-      entities:       parsed.entities      || {},
-      passengerField: parsed.passengerField || null,
+      action,
+      entities,
+      passengerField,
     };
   } catch {
     return {
@@ -258,6 +301,20 @@ function parseResponse(raw) {
       action: null, entities: {}, passengerField: null,
     };
   }
+}
+
+// ── Normalise passenger object from various AI key formats ────────
+function normalisePax(raw) {
+  if (!raw) return null;
+  return {
+    firstName:   raw.firstName   || raw.first_name  || (raw.name && raw.name.split(' ')[0])  || '',
+    lastName:    raw.lastName    || raw.last_name   || (raw.name && raw.name.split(' ').slice(1).join(' ')) || '',
+    email:       raw.email       || raw.email_address || '',
+    phone:       raw.phone       || raw.phone_number  || raw.telephone || '',
+    dob:         raw.dob         || raw.date_of_birth || raw.dateOfBirth || raw.born || '',
+    passport:    raw.passport    || raw.passport_number || raw.passportNumber || '',
+    nationality: raw.nationality || raw.country || raw.nationalityCode || '',
+  };
 }
 
 // ── Fallback when no API key ──────────────────────────────────────
