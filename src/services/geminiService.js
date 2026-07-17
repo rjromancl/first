@@ -107,29 +107,17 @@ CRITICAL: When you have from+to (even inferred) + departureDate (from festival o
 
 ONE-SHOT FULL BOOKING (flight + passenger in one utterance):
 When user speaks both flight details AND personal info, use action type FULL_BOOKING.
-Extract passenger fields: firstName, lastName, email, phone, dob(YYYY-MM-DD), passport, nationality(ISO code).
-Example: "London to New York Christmas business 2 adults. John Smith john@test.com 07912345678 born 15 March 1990 passport AB123456 British"
--> FULL_BOOKING with all fields populated
+Extract passenger fields: firstName, lastName, phone, nationality(ISO code).
+Example: "London to New York Christmas business 2 adults. John Smith 07912345678 British"
+-> FULL_BOOKING with passenger populated
 
 PASSENGER EXTRACTION RULES:
 - Names: first word=firstName, rest=lastName
-- "email X" or "my email is X" -> email=X
-- "phone X" or "number X" -> phone=X  
-- "born X" or "DOB X" or "date of birth X" -> dob as YYYY-MM-DD
-- "passport X" -> passport=X
-- "British/Indian/Pakistani/American/Irish" -> nationality=GB/IN/PK/US/IE
+- "phone X" or "number X" or any phone number format -> phone=X
+- "British/Indian/Pakistani/American/Irish/Australian" -> nationality=GB/IN/PK/US/IE/AU
 
-STEP-BY-STEP MODE (only when user explicitly asks OR info is truly missing):
-Ask ONE question at a time. After getting answer, ask next.
-Required order: destination -> dates -> cabin -> passengers -> personal details
-Keep questions SHORT: "Where to?" not "Could you please tell me your destination?"
-
-TWO_OPTIONS: Use ONLY for genuine binary choices (one-way vs return, economy vs business).
-Must have EXACTLY 2 quickReplies. Short labels max 3 words each.
-
-PASSENGER FIELD-BY-FIELD (only if user chose step-by-step):
-After collecting flight details, ask passenger fields one at a time.
-Always set nextQuestion in passengerField so UI speaks it automatically.
+STEP-BY-STEP PASSENGER FIELDS — ask in this order: firstName -> lastName -> phone -> nationality
+Keep questions SHORT: "Your first name?" / "Last name?" / "Phone number?" / "Nationality?"
 
 RESPONSE SCHEMA — output ONLY raw JSON, no markdown:
 {
@@ -138,7 +126,7 @@ RESPONSE SCHEMA — output ONLY raw JSON, no markdown:
   "quickReplies": [],
   "action": null | {"type":"NAVIGATE","path":"/book"} | {"type":"FULL_BOOKING","passenger":{...}} | {"type":"PREFILL_BOOKING","passenger":{...}},
   "entities": {"from":"LHR","to":"JFK","departureDate":"YYYY-MM-DD","returnDate":"YYYY-MM-DD","adults":1,"cabin":"economy","tripType":"return","festival":""},
-  "passengerField": null | {"collected":{},"nextField":"firstName","nextQuestion":"What is your first name?","allCollected":false}
+  "passengerField": null | {"collected":{"firstName":"","lastName":"","phone":"","nationality":""},"nextField":"firstName","nextQuestion":"Your first name?","allCollected":false}
 }
 
 RULES:
@@ -166,13 +154,10 @@ function normalisePax(raw) {
   const name = raw.name || '';
   const parts = name.split(' ');
   return {
-    firstName:   raw.firstName   || raw.first_name  || parts[0]                          || '',
-    lastName:    raw.lastName    || raw.last_name   || parts.slice(1).join(' ')           || '',
-    email:       raw.email       || raw.email_address                                     || '',
-    phone:       raw.phone       || raw.phone_number || raw.telephone                     || '',
-    dob:         raw.dob         || raw.date_of_birth || raw.dateOfBirth || raw.born      || '',
-    passport:    raw.passport    || raw.passport_number || raw.passportNumber             || '',
-    nationality: raw.nationality || raw.country || raw.nationalityCode                    || '',
+    firstName:   raw.firstName   || raw.first_name || parts[0]                        || '',
+    lastName:    raw.lastName    || raw.last_name  || parts.slice(1).join(' ')         || '',
+    phone:       raw.phone       || raw.phone_number || raw.telephone                  || '',
+    nationality: raw.nationality || raw.country    || raw.nationalityCode              || '',
   };
 }
 

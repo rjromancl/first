@@ -30,13 +30,10 @@ const WELCOME = {
 };
 
 const PAX_FIELDS = [
-  { key: 'firstName',   label: 'First Name',    q: 'What is your first name?' },
-  { key: 'lastName',    label: 'Last Name',      q: 'And your last name?' },
-  { key: 'email',       label: 'Email',          q: 'What is your email address?' },
-  { key: 'phone',       label: 'Phone',          q: 'What is your phone number including the country code?' },
-  { key: 'dob',         label: 'Date of Birth',  q: 'What is your date of birth? Please say the day, month and year.' },
-  { key: 'passport',    label: 'Passport No.',   q: 'What is your passport number?' },
-  { key: 'nationality', label: 'Nationality',    q: 'And finally, what is your nationality?' },
+  { key: 'firstName',   label: 'First Name',  q: 'What is your first name?' },
+  { key: 'lastName',    label: 'Last Name',    q: 'And your last name?' },
+  { key: 'phone',       label: 'Phone',        q: 'What is your phone number?' },
+  { key: 'nationality', label: 'Nationality',  q: 'And your nationality?' },
 ];
 
 let _id = 1;

@@ -50,11 +50,8 @@ export default function BookFlight() {
   const [toSuggestions, setToSuggestions] = useState([]);
   const [passenger, setPassenger] = useState({
     firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: '',
-    dob: '',
-    passport: '',
+    lastName:  user?.lastName  || '',
+    phone:     '',
     nationality: 'GB',
   });
 
@@ -177,19 +174,16 @@ export default function BookFlight() {
     try {
       // Build traveler payload from passenger form data
       const travelers = [{
-        firstName: passenger.firstName,
-        lastName:  passenger.lastName,
-        email:     passenger.email,
-        phone:     passenger.phone,
-        dob:       passenger.dob,
-        passport:  passenger.passport,
+        firstName:   passenger.firstName,
+        lastName:    passenger.lastName,
+        phone:       passenger.phone,
         nationality: passenger.nationality,
       }];
       // Replicate for multiple adults (same lead passenger for demo)
       for (let i = 1; i < adults; i++) travelers.push({ ...travelers[0] });
 
       const booking = await bookingsAPI.create(selectedFlight, travelers, [
-        { emailAddress: passenger.email, phones: [{ deviceType: 'MOBILE', countryCallingCode: '44', number: passenger.phone.replace(/\D/g, '') || '7700900000' }] },
+        { phones: [{ deviceType: 'MOBILE', countryCallingCode: '44', number: passenger.phone.replace(/\D/g, '') || '7700900000' }] },
       ]);
 
       setBookingRef(booking.reference);
@@ -457,39 +451,24 @@ export default function BookFlight() {
             <form className="card bookflight__pax-form" onSubmit={handlePassengerSubmit}>
               <h2>Passenger Details</h2>
               <p className="bookflight__pax-note">
-                Please ensure all names match exactly as they appear on your passport.
+                Enter your details as the lead passenger.
               </p>
 
               <div className="bookflight__form-grid">
                 <div className="form-group">
                   <label className="form-label">First Name</label>
                   <input className="form-control" required value={passenger.firstName}
-                    onChange={e => setPassenger({...passenger, firstName: e.target.value})} placeholder="As on passport" />
+                    onChange={e => setPassenger({...passenger, firstName: e.target.value})} placeholder="First name" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Last Name</label>
                   <input className="form-control" required value={passenger.lastName}
-                    onChange={e => setPassenger({...passenger, lastName: e.target.value})} placeholder="As on passport" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email Address</label>
-                  <input type="email" className="form-control" required value={passenger.email}
-                    onChange={e => setPassenger({...passenger, email: e.target.value})} placeholder="booking@email.com" />
+                    onChange={e => setPassenger({...passenger, lastName: e.target.value})} placeholder="Last name" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Phone Number</label>
                   <input type="tel" className="form-control" required value={passenger.phone}
                     onChange={e => setPassenger({...passenger, phone: e.target.value})} placeholder="+44 7xxx xxxxxx" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Date of Birth</label>
-                  <input type="date" className="form-control" required value={passenger.dob}
-                    onChange={e => setPassenger({...passenger, dob: e.target.value})} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Passport Number</label>
-                  <input className="form-control" required value={passenger.passport}
-                    onChange={e => setPassenger({...passenger, passport: e.target.value})} placeholder="123456789" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Nationality</label>
@@ -502,6 +481,8 @@ export default function BookFlight() {
                     <option value="DE">German</option>
                     <option value="FR">French</option>
                     <option value="IN">Indian</option>
+                    <option value="PK">Pakistani</option>
+                    <option value="IE">Irish</option>
                     <option value="OTHER">Other</option>
                   </select>
                 </div>
