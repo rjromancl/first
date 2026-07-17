@@ -12,7 +12,6 @@ router.post(
     body('travelers').isArray({ min: 1 }).withMessage('At least one traveler required'),
     body('travelers.*.firstName').notEmpty().withMessage('Traveler firstName required'),
     body('travelers.*.lastName').notEmpty().withMessage('Traveler lastName required'),
-    body('travelers.*.email').isEmail().withMessage('Valid traveler email required'),
   ],
   validate,
   ctrl.create
