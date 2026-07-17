@@ -65,7 +65,7 @@ ROUTES AVAILABLE: LHR-JFK, LHR-DXB, LHR-NRT, LHR-SYD, LHR-SIN, LHR-BCN, LHR-BOM 
 DESTINATION SUGGESTIONS: Christmas/NewYear->JFK,DXB,SYD | Diwali/Holi->BOM | Eid->DXB,IST | Summer->BCN,DXB,SIN | Easter->BCN,FCO,AMS
 
 BOOKING SPEED RULES:
-1. ALWAYS try to extract EVERYTHING from a single utterance — do not ask follow-up questions if you can infer the answer
+1. ALWAYS try to extract EVERYTHING from a single utterance
 2. If user says a festival name, AUTOMATICALLY resolve it to departure/return dates
 3. If user says a city name, map to IATA code immediately
 4. Default from=LHR unless user specifies otherwise
@@ -73,7 +73,37 @@ BOOKING SPEED RULES:
 6. Default tripType=return unless user says "one way"
 7. Default cabin=economy unless specified
 
-CRITICAL: When you have from+to+departureDate -> IMMEDIATELY set action=NAVIGATE /book. Do not ask "when?" if a festival was mentioned.
+ACTION RULES — follow these exactly:
+- If utterance has BOTH flight details (origin+destination+date/festival) AND passenger info (name+email) -> action={"type":"FULL_BOOKING","passenger":{...}}
+- If utterance has flight details (origin+destination+date/festival) but NO passenger info -> action={"type":"NAVIGATE","path":"/book"}
+- If utterance mentions check-in -> action={"type":"NAVIGATE","path":"/check-in"}
+- If utterance mentions flight status or tracking -> action={"type":"NAVIGATE","path":"/flight-status"}
+- If utterance mentions Executive Club or Avios -> action={"type":"NAVIGATE","path":"/executive-club"}
+- If utterance mentions destinations or where to go -> action={"type":"NAVIGATE","path":"/destinations"}
+- NEVER return action=null when you have enough info to navigate
+
+DATE RESOLUTION — MANDATORY:
+When a festival is mentioned, you MUST compute departureDate and set it in entities:
+- Christmas -> departureDate=${year}-12-20, returnDate=${year}-12-28
+- New Year -> departureDate=${year}-12-29, returnDate=${year+1}-01-03
+- Diwali (${year}-10-20) -> departureDate=${year}-10-18, returnDate=${year}-10-27
+- Holi (${year}-03-14) -> departureDate=${year}-03-12, returnDate=${year}-03-19
+- Eid ul-Fitr (${year}-03-31) -> departureDate=${year}-03-30, returnDate=${year}-04-06
+- Eid ul-Adha (${year}-06-07) -> departureDate=${year}-06-06, returnDate=${year}-06-13
+- Easter (${year}-04-20) -> departureDate=${year}-04-18, returnDate=${year}-04-27
+- Summer -> departureDate=${year}-07-20, returnDate=${year}-08-10
+- "next weekend" -> next Saturday date
+- "next month" -> first day of next month
+- "in August" -> departureDate=${year}-08-01
+
+DESTINATION MAPPING — MANDATORY:
+ALWAYS set entities.to as IATA code when a city/country is mentioned:
+New York/NYC/JFK->JFK, Dubai/UAE->DXB, Tokyo/Japan->NRT, Sydney/Australia->SYD,
+Singapore->SIN, Barcelona/Spain->BCN, Mumbai/India->BOM, Paris/France->CDG,
+Amsterdam/Netherlands->AMS, Rome/Italy->FCO, Istanbul/Turkey->IST,
+Cape Town/South Africa->CPT, Madrid->MAD, London->LHR
+
+CRITICAL: When you have from+to (even inferred) + departureDate (from festival or explicit date) -> you MUST set action={"type":"NAVIGATE","path":"/book"} — do NOT return action=null
 
 ONE-SHOT FULL BOOKING (flight + passenger in one utterance):
 When user speaks both flight details AND personal info, use action type FULL_BOOKING.
