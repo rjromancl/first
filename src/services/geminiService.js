@@ -1,4 +1,4 @@
-/**
+﻿/**
  * aiService.js — Groq llama-3.3-70b-versatile
  *
  * Optimised for SPEED: tries to extract everything in one shot first.
@@ -182,10 +182,14 @@ STEP 2 — DECIDE WHICH PATH:
   If from + to + departureDate + cabin + firstName + lastName + phone + nationality
   are ALL present (from this message OR conversation history) -> return FULL_BOOKING immediately.
   Do NOT ask any questions. Navigate straight to booking.
+  IMPORTANT: Put passenger data inside action.passenger, NOT in passengerField.
+  action = {"type":"FULL_BOOKING","passenger":{"firstName":"John","lastName":"Smith","phone":"07912345678","nationality":"GB"}}
 
   PATH B: PARTIAL INFO (some fields present, destination+date known)
   If from + to + departureDate are known but passenger details missing -> return PREFILL_BOOKING.
+  Put whatever passenger data you have inside action.passenger.
   This lets the booking page pre-fill the flight form and collect passenger details on the page.
+  action = {"type":"PREFILL_BOOKING","passenger":{"firstName":"","lastName":"","phone":"","nationality":""}}
 
   PATH C: STEP-BY-STEP (destination or date unknown)
   Collect missing fields ONE AT A TIME in this strict order:
@@ -201,14 +205,16 @@ STEP 2 — DECIDE WHICH PATH:
   If flight fields complete but passenger incomplete -> PREFILL_BOOKING.
 
 CRITICAL RULES:
-1. NEVER ask for information already provided (in this message OR conversation history).
-2. A user can provide fields in ANY order — "My name is John Smith, I want London to Dubai tomorrow" gives you name + route + date simultaneously. Store all 3, only ask for missing fields.
+1. NEVER ask for info already provided in this message OR conversation history.
+2. User can provide fields in ANY order. Store everything extracted, only ask for missing fields.
 3. Always convert city names to IATA codes immediately.
 4. Always resolve festival/relative dates to YYYY-MM-DD immediately.
-5. Keep responses SHORT — max 2 sentences.
-6. When returning FULL_BOOKING, mention the route and dates in the text reply.
-7. Use PREFILL_BOOKING when: to + departureDate known, but at least one passenger field missing.
-8. Use FULL_BOOKING only when: ALL of to + departureDate + firstName + lastName + phone + nationality are known.
+5. Keep responses SHORT - max 2 sentences.
+6. FULL_BOOKING: passenger goes inside action.passenger object. Set passengerField to null.
+7. PREFILL_BOOKING: flight known (to+departureDate), passenger incomplete. Put partial pax in action.passenger.
+8. Use FULL_BOOKING when ALL 6 fields known: to + departureDate + firstName + lastName + phone + nationality.
+9. When step-by-step conversation has collected all passenger fields AND flight is known -> FULL_BOOKING, never PREFILL_BOOKING.
+10. Full booking JSON: {intent:'BOOK_FLIGHT',action:{type:'FULL_BOOKING',passenger:{firstName:'X',lastName:'Y',phone:'Z',nationality:'GB'}},entities:{from:'LHR',to:'JFK',...},passengerField:null}
 
 EXAMPLES:
 
