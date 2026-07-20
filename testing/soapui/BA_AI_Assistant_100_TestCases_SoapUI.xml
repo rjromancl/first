@@ -1,0 +1,2204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapui-project name="British_Airways_AI_Assistant_100_TestCases">
+<testSuite name="BA_AI_Voice_Assistant_Regression">
+
+<testCase id="TC001" name="TC001_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Book a flight
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Book a flight",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC002" name="TC002_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Book London to New York
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Book London to New York",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC003" name="TC003_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly me to Dubai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly me to Dubai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC004" name="TC004_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: I want Tokyo tickets
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "I want Tokyo tickets",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC005" name="TC005_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Flight from London to Sydney
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Flight from London to Sydney",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC006" name="TC006_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London to Mumbai flight
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London to Mumbai flight",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC007" name="TC007_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Paris flight
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Paris flight",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC008" name="TC008_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Amsterdam
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Amsterdam",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC009" name="TC009_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Barcelona
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Barcelona",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC010" name="TC010_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Rome
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Rome",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC011" name="TC011_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Istanbul
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Istanbul",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC012" name="TC012_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: London Cape Town
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "London Cape Town",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC013" name="TC013_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Cheapest flight to Dubai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Cheapest flight to Dubai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC014" name="TC014_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Need a return ticket
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Need a return ticket",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC015" name="TC015_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: One way ticket to New York
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "One way ticket to New York",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC016" name="TC016_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Book business class
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Book business class",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC017" name="TC017_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Book first class
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Book first class",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC018" name="TC018_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Economy ticket
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Economy ticket",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC019" name="TC019_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Two passengers London Dubai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Two passengers London Dubai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC020" name="TC020_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Family trip to USA
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Family trip to USA",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC021" name="TC021_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly tomorrow
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly tomorrow",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC022" name="TC022_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly day after tomorrow
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly day after tomorrow",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC023" name="TC023_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly next Monday
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly next Monday",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC024" name="TC024_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly this Friday
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly this Friday",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC025" name="TC025_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly next weekend
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly next weekend",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC026" name="TC026_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly in two weeks
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly in two weeks",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC027" name="TC027_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly next month
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly next month",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC028" name="TC028_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly in 3 months
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly in 3 months",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC029" name="TC029_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly during summer
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly during summer",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC030" name="TC030_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Fly during winter
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Fly during winter",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC031" name="TC031_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Christmas trip
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Christmas trip",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC032" name="TC032_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: New year holiday
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "New year holiday",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC033" name="TC033_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Easter holiday
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Easter holiday",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC034" name="TC034_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: October half term
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "October half term",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC035" name="TC035_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Summer vacation
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Summer vacation",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC036" name="TC036_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Book India trip for Diwali
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Book India trip for Diwali",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC037" name="TC037_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Flight for Holi
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Flight for Holi",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC038" name="TC038_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Eid holiday Dubai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Eid holiday Dubai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC039" name="TC039_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Christmas New York
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Christmas New York",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC040" name="TC040_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Christmas Dubai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Christmas Dubai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC041" name="TC041_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: New Year Sydney
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "New Year Sydney",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC042" name="TC042_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Easter Barcelona
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Easter Barcelona",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC043" name="TC043_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Ramadan travel
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Ramadan travel",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC044" name="TC044_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Ganesh festival Mumbai
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Ganesh festival Mumbai",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC045" name="TC045_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Independence day India trip
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Independence day India trip",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC046" name="TC046_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Thanksgiving USA trip
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Thanksgiving USA trip",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC047" name="TC047_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Halloween trip
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Halloween trip",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC048" name="TC048_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Summer festival travel
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Summer festival travel",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC049" name="TC049_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Religious holiday travel
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Religious holiday travel",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC050" name="TC050_HELP">
+    <description>
+        <![CDATA[
+        User Input: Festival date question
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Festival date question",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC051" name="TC051_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Check me in
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Check me in",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC052" name="TC052_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Online check in
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Online check in",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC053" name="TC053_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: I need boarding pass
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "I need boarding pass",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC054" name="TC054_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Start check in
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Start check in",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC055" name="TC055_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Check my booking in
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Check my booking in",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC056" name="TC056_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: When does checkin open
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "When does checkin open",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC057" name="TC057_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Need boarding pass
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Need boarding pass",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC058" name="TC058_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Check-in for tomorrow flight
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Check-in for tomorrow flight",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC059" name="TC059_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Complete my check in
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Complete my check in",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC060" name="TC060_CHECK_IN">
+    <description>
+        <![CDATA[
+        User Input: Help with checkin
+        Expected Intent: CHECK_IN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Help with checkin",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC061" name="TC061_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Track my flight
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Track my flight",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC062" name="TC062_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Flight status
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Flight status",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC063" name="TC063_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Is BA117 delayed
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Is BA117 delayed",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC064" name="TC064_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Where is my plane
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Where is my plane",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC065" name="TC065_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Flight arrival time
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Flight arrival time",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC066" name="TC066_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Is my flight cancelled
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Is my flight cancelled",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC067" name="TC067_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Track BA204
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Track BA204",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC068" name="TC068_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Departure update
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Departure update",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC069" name="TC069_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Airport status
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Airport status",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC070" name="TC070_FLIGHT_STATUS">
+    <description>
+        <![CDATA[
+        User Input: Flight running late
+        Expected Intent: FLIGHT_STATUS
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Flight running late",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC071" name="TC071_EXECUTIVE_CLUB">
+    <description>
+        <![CDATA[
+        User Input: Show Avios
+        Expected Intent: EXECUTIVE_CLUB
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Show Avios",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC072" name="TC072_EXECUTIVE_CLUB">
+    <description>
+        <![CDATA[
+        User Input: My points
+        Expected Intent: EXECUTIVE_CLUB
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "My points",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC073" name="TC073_EXECUTIVE_CLUB">
+    <description>
+        <![CDATA[
+        User Input: Executive club
+        Expected Intent: EXECUTIVE_CLUB
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Executive club",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC074" name="TC074_EXECUTIVE_CLUB">
+    <description>
+        <![CDATA[
+        User Input: Check rewards
+        Expected Intent: EXECUTIVE_CLUB
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Check rewards",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC075" name="TC075_EXECUTIVE_CLUB">
+    <description>
+        <![CDATA[
+        User Input: Loyalty account
+        Expected Intent: EXECUTIVE_CLUB
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Loyalty account",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC076" name="TC076_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: John
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "John",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC077" name="TC077_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: John Smith
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "John Smith",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC078" name="TC078_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: Phone number 07912345678
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Phone number 07912345678",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC079" name="TC079_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: British nationality
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "British nationality",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC080" name="TC080_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: Indian nationality
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Indian nationality",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC081" name="TC081_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: American nationality
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "American nationality",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC082" name="TC082_FULL_BOOKING">
+    <description>
+        <![CDATA[
+        User Input: Alex Brown 07123456789 British
+        Expected Intent: FULL_BOOKING
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Alex Brown 07123456789 British",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC083" name="TC083_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: Sarah Jones phone
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Sarah Jones phone",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC084" name="TC084_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: Missing phone
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Missing phone",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC085" name="TC085_PASSENGER">
+    <description>
+        <![CDATA[
+        User Input: Missing nationality
+        Expected Intent: PASSENGER
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Missing nationality",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC086" name="TC086_HELP">
+    <description>
+        <![CDATA[
+        User Input: What day is today
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "What day is today",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC087" name="TC087_HELP">
+    <description>
+        <![CDATA[
+        User Input: What time is it
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "What time is it",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC088" name="TC088_HELP">
+    <description>
+        <![CDATA[
+        User Input: How many days until Christmas
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "How many days until Christmas",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC089" name="TC089_HELP">
+    <description>
+        <![CDATA[
+        User Input: Is Christmas weekend
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Is Christmas weekend",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC090" name="TC090_HELP">
+    <description>
+        <![CDATA[
+        User Input: Should I book now
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Should I book now",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC091" name="TC091_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: Random text
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Random text",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC092" name="TC092_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: 
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC093" name="TC093_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: null input
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "null input",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC094" name="TC094_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: Invalid JSON response
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Invalid JSON response",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC095" name="TC095_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: API timeout
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "API timeout",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC096" name="TC096_UNKNOWN">
+    <description>
+        <![CDATA[
+        User Input: Rate limit error
+        Expected Intent: UNKNOWN
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Rate limit error",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC097" name="TC097_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Very long sentence booking request
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Very long sentence booking request",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC098" name="TC098_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: Dubia flight typo
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Dubia flight typo",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC099" name="TC099_BOOK_FLIGHT">
+    <description>
+        <![CDATA[
+        User Input: flite tokyo
+        Expected Intent: BOOK_FLIGHT
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "flite tokyo",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+
+<testCase id="TC100" name="TC100_HELP">
+    <description>
+        <![CDATA[
+        User Input: Unsupported request
+        Expected Intent: HELP
+        Validate JSON response:
+        $.intent
+        $.text
+        $.action.type
+        $.entities
+        ]]>
+    </description>
+    <testRequest>
+        <![CDATA[
+{
+  "userMessage": "Unsupported request",
+  "history": []
+}
+        ]]>
+    </testRequest>
+</testCase>
+</testSuite></soapui-project>
