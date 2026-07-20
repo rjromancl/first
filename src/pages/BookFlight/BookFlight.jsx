@@ -64,16 +64,16 @@ export default function BookFlight() {
     if (s.prefillPassenger) {
       setPassenger(prev => ({ ...prev, ...s.prefillPassenger }));
       const pf = s.prefillPassenger;
-      if (pf.firstName && pf.lastName && pf.email) {
+      // Check firstName + lastName (email removed from form)
+      if (pf.firstName && pf.lastName) {
         if (s.from && s.to && s.departDate) {
           setFrom(s.from);
           setTo(s.to);
           setDepartDate(s.departDate);
           if (s.returnDate) setReturnDate(s.returnDate);
-          if (s.adults)    setAdults(Number(s.adults));
-          if (s.cabin)     setCabin(s.cabin);
-          if (s.tripType)  setTripType(s.tripType);
-          // FULL_BOOKING: auto-search, then jump to step 3 after results
+          if (s.adults)     setAdults(Number(s.adults));
+          if (s.cabin)      setCabin(s.cabin);
+          if (s.tripType)   setTripType(s.tripType);
           if (s.autoSearch) {
             setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 400);
           } else {
@@ -84,7 +84,6 @@ export default function BookFlight() {
         }
       }
     }
-    // Pre-fill search fields from voice agent navigation (no passenger)
     if (!s.prefillPassenger) {
       if (s.from)       setFrom(s.from);
       if (s.to)         setTo(s.to);

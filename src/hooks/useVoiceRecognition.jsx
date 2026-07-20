@@ -62,7 +62,7 @@ export function useVoiceRecognition({
           if (!abortedRef.current && recognizerRef.current === r) {
             try { r.start(); } catch (_) {}
           }
-        }, 300);
+        }, 100); // faster restart — 100ms not 300ms
       }
     };
 
