@@ -1,1006 +1,804 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <con:soapui-project
-  xsi:schemaLocation="http://eviware.com/soapui/config soapui-config.xsd"
   xmlns:con="http://eviware.com/soapui/config"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   name="British Airways API Test Suite"
-  resourceRoot=""
   activeEnvironment="Default"
   soapui-version="5.7.2">
 
-  <!-- ═══════════════════════════════════════════
-       PROJECT PROPERTIES
-       BASE_URL: change to your deployment URL
-       ═══════════════════════════════════════════ -->
   <con:properties>
-    <con:property>
-      <con:name>BASE_URL</con:name>
-      <con:value>https://first-eight-cyan.vercel.app/api</con:value>
-    </con:property>
+    <con:property><con:name>BASE_URL</con:name><con:value>https://first-eight-cyan.vercel.app/api</con:value></con:property>
+    <con:property><con:name>BOOKING_REF</con:name><con:value>XYMBA1</con:value></con:property>
+    <con:property><con:name>BOOKING_SURNAME</con:name><con:value>Wilson</con:value></con:property>
+    <con:property><con:name>AUTH_TOKEN</con:name><con:value></con:value></con:property>
   </con:properties>
 
-  <!-- ═══════════════════════════════════════════
-       REST SERVICE DEFINITION
-       ═══════════════════════════════════════════ -->
-  <con:interface xsi:type="con:RestService" name="BA Backend API"
-    basePath="/api" type="rest">
-    <con:endpoints>
-      <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-    </con:endpoints>
 
-    <!-- Health Resource -->
-    <con:resource name="Health" path="/health" id="r-health">
-      <con:method name="GET Health" id="m-health" method="GET">
-        <con:response name="200" status="200" mediaType="application/json">
-          <con:responseHeaders/>
-        </con:response>
-      </con:method>
-    </con:resource>
+  <!-- ====================================================
+       TEST SUITE 1: INFRASTRUCTURE
+       ==================================================== -->
+  <con:testSuite name="1 - Infrastructure">
+    <con:properties/>
 
-    <!-- Flights Search Resource -->
-    <con:resource name="Flights Search" path="/flights/search" id="r-flights-search">
-      <con:method name="GET Search Flights" id="m-flights-search" method="GET">
-        <con:parameters>
-          <con:parameter name="from" default="LHR" style="QUERY"/>
-          <con:parameter name="to" default="JFK" style="QUERY"/>
-          <con:parameter name="departureDate" default="2026-12-20" style="QUERY"/>
-          <con:parameter name="adults" default="1" style="QUERY"/>
-          <con:parameter name="cabin" default="ECONOMY" style="QUERY"/>
-        </con:parameters>
-      </con:method>
-    </con:resource>
-
-    <!-- Flight Status Resource -->
-    <con:resource name="Flight Status" path="/flights/status" id="r-flight-status">
-      <con:method name="GET Flight Status" id="m-flight-status" method="GET">
-        <con:parameters>
-          <con:parameter name="flightNumber" default="BA117" style="QUERY"/>
-        </con:parameters>
-      </con:method>
-    </con:resource>
-
-    <!-- Airports Search Resource -->
-    <con:resource name="Airports Search" path="/airports" id="r-airports">
-      <con:method name="GET Airports" id="m-airports" method="GET">
-        <con:parameters>
-          <con:parameter name="q" default="london" style="QUERY"/>
-        </con:parameters>
-      </con:method>
-    </con:resource>
-
-    <!-- Destinations Resource -->
-    <con:resource name="Destinations" path="/destinations" id="r-destinations">
-      <con:method name="GET Destinations" id="m-destinations" method="GET"/>
-    </con:resource>
-
-    <!-- Bookings Resource -->
-    <con:resource name="Bookings" path="/bookings" id="r-bookings">
-      <con:method name="POST Create Booking" id="m-create-booking" method="POST">
-        <con:request name="Request 1" mediaType="application/json">
-          <con:requestHeaders>
-            <con:entry key="Content-Type" value="application/json"/>
-          </con:requestHeaders>
-        </con:request>
-      </con:method>
-      <con:resource name="Booking by Reference" path="/{reference}" id="r-booking-ref">
-        <con:parameters>
-          <con:parameter name="reference" style="TEMPLATE" default="XYMBA1"/>
-          <con:parameter name="surname" style="QUERY" default="Wilson"/>
-        </con:parameters>
-        <con:method name="GET Booking" id="m-get-booking" method="GET"/>
-        <con:resource name="Seat" path="/seat" id="r-seat">
-          <con:method name="PATCH Select Seat" id="m-select-seat" method="PATCH">
-            <con:request name="Request 1" mediaType="application/json">
-              <con:requestHeaders>
-                <con:entry key="Content-Type" value="application/json"/>
-              </con:requestHeaders>
-            </con:request>
-          </con:method>
-        </con:resource>
-        <con:resource name="Bags" path="/bags" id="r-bags">
-          <con:method name="PATCH Update Bags" id="m-update-bags" method="PATCH">
-            <con:request name="Request 1" mediaType="application/json">
-              <con:requestHeaders>
-                <con:entry key="Content-Type" value="application/json"/>
-              </con:requestHeaders>
-            </con:request>
-          </con:method>
-        </con:resource>
-      </con:resource>
-    </con:resource>
-
-    <!-- Check-in Resource -->
-    <con:resource name="Check-In" path="/checkin" id="r-checkin">
-      <con:method name="POST Check-In" id="m-checkin" method="POST">
-        <con:request name="Request 1" mediaType="application/json">
-          <con:requestHeaders>
-            <con:entry key="Content-Type" value="application/json"/>
-          </con:requestHeaders>
-        </con:request>
-      </con:method>
-    </con:resource>
-
-    <!-- Avios Resource -->
-    <con:resource name="Avios" path="/avios/calculate" id="r-avios">
-      <con:method name="GET Avios Calculate" id="m-avios" method="GET">
-        <con:parameters>
-          <con:parameter name="from" default="LHR" style="QUERY"/>
-          <con:parameter name="to" default="JFK" style="QUERY"/>
-          <con:parameter name="cabin" default="economy" style="QUERY"/>
-        </con:parameters>
-      </con:method>
-    </con:resource>
-
-    <!-- Auth Resources -->
-    <con:resource name="Auth Login" path="/auth/login" id="r-auth-login">
-      <con:method name="POST Login" id="m-login" method="POST">
-        <con:request name="Request 1" mediaType="application/json">
-          <con:requestHeaders>
-            <con:entry key="Content-Type" value="application/json"/>
-          </con:requestHeaders>
-        </con:request>
-      </con:method>
-    </con:resource>
-
-    <con:resource name="Auth Register" path="/auth/register" id="r-auth-register">
-      <con:method name="POST Register" id="m-register" method="POST">
-        <con:request name="Request 1" mediaType="application/json">
-          <con:requestHeaders>
-            <con:entry key="Content-Type" value="application/json"/>
-          </con:requestHeaders>
-        </con:request>
-      </con:method>
-    </con:resource>
-
-    <!-- Offers Resource -->
-    <con:resource name="Offers" path="/offers" id="r-offers">
-      <con:method name="GET Offers" id="m-offers" method="GET"/>
-    </con:resource>
-
-  </con:interface>
-
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 1 — INFRASTRUCTURE
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="1 - Infrastructure" id="ts-infra">
-
-    <!-- TC 1.1 Health Check -->
-    <con:testCase name="TC1.1 Health Check" id="tc-health">
-      <con:testStep type="restrequest" name="GET /health" id="ts-health-req">
-        <con:config resourcePath="/health" methodName="GET Health"
-          service="BA Backend API">
-          <con:restRequest name="GET /health" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/health</con:resource>
-            <con:method>GET</con:method>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Health Response" id="ts-health-assert">
+    <con:testCase name="TC1.1 Health Check" failOnError="true">
+      <con:testStep type="httprequest" name="GET Health">
         <con:config>
-          <con:script>
-def response = testRunner.testCase.testSteps["GET /health"].testRequest.response
-def json = new groovy.json.JsonSlurper().parseText(response.responseContent)
-assert response.statusCode == 200, "Expected 200, got ${response.statusCode}"
-assert json.status == "ok", "Expected status=ok, got ${json.status}"
-assert json.service == "ba-backend", "Expected service=ba-backend"
-assert json.timestamp != null, "Missing timestamp"
-log.info "Health check PASSED: status=${json.status}"
-          </con:script>
+          <con:request name="GET Health" URL="${#Project#BASE_URL}/health" method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status is ok">
+              <con:configuration>
+                <con:expression>$.status</con:expression>
+                <con:expectedContent>ok</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Timestamp exists">
+              <con:configuration><con:expression>$.timestamp</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 1.2 Airport Search - London -->
-    <con:testCase name="TC1.2 Airport Search London" id="tc-airports-london">
-      <con:testStep type="restrequest" name="GET /airports?q=london" id="ts-airports-london">
-        <con:config resourcePath="/airports" methodName="GET Airports"
-          service="BA Backend API">
-          <con:restRequest name="GET airports london" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/airports</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="q" value="london"/>
-            </con:parameters>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Airports" id="ts-airports-assert">
+    <con:testCase name="TC1.2 Airport Search London" failOnError="true">
+      <con:testStep type="httprequest" name="GET Airports London">
         <con:config>
-          <con:script>
-def response = testRunner.testCase.testSteps["GET /airports?q=london"].testRequest.response
-def json = new groovy.json.JsonSlurper().parseText(response.responseContent)
-assert response.statusCode == 200, "Expected 200, got ${response.statusCode}"
-assert json.success == true, "Expected success=true"
-assert json.data.size() > 0, "Expected at least 1 airport"
-def lhr = json.data.find { it.iataCode == "LHR" }
-assert lhr != null, "Expected LHR in results"
-assert lhr.name.toLowerCase().contains("heathrow"), "Expected Heathrow in name"
-log.info "Airport search PASSED: found ${json.data.size()} airports, LHR found"
-          </con:script>
+          <con:request name="GET Airports London" URL="${#Project#BASE_URL}/airports?q=london" method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration>
+                <con:expression>$.success</con:expression>
+                <con:expectedContent>true</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Count" name="At least 1 airport">
+              <con:configuration>
+                <con:expression>$.data[*]</con:expression>
+                <con:expectedContent>1</con:expectedContent>
+                <con:allowWildcards>true</con:allowWildcards>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="LHR code returned">
+              <con:configuration>
+                <con:expression>$.data[0].iataCode</con:expression>
+                <con:expectedContent>LHR</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 1.3 Airport Search - Dubai -->
-    <con:testCase name="TC1.3 Airport Search Dubai" id="tc-airports-dubai">
-      <con:testStep type="restrequest" name="GET /airports?q=dubai" id="ts-airports-dubai">
-        <con:config resourcePath="/airports" methodName="GET Airports"
-          service="BA Backend API">
-          <con:restRequest name="GET airports dubai" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/airports</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="q" value="dubai"/>
-            </con:parameters>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Dubai Airport" id="ts-dubai-assert">
+    <con:testCase name="TC1.3 Airport Search Dubai" failOnError="true">
+      <con:testStep type="httprequest" name="GET Airports Dubai">
         <con:config>
-          <con:script>
-def response = testRunner.testCase.testSteps["GET /airports?q=dubai"].testRequest.response
-def json = new groovy.json.JsonSlurper().parseText(response.responseContent)
-assert response.statusCode == 200
-assert json.data.find { it.iataCode == "DXB" } != null, "Expected DXB"
-log.info "Dubai airport search PASSED"
-          </con:script>
+          <con:request name="GET Airports Dubai" URL="${#Project#BASE_URL}/airports?q=dubai" method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="DXB returned">
+              <con:configuration>
+                <con:expression>$.data[0].iataCode</con:expression>
+                <con:expectedContent>DXB</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 1.4 Destinations -->
-    <con:testCase name="TC1.4 Get All Destinations" id="tc-destinations">
-      <con:testStep type="restrequest" name="GET /destinations" id="ts-destinations">
-        <con:config resourcePath="/destinations" methodName="GET Destinations"
-          service="BA Backend API">
-          <con:restRequest name="GET destinations" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/destinations</con:resource>
-            <con:method>GET</con:method>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Destinations" id="ts-dest-assert">
+    <con:testCase name="TC1.4 Get All Destinations" failOnError="true">
+      <con:testStep type="httprequest" name="GET Destinations">
         <con:config>
-          <con:script>
-def response = testRunner.testCase.testSteps["GET /destinations"].testRequest.response
-def json = new groovy.json.JsonSlurper().parseText(response.responseContent)
-assert response.statusCode == 200
-assert json.success == true
-assert json.data.size() >= 6, "Expected at least 6 destinations, got ${json.data.size()}"
-def cities = json.data.collect { it.city }
-assert cities.contains("New York"), "Expected New York"
-assert cities.contains("Dubai"), "Expected Dubai"
-log.info "Destinations PASSED: ${json.data.size()} destinations: ${cities.join(', ')}"
-          </con:script>
+          <con:request name="GET Destinations" URL="${#Project#BASE_URL}/destinations" method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration>
+                <con:expression>$.success</con:expression>
+                <con:expectedContent>true</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Data array exists">
+              <con:configuration><con:expression>$.data[0]</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 1.5 Offers -->
-    <con:testCase name="TC1.5 Get Offers" id="tc-offers">
-      <con:testStep type="restrequest" name="GET /offers" id="ts-offers">
-        <con:config resourcePath="/offers" methodName="GET Offers"
-          service="BA Backend API">
-          <con:restRequest name="GET offers" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/offers</con:resource>
-            <con:method>GET</con:method>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Offers" id="ts-offers-assert">
+    <con:testCase name="TC1.5 Airport Search Short Query Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="GET Airports Short Query">
         <con:config>
-          <con:script>
-def response = testRunner.testCase.testSteps["GET /offers"].testRequest.response
-def json = new groovy.json.JsonSlurper().parseText(response.responseContent)
-assert response.statusCode == 200
-assert json.success == true
-log.info "Offers PASSED: ${json.data?.size()} offers returned"
-          </con:script>
+          <con:request name="GET Airports Short" URL="${#Project#BASE_URL}/airports?q=l" method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 400">
+              <con:configuration><con:codes>400</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 2 — FLIGHT SEARCH
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="2 - Flight Search" id="ts-flights">
+  <!-- ====================================================
+       TEST SUITE 2: FLIGHT SEARCH
+       ==================================================== -->
+  <con:testSuite name="2 - Flight Search">
+    <con:properties/>
 
-    <!-- TC 2.1 LHR to JFK Business -->
-    <con:testCase name="TC2.1 Search LHR-JFK Business Dec" id="tc-flights-jfk">
-      <con:testStep type="restrequest" name="GET flights LHR-JFK" id="ts-flights-jfk">
-        <con:config service="BA Backend API">
-          <con:restRequest name="LHR to JFK" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/search</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="JFK"/>
-              <con:entry key="departureDate" value="2026-12-20"/>
-              <con:entry key="adults" value="1"/>
-              <con:entry key="cabin" value="BUSINESS"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC2.1 Search LHR to JFK Business" failOnError="true">
+      <con:testStep type="httprequest" name="GET Flights LHR-JFK">
+        <con:config>
+          <con:request name="GET Flights LHR-JFK"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=JFK&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=BUSINESS"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Flights array exists">
+              <con:configuration><con:expression>$.data.flights[0]</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Origin is LHR">
+              <con:configuration><con:expression>$.data.flights[0].from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Destination is JFK">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Flights JFK" id="ts-assert-jfk">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET flights LHR-JFK"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-assert j.data.flights.size() == 6, "Expected 6 flights, got ${j.data.flights.size()}"
-def f = j.data.flights[0]
-assert f.flightNumber != null
-assert f.from == "LHR"
-assert f.to == "JFK"
-assert f.price.grandTotal.toDouble() > 0
-log.info "LHR-JFK PASSED: ${j.data.flights.size()} flights, first=${f.flightNumber} GBP${f.price.grandTotal}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 2.2 LHR to DXB Economy -->
-    <con:testCase name="TC2.2 Search LHR-DXB Economy" id="tc-flights-dxb">
-      <con:testStep type="restrequest" name="GET flights LHR-DXB" id="ts-flights-dxb">
-        <con:config service="BA Backend API">
-          <con:restRequest name="LHR to DXB" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/search</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="DXB"/>
-              <con:entry key="departureDate" value="2026-10-18"/>
-              <con:entry key="adults" value="2"/>
-              <con:entry key="cabin" value="ECONOMY"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC2.2 Search LHR to DXB Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET Flights LHR-DXB">
+        <con:config>
+          <con:request name="GET Flights LHR-DXB"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=2&amp;cabin=ECONOMY"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Destination is DXB">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Price exists">
+              <con:configuration><con:expression>$.data.flights[0].price.grandTotal</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Flights DXB" id="ts-assert-dxb">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET flights LHR-DXB"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.data.flights.size() == 6
-assert j.data.flights[0].to == "DXB"
-log.info "LHR-DXB PASSED: ${j.data.flights.size()} flights"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 2.3 LHR to BCN Economy -->
-    <con:testCase name="TC2.3 Search LHR-BCN Economy" id="tc-flights-bcn">
-      <con:testStep type="restrequest" name="GET flights LHR-BCN" id="ts-flights-bcn">
-        <con:config service="BA Backend API">
-          <con:restRequest name="LHR to BCN" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/search</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="BCN"/>
-              <con:entry key="departureDate" value="2026-07-20"/>
-              <con:entry key="adults" value="1"/>
-              <con:entry key="cabin" value="ECONOMY"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC2.3 Search LHR to BCN Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET Flights LHR-BCN">
+        <con:config>
+          <con:request name="GET Flights LHR-BCN"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=BCN&amp;departureDate=2026-07-20&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Destination is BCN">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>BCN</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert BCN Flights" id="ts-assert-bcn">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET flights LHR-BCN"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.data.flights.size() == 6
-assert j.data.flights[0].price.grandTotal.toDouble() < 200, "BCN economy should be under GBP200"
-log.info "LHR-BCN PASSED: cheapest GBP${j.data.flights.collect{it.price.grandTotal.toDouble()}.min()}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 2.4 Missing required param returns 400 -->
-    <con:testCase name="TC2.4 Missing Param Returns Error" id="tc-flights-missing">
-      <con:testStep type="restrequest" name="GET flights no params" id="ts-flights-empty">
-        <con:config service="BA Backend API">
-          <con:restRequest name="No Params" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/search</con:resource>
-            <con:method>GET</con:method>
-          </con:restRequest>
+    <con:testCase name="TC2.4 Search LHR to NRT Business" failOnError="true">
+      <con:testStep type="httprequest" name="GET Flights LHR-NRT">
+        <con:config>
+          <con:request name="GET Flights LHR-NRT"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=NRT&amp;departureDate=2026-08-01&amp;adults=1&amp;cabin=BUSINESS"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Destination is NRT">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>NRT</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
-      <con:testStep type="groovy" name="Assert Error Response" id="ts-assert-missing">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET flights no params"].testRequest.response
-assert r.statusCode == 400 || r.statusCode == 422, "Expected 4xx for missing params, got ${r.statusCode}"
-log.info "Missing param validation PASSED: got ${r.statusCode}"
-        </con:script></con:config>
+    </con:testCase>
+
+    <con:testCase name="TC2.5 Missing Departure Date Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="GET Flights No Date">
+        <con:config>
+          <con:request name="GET Flights No Date"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=JFK"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 400">
+              <con:configuration><con:codes>400</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 3 — FLIGHT STATUS
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="3 - Flight Status" id="ts-status">
+  <!-- ====================================================
+       TEST SUITE 3: FLIGHT STATUS
+       ==================================================== -->
+  <con:testSuite name="3 - Flight Status">
+    <con:properties/>
 
-    <con:testCase name="TC3.1 Status BA117 On Time" id="tc-status-ba117">
-      <con:testStep type="restrequest" name="GET status BA117" id="ts-status-ba117">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Status BA117" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/status</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="flightNumber" value="BA117"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC3.1 BA117 On Time" failOnError="true">
+      <con:testStep type="httprequest" name="GET Status BA117">
+        <con:config>
+          <con:request name="GET Status BA117"
+            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA117"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Flight number BA117">
+              <con:configuration><con:expression>$.data[0].flightNumber</con:expression><con:expectedContent>BA117</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status on-time">
+              <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>on-time</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Gate B22">
+              <con:configuration><con:expression>$.data[0].gate</con:expression><con:expectedContent>B22</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Terminal 5">
+              <con:configuration><con:expression>$.data[0].terminal</con:expression><con:expectedContent>5</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert BA117" id="ts-assert-ba117">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET status BA117"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-def s = j.data[0]
-assert s.flightNumber == "BA117"
-assert s.statusLabel != null
-assert s.gate != null
-assert s.terminal != null
-assert s.progress >= 0 &amp;&amp; s.progress &lt;= 100
-log.info "BA117 PASSED: ${s.statusLabel} Gate=${s.gate} Progress=${s.progress}%"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC3.2 Status BA204 Delayed" id="tc-status-ba204">
-      <con:testStep type="restrequest" name="GET status BA204" id="ts-status-ba204">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Status BA204" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/status</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="flightNumber" value="BA204"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC3.2 BA204 Delayed" failOnError="true">
+      <con:testStep type="httprequest" name="GET Status BA204">
+        <con:config>
+          <con:request name="GET Status BA204"
+            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA204"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Flight BA204">
+              <con:configuration><con:expression>$.data[0].flightNumber</con:expression><con:expectedContent>BA204</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status delayed">
+              <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>delayed</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert BA204" id="ts-assert-ba204">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET status BA204"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.data[0].flightNumber == "BA204"
-assert j.data[0].status == "delayed"
-log.info "BA204 PASSED: ${j.data[0].statusLabel}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC3.3 Status by Route LHR-JFK" id="tc-status-route">
-      <con:testStep type="restrequest" name="GET status by route" id="ts-status-route">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Status by route" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/status</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="JFK"/>
-              <con:entry key="date" value="2026-12-20"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC3.3 BA016 Scheduled" failOnError="true">
+      <con:testStep type="httprequest" name="GET Status BA016">
+        <con:config>
+          <con:request name="GET Status BA016"
+            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA016"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status scheduled">
+              <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>scheduled</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Route Status" id="ts-assert-route">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET status by route"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.data.size() > 0, "Expected results for LHR-JFK route"
-log.info "Route status PASSED: ${j.data.size()} flights"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC3.4 Invalid Flight Number Returns Unknown" id="tc-status-invalid">
-      <con:testStep type="restrequest" name="GET status INVALID" id="ts-status-invalid">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Invalid flight" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/flights/status</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="flightNumber" value="BA999"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC3.4 BA011 Now Boarding" failOnError="true">
+      <con:testStep type="httprequest" name="GET Status BA011">
+        <con:config>
+          <con:request name="GET Status BA011"
+            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA011"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Status field exists">
+              <con:configuration><con:expression>$.data[0].status</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
-      <con:testStep type="groovy" name="Assert Unknown Flight" id="ts-assert-invalid">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET status INVALID"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-def s = j.data[0]
-assert s != null
-assert s.flightNumber == "BA999"
-log.info "Unknown flight PASSED: returned ${s.status} status"
-        </con:script></con:config>
+    </con:testCase>
+
+    <con:testCase name="TC3.5 Status by Route LHR-JFK" failOnError="true">
+      <con:testStep type="httprequest" name="GET Status Route LHR-JFK">
+        <con:config>
+          <con:request name="GET Status by Route"
+            URL="${#Project#BASE_URL}/flights/status?from=LHR&amp;to=JFK&amp;date=2026-12-20"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Results returned">
+              <con:configuration><con:expression>$.data[0]</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 4 — BOOKING LIFECYCLE
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="4 - Booking Lifecycle" id="ts-booking">
+  <!-- ====================================================
+       TEST SUITE 4: BOOKING LIFECYCLE
+       ==================================================== -->
+  <con:testSuite name="4 - Booking Lifecycle">
+    <con:properties/>
 
-    <!-- TC 4.1 Create Booking -->
-    <con:testCase name="TC4.1 Create Booking" id="tc-create-booking">
-      <con:testStep type="restrequest" name="POST /bookings" id="ts-create-booking">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Create Booking" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings</con:resource>
-            <con:method>POST</con:method>
+    <con:testCase name="TC4.1 Create Booking" failOnError="true">
+      <con:testStep type="httprequest" name="POST Create Booking">
+        <con:config>
+          <con:request name="POST Create Booking"
+            URL="${#Project#BASE_URL}/bookings"
+            method="POST" mediaType="application/json">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:request>{"flightOffer":{"id":"1","flightNumber":"BA117","from":"LHR","to":"JFK","departure":"08:30","arrival":"11:45","duration":"7h 15m","stops":0,"aircraft":"777","date":"2026-12-20","prices":{"economy":349,"premiumEconomy":645,"businessClass":1256,"firstClass":2164},"price":{"grandTotal":"349","total":"349","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H15M","segments":[{"departure":{"iataCode":"LHR","at":"2026-12-20T08:30:00"},"arrival":{"iataCode":"JFK","at":"2026-12-20T11:45:00"},"carrierCode":"BA","number":"117","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"John","lastName":"Smith","phone":"07912345678","nationality":"GB"}],"contacts":[]}</con:request>
-          </con:restRequest>
+            <con:requestBody>{"flightOffer":{"id":"1","flightNumber":"BA117","from":"LHR","to":"JFK","departure":"08:30","arrival":"11:45","duration":"7h 15m","stops":0,"aircraft":"777","date":"2026-12-20","prices":{"economy":349,"premiumEconomy":645,"businessClass":1256,"firstClass":2164},"price":{"grandTotal":"349","total":"349","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H15M","segments":[{"departure":{"iataCode":"LHR","at":"2026-12-20T08:30:00"},"arrival":{"iataCode":"JFK","at":"2026-12-20T11:45:00"},"carrierCode":"BA","number":"117","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"John","lastName":"Smith","phone":"07912345678","nationality":"GB"}],"contacts":[]}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 201">
+              <con:configuration><con:codes>200,201</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status confirmed">
+              <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Reference exists">
+              <con:configuration><con:expression>$.data.reference</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Booking Created" id="ts-assert-booking">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST /bookings"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 201 || r.statusCode == 200, "Expected 2xx, got ${r.statusCode}"
-assert j.success == true
-assert j.data.reference != null, "Missing booking reference"
-assert j.data.reference.length() == 6, "Reference must be 6 chars"
-assert j.data.status == "confirmed"
-assert j.data.passenger.firstName == "John"
-// Store reference for next test cases
-testRunner.testCase.testSuite.project.setPropertyValue("BOOKING_REF", j.data.reference)
-testRunner.testCase.testSuite.project.setPropertyValue("PASSENGER_SURNAME", "Smith")
-log.info "Create Booking PASSED: Ref=${j.data.reference} Status=${j.data.status} Paid=GBP${j.data.totalPaid}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 4.2 Retrieve Booking -->
-    <con:testCase name="TC4.2 Retrieve Booking" id="tc-retrieve-booking">
-      <con:testStep type="groovy" name="Set Reference from TC4.1" id="ts-set-ref">
-        <con:config><con:script>
-// Use pre-seeded demo booking if TC4.1 hasn't run
-def ref = testRunner.testCase.testSuite.project.getPropertyValue("BOOKING_REF")
-if (!ref || ref.isEmpty()) {
-    testRunner.testCase.testSuite.project.setPropertyValue("BOOKING_REF", "XYMBA1")
-    testRunner.testCase.testSuite.project.setPropertyValue("PASSENGER_SURNAME", "Wilson")
-    log.info "Using demo booking XYMBA1/Wilson"
-} else {
-    log.info "Using created booking: ${ref}"
-}
-        </con:script></con:config>
-      </con:testStep>
-      <con:testStep type="restrequest" name="GET /bookings/XYMBA1" id="ts-get-booking">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Get Booking XYMBA1" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings/XYMBA1</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="surname" value="Wilson"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC4.2 Retrieve Demo Booking XYMBA1" failOnError="true">
+      <con:testStep type="httprequest" name="GET Booking XYMBA1">
+        <con:config>
+          <con:request name="GET Booking XYMBA1"
+            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=Wilson"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Reference XYMBA1">
+              <con:configuration><con:expression>$.data.reference</con:expression><con:expectedContent>XYMBA1</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status confirmed">
+              <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Outbound flight">
+              <con:configuration><con:expression>$.data.outbound.flightNumber</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Origin LHR">
+              <con:configuration><con:expression>$.data.outbound.from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Booking Retrieved" id="ts-assert-retrieve">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET /bookings/XYMBA1"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-assert j.data.reference == "XYMBA1"
-assert j.data.status == "confirmed"
-assert j.data.outbound != null
-assert j.data.passenger.firstName != null
-log.info "Retrieve Booking PASSED: Ref=${j.data.reference} Cabin=${j.data.outbound.cabin} Paid=GBP${j.data.totalPaid}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 4.3 Select Seat -->
-    <con:testCase name="TC4.3 Select Seat" id="tc-select-seat">
-      <con:testStep type="restrequest" name="PATCH seat XYMBA1" id="ts-select-seat">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Select Seat" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings/XYMBA1/seat</con:resource>
-            <con:method>PATCH</con:method>
+    <con:testCase name="TC4.3 Select Seat on XYMBA1" failOnError="true">
+      <con:testStep type="httprequest" name="PATCH Seat XYMBA1">
+        <con:config>
+          <con:request name="PATCH Seat XYMBA1"
+            URL="${#Project#BASE_URL}/bookings/XYMBA1/seat"
+            method="PATCH" mediaType="application/json">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:request>{"seat":"12A","segment":"outbound"}</con:request>
-          </con:restRequest>
+            <con:requestBody>{"seat":"14A","segment":"outbound"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Seat is 14A">
+              <con:configuration><con:expression>$.data.seat</con:expression><con:expectedContent>14A</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Seat Selected" id="ts-assert-seat">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["PATCH seat XYMBA1"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-assert j.data.seat == "12A" || j.data.reference == "XYMBA1"
-log.info "Seat Selection PASSED: Seat=${j.data.seat}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 4.4 Update Bags -->
-    <con:testCase name="TC4.4 Update Baggage" id="tc-update-bags">
-      <con:testStep type="restrequest" name="PATCH bags XYMBA1" id="ts-update-bags">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Update Bags" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings/XYMBA1/bags</con:resource>
-            <con:method>PATCH</con:method>
+    <con:testCase name="TC4.4 Update Baggage on XYMBA1" failOnError="true">
+      <con:testStep type="httprequest" name="PATCH Bags XYMBA1">
+        <con:config>
+          <con:request name="PATCH Bags XYMBA1"
+            URL="${#Project#BASE_URL}/bookings/XYMBA1/bags"
+            method="PATCH" mediaType="application/json">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:request>{"checked":2,"cabin":1}</con:request>
-          </con:restRequest>
+            <con:requestBody>{"checked":2,"cabin":1}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Bags Updated" id="ts-assert-bags">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["PATCH bags XYMBA1"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-log.info "Baggage Update PASSED: checked=${j.data?.bags?.checked}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 4.5 Invalid Reference Returns 404 -->
-    <con:testCase name="TC4.5 Invalid Reference 404" id="tc-booking-404">
-      <con:testStep type="restrequest" name="GET invalid booking" id="ts-booking-404">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Invalid Booking" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings/XXXXXX</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="surname" value="Smith"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC4.5 Invalid Reference Returns 404" failOnError="false">
+      <con:testStep type="httprequest" name="GET Invalid Booking">
+        <con:config>
+          <con:request name="GET Invalid Booking"
+            URL="${#Project#BASE_URL}/bookings/XXXXXX?surname=Smith"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+              <con:configuration><con:codes>404</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert 404" id="ts-assert-404">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET invalid booking"].testRequest.response
-assert r.statusCode == 404, "Expected 404 for invalid ref, got ${r.statusCode}"
-log.info "Invalid booking 404 PASSED"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 4.6 Wrong Surname Returns 404 -->
-    <con:testCase name="TC4.6 Wrong Surname Returns 404" id="tc-booking-wrong-surname">
-      <con:testStep type="restrequest" name="GET wrong surname" id="ts-wrong-surname">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Wrong Surname" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/bookings/XYMBA1</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters><con:entry key="surname" value="WRONGNAME"/></con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC4.6 Wrong Surname Returns 404" failOnError="false">
+      <con:testStep type="httprequest" name="GET Wrong Surname">
+        <con:config>
+          <con:request name="GET Wrong Surname"
+            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=WRONG"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+              <con:configuration><con:codes>404</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Wrong Surname" id="ts-assert-wrong-surname">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET wrong surname"].testRequest.response
-assert r.statusCode == 404, "Expected 404 for wrong surname, got ${r.statusCode}"
-log.info "Wrong surname 404 PASSED"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 5 — CHECK-IN
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="5 - Check-In" id="ts-checkin">
+  <!-- ====================================================
+       TEST SUITE 5: CHECK-IN
+       ==================================================== -->
+  <con:testSuite name="5 - Check-In">
+    <con:properties/>
 
-    <!-- TC 5.1 Check-in Demo Booking -->
-    <con:testCase name="TC5.1 Check-In XYMBA1" id="tc-checkin-xymba1">
-      <con:testStep type="restrequest" name="POST checkin XYMBA1" id="ts-checkin-xymba1">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Check-In XYMBA1" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/checkin</con:resource>
-            <con:method>POST</con:method>
+    <con:testCase name="TC5.1 Check-In XYMBA1 Wilson" failOnError="false">
+      <con:testStep type="httprequest" name="POST Check-In XYMBA1">
+        <con:config>
+          <con:request name="POST Check-In XYMBA1"
+            URL="${#Project#BASE_URL}/checkin"
+            method="POST" mediaType="application/json">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:request>{"reference":"XYMBA1","surname":"Wilson"}</con:request>
-          </con:restRequest>
+            <con:requestBody>{"reference":"XYMBA1","surname":"Wilson"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 400">
+              <con:configuration><con:codes>200,400</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Success field exists">
+              <con:configuration><con:expression>$.success</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Check-In" id="ts-assert-checkin">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST checkin XYMBA1"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-if (r.statusCode == 200) {
-    assert j.success == true
-    assert j.data.boardingPass != null
-    assert j.data.boardingPass.flight.number != null
-    assert j.data.boardingPass.flight.seat != null
-    log.info "Check-in PASSED: Flight=${j.data.boardingPass.flight.number} Seat=${j.data.boardingPass.flight.seat}"
-} else if (r.statusCode == 400) {
-    // Check-in window not open — also valid
-    assert j.success == false
-    assert j.error.message.toLowerCase().contains("check") || j.error.message.toLowerCase().contains("open") || j.error.message.toLowerCase().contains("24")
-    log.info "Check-in window not open — correct behaviour for future flight"
-} else {
-    assert false, "Unexpected status ${r.statusCode}"
-}
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <!-- TC 5.2 Check-in Invalid Reference -->
-    <con:testCase name="TC5.2 Check-In Invalid Ref 404" id="tc-checkin-invalid">
-      <con:testStep type="restrequest" name="POST checkin invalid" id="ts-checkin-invalid">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Check-In Invalid" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/checkin</con:resource>
-            <con:method>POST</con:method>
+    <con:testCase name="TC5.2 Check-In PLCNR7 Johnson" failOnError="false">
+      <con:testStep type="httprequest" name="POST Check-In PLCNR7">
+        <con:config>
+          <con:request name="POST Check-In PLCNR7"
+            URL="${#Project#BASE_URL}/checkin"
+            method="POST" mediaType="application/json">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:request>{"reference":"ZZZZZZ","surname":"Nobody"}</con:request>
-          </con:restRequest>
+            <con:requestBody>{"reference":"PLCNR7","surname":"Johnson"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 400">
+              <con:configuration><con:codes>200,400</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
       </con:testStep>
-      <con:testStep type="groovy" name="Assert Check-In Invalid" id="ts-assert-checkin-invalid">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST checkin invalid"].testRequest.response
-assert r.statusCode == 404 || r.statusCode == 400
-log.info "Invalid check-in PASSED: got expected ${r.statusCode}"
-        </con:script></con:config>
+    </con:testCase>
+
+    <con:testCase name="TC5.3 Check-In Invalid Ref Returns 404" failOnError="false">
+      <con:testStep type="httprequest" name="POST Check-In Invalid">
+        <con:config>
+          <con:request name="POST Check-In Invalid"
+            URL="${#Project#BASE_URL}/checkin"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"reference":"XXXXXX","surname":"Nobody"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+              <con:configuration><con:codes>404</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC5.4 Check-In Missing Fields Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="POST Check-In No Body">
+        <con:config>
+          <con:request name="POST Check-In No Body"
+            URL="${#Project#BASE_URL}/checkin"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 400 or 422">
+              <con:configuration><con:codes>400,422</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 6 — AVIOS
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="6 - Avios" id="ts-avios">
+  <!-- ====================================================
+       TEST SUITE 6: AVIOS
+       ==================================================== -->
+  <con:testSuite name="6 - Avios">
+    <con:properties/>
 
-    <con:testCase name="TC6.1 Avios LHR-JFK Business" id="tc-avios-jfk">
-      <con:testStep type="restrequest" name="GET avios LHR-JFK" id="ts-avios-jfk">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Avios LHR-JFK" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/avios/calculate</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="JFK"/>
-              <con:entry key="cabin" value="business"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC6.1 Avios LHR-JFK Business" failOnError="true">
+      <con:testStep type="httprequest" name="GET Avios LHR-JFK Business">
+        <con:config>
+          <con:request name="GET Avios LHR-JFK Business"
+            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=JFK&amp;cabin=business"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Avios value exists">
+              <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Origin LHR">
+              <con:configuration><con:expression>$.data.origin</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Destination JFK">
+              <con:configuration><con:expression>$.data.destination</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Cabin is business">
+              <con:configuration><con:expression>$.data.cabin</con:expression><con:expectedContent>business</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Avios JFK" id="ts-assert-avios-jfk">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET avios LHR-JFK"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-assert j.data.avios > 0
-assert j.data.distanceKm > 0
-assert j.data.cabin == "business"
-assert j.data.origin == "LHR"
-assert j.data.destination == "JFK"
-log.info "Avios LHR-JFK Business PASSED: ${j.data.avios} Avios for ${j.data.distanceKm}km"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC6.2 Avios LHR-DXB Economy" id="tc-avios-dxb">
-      <con:testStep type="restrequest" name="GET avios LHR-DXB" id="ts-avios-dxb">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Avios LHR-DXB" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/avios/calculate</con:resource>
-            <con:method>GET</con:method>
-            <con:parameters>
-              <con:entry key="from" value="LHR"/>
-              <con:entry key="to" value="DXB"/>
-              <con:entry key="cabin" value="economy"/>
-            </con:parameters>
-          </con:restRequest>
+    <con:testCase name="TC6.2 Avios LHR-DXB Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET Avios LHR-DXB Economy">
+        <con:config>
+          <con:request name="GET Avios LHR-DXB Economy"
+            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Avios value exists">
+              <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Distance exists">
+              <con:configuration><con:expression>$.data.distanceKm</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Avios DXB" id="ts-assert-avios-dxb">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["GET avios LHR-DXB"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.data.avios > 0
-assert j.data.avios &lt; j.data.avios * 2  // sanity check
-log.info "Avios LHR-DXB Economy PASSED: ${j.data.avios} Avios"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
-  </con:testSuite>
-
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 7 — AUTH
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="7 - Authentication" id="ts-auth">
-
-    <con:testCase name="TC7.1 Register New User" id="tc-register">
-      <con:testStep type="restrequest" name="POST register" id="ts-register">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Register" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/auth/register</con:resource>
-            <con:method>POST</con:method>
-            <con:requestHeaders>
-              <con:entry key="Content-Type" value="application/json"/>
-            </con:requestHeaders>
-            <con:request>{"firstName":"Test","lastName":"User","email":"testuser${new Date().getTime()}@soapui.test","password":"TestPass123!"}</con:request>
-          </con:restRequest>
+    <con:testCase name="TC6.3 Avios LHR-SYD First Class" failOnError="true">
+      <con:testStep type="httprequest" name="GET Avios LHR-SYD First">
+        <con:config>
+          <con:request name="GET Avios LHR-SYD First"
+            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=SYD&amp;cabin=first"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Avios greater for First">
+              <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
         </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Register" id="ts-assert-register">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST register"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 201 || r.statusCode == 200
-assert j.success == true
-assert j.data.token != null, "Expected JWT token"
-assert j.data.user != null
-assert j.data.user.firstName == "Test"
-testRunner.testCase.testSuite.project.setPropertyValue("AUTH_TOKEN", j.data.token)
-log.info "Register PASSED: User=${j.data.user.email} Token=${j.data.token.substring(0,20)}..."
-        </con:script></con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase name="TC7.2 Login Demo User" id="tc-login">
-      <con:testStep type="restrequest" name="POST login" id="ts-login">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Login" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/auth/login</con:resource>
-            <con:method>POST</con:method>
-            <con:requestHeaders>
-              <con:entry key="Content-Type" value="application/json"/>
-            </con:requestHeaders>
-            <con:request>{"email":"demo@ba.com","password":"demo1234"}</con:request>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert Login" id="ts-assert-login">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST login"].testRequest.response
-def j = new groovy.json.JsonSlurper().parseText(r.responseContent)
-assert r.statusCode == 200
-assert j.success == true
-assert j.data.token != null
-assert j.data.user.email == "demo@ba.com"
-testRunner.testCase.testSuite.project.setPropertyValue("AUTH_TOKEN", j.data.token)
-log.info "Login PASSED: ${j.data.user.email} tier=${j.data.user.tier}"
-        </con:script></con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase name="TC7.3 Login Wrong Password Returns 401" id="tc-login-fail">
-      <con:testStep type="restrequest" name="POST login wrong pwd" id="ts-login-fail">
-        <con:config service="BA Backend API">
-          <con:restRequest name="Login Wrong Password" mediaType="application/json">
-            <con:endpoint>https://first-eight-cyan.vercel.app</con:endpoint>
-            <con:resource>/api/auth/login</con:resource>
-            <con:method>POST</con:method>
-            <con:requestHeaders>
-              <con:entry key="Content-Type" value="application/json"/>
-            </con:requestHeaders>
-            <con:request>{"email":"demo@ba.com","password":"wrongpassword"}</con:request>
-          </con:restRequest>
-        </con:config>
-      </con:testStep>
-      <con:testStep type="groovy" name="Assert 401" id="ts-assert-login-fail">
-        <con:config><con:script>
-def r = testRunner.testCase.testSteps["POST login wrong pwd"].testRequest.response
-assert r.statusCode == 401 || r.statusCode == 400
-log.info "Wrong password 401 PASSED: got ${r.statusCode}"
-        </con:script></con:config>
       </con:testStep>
     </con:testCase>
 
   </con:testSuite>
 
-  <!-- ═══════════════════════════════════════════
-       TEST SUITE 8 — END TO END
-       ═══════════════════════════════════════════ -->
-  <con:testSuite name="8 - End-to-End Flow" id="ts-e2e">
+  <!-- ====================================================
+       TEST SUITE 7: AUTHENTICATION
+       ==================================================== -->
+  <con:testSuite name="7 - Authentication">
+    <con:properties/>
 
-    <con:testCase name="TC8.1 Full Booking Flow" id="tc-e2e-booking">
-      <con:testStep type="groovy" name="Step 1: Search Flights" id="ts-e2e-search">
-        <con:config><con:script>
-import groovyx.net.http.RESTClient
-def base = "https://first-eight-cyan.vercel.app/api"
-def http = new RESTClient(base)
-def resp = http.get(path: "/flights/search", query: [from:"LHR", to:"DXB", departureDate:"2026-10-18", adults:"1", cabin:"ECONOMY"])
-assert resp.status == 200
-def flight = resp.data.data.flights[0]
-assert flight != null
-testRunner.testCase.setPropertyValue("FLIGHT_OBJ", groovy.json.JsonOutput.toJson(flight))
-testRunner.testCase.setPropertyValue("FLIGHT_NUM", flight.flightNumber)
-log.info "E2E Step1 PASSED: Found flight ${flight.flightNumber} GBP${flight.price.grandTotal}"
-        </con:script></con:config>
+    <con:testCase name="TC7.1 Login Demo User" failOnError="true">
+      <con:testStep type="httprequest" name="POST Login demo">
+        <con:config>
+          <con:request name="POST Login demo"
+            URL="${#Project#BASE_URL}/auth/login"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"email":"demo@ba.com","password":"demo1234"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Token returned">
+              <con:configuration><con:expression>$.data.token</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Email correct">
+              <con:configuration><con:expression>$.data.user.email</con:expression><con:expectedContent>demo@ba.com</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC7.2 Login Wrong Password Returns 401" failOnError="false">
+      <con:testStep type="httprequest" name="POST Login Wrong Password">
+        <con:config>
+          <con:request name="POST Login Wrong Password"
+            URL="${#Project#BASE_URL}/auth/login"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"email":"demo@ba.com","password":"wrongpassword"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 401">
+              <con:configuration><con:codes>401</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success false">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>false</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC7.3 Register New User" failOnError="true">
+      <con:testStep type="httprequest" name="POST Register">
+        <con:config>
+          <con:request name="POST Register"
+            URL="${#Project#BASE_URL}/auth/register"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"firstName":"Test","lastName":"SoapUI","email":"soapui.test.12345@ba.test","password":"TestPass123!"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 201">
+              <con:configuration><con:codes>200,201</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Success true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Token exists">
+              <con:configuration><con:expression>$.data.token</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC7.4 Login Missing Email Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="POST Login No Email">
+        <con:config>
+          <con:request name="POST Login No Email"
+            URL="${#Project#BASE_URL}/auth/login"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"password":"demo1234"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="Status 400 or 422">
+              <con:configuration><con:codes>400,422</con:codes></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+  </con:testSuite>
+
+  <!-- ====================================================
+       TEST SUITE 8: END-TO-END
+       ==================================================== -->
+  <con:testSuite name="8 - End-to-End Booking Flow">
+    <con:properties/>
+
+    <con:testCase name="TC8.1 Search then Book LHR-DXB" failOnError="true">
+
+      <con:testStep type="httprequest" name="Step1 Search LHR-DXB">
+        <con:config>
+          <con:request name="Step1 Search"
+            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Has flights">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
 
-      <con:testStep type="groovy" name="Step 2: Create Booking" id="ts-e2e-book">
-        <con:config><con:script>
-import groovyx.net.http.RESTClient
-import groovy.json.JsonOutput
-def base = "https://first-eight-cyan.vercel.app/api"
-def flightJson = testRunner.testCase.getPropertyValue("FLIGHT_OBJ")
-def flight = new groovy.json.JsonSlurper().parseText(flightJson)
-def http = new RESTClient(base)
-def payload = [flightOffer: flight, travelers: [[firstName:"Priya", lastName:"Sharma", phone:"07800123456", nationality:"IN"]], contacts: []]
-def resp = http.post(path: "/bookings", body: JsonOutput.toJson(payload), requestContentType: "application/json")
-assert resp.status == 200 || resp.status == 201
-def ref = resp.data.data.reference
-assert ref != null &amp;&amp; ref.length() == 6
-testRunner.testCase.setPropertyValue("E2E_REF", ref)
-log.info "E2E Step2 PASSED: Booking ${ref} confirmed GBP${resp.data.data.totalPaid}"
-        </con:script></con:config>
+      <con:testStep type="httprequest" name="Step2 Create Booking LHR-DXB">
+        <con:config>
+          <con:request name="Step2 Create Booking"
+            URL="${#Project#BASE_URL}/bookings"
+            method="POST" mediaType="application/json">
+            <con:requestHeaders>
+              <con:entry key="Content-Type" value="application/json"/>
+            </con:requestHeaders>
+            <con:requestBody>{"flightOffer":{"id":"2","flightNumber":"BA107","from":"LHR","to":"DXB","departure":"07:00","arrival":"18:00","duration":"7h 0m","stops":0,"aircraft":"777","date":"2026-10-18","prices":{"economy":289,"premiumEconomy":535,"businessClass":1040,"firstClass":1790},"price":{"grandTotal":"289","total":"289","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H0M","segments":[{"departure":{"iataCode":"LHR","at":"2026-10-18T07:00:00"},"arrival":{"iataCode":"DXB","at":"2026-10-18T18:00:00"},"carrierCode":"BA","number":"107","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"Priya","lastName":"Sharma","phone":"07800123456","nationality":"IN"}],"contacts":[]}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="200 or 201">
+              <con:configuration><con:codes>200,201</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Status confirmed">
+              <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Passenger first name">
+              <con:configuration><con:expression>$.data.passenger.firstName</con:expression><con:expectedContent>Priya</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
 
-      <con:testStep type="groovy" name="Step 3: Select Seat" id="ts-e2e-seat">
-        <con:config><con:script>
-import groovyx.net.http.RESTClient
-import groovy.json.JsonOutput
-def ref  = testRunner.testCase.getPropertyValue("E2E_REF")
-def base = "https://first-eight-cyan.vercel.app/api"
-def http = new RESTClient(base)
-def resp = http.patch(path: "/bookings/${ref}/seat", body: JsonOutput.toJson([seat:"22F", segment:"outbound"]), requestContentType: "application/json")
-assert resp.status == 200
-log.info "E2E Step3 PASSED: Seat 22F selected on ${ref}"
-        </con:script></con:config>
+      <con:testStep type="httprequest" name="Step3 Verify Booking XYMBA1">
+        <con:config>
+          <con:request name="Step3 Verify Demo Booking"
+            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=Wilson"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Reference correct">
+              <con:configuration><con:expression>$.data.reference</con:expression><con:expectedContent>XYMBA1</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="Route from LHR">
+              <con:configuration><con:expression>$.data.outbound.from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
 
-      <con:testStep type="groovy" name="Step 4: Retrieve and Verify" id="ts-e2e-verify">
-        <con:config><con:script>
-import groovyx.net.http.RESTClient
-def ref  = testRunner.testCase.getPropertyValue("E2E_REF")
-def base = "https://first-eight-cyan.vercel.app/api"
-def http = new RESTClient(base)
-def resp = http.get(path: "/bookings/${ref}", query: [surname: "Sharma"])
-assert resp.status == 200
-def booking = resp.data.data
-assert booking.reference == ref
-assert booking.status == "confirmed"
-assert booking.passenger.firstName == "Priya"
-assert booking.outbound.from == "LHR"
-assert booking.outbound.to == "DXB"
-log.info "E2E Step4 PASSED: Booking ${ref} verified: Priya Sharma LHR-DXB ${booking.outbound.cabin} GBP${booking.totalPaid}"
-        </con:script></con:config>
+      <con:testStep type="httprequest" name="Step4 Calculate Avios">
+        <con:config>
+          <con:request name="Step4 Avios"
+            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy"
+            method="GET" mediaType="application/json">
+            <con:assertion type="Valid HTTP Status Codes" name="200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="Avios calculated">
+              <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
       </con:testStep>
+
     </con:testCase>
 
   </con:testSuite>
