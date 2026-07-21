@@ -7,7 +7,7 @@
   soapui-version="5.7.2">
 
   <con:properties>
-    <con:property><con:name>BASE</con:name><con:value>https://first-eight-cyan.vercel.app/api</con:value></con:property>
+    <con:property><con:name>BASE</con:name><con:value>https://first-eight-cyan.vercel.app</con:value></con:property>
   </con:properties>
 
   <!-- ==================================================
@@ -20,7 +20,7 @@
       <con:testStep type="httprequest" name="GET /health">
         <con:config>
           <con:request name="GET /health"
-            URL="${#Project#BASE}/health" method="GET">
+            URL="${#Project#BASE}/api/health" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -48,7 +48,7 @@
       <con:testStep type="httprequest" name="GET /airports?q=london">
         <con:config>
           <con:request name="GET airports london"
-            URL="${#Project#BASE}/airports?q=london" method="GET">
+            URL="${#Project#BASE}/api/airports?q=london" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -79,7 +79,7 @@
       <con:testStep type="httprequest" name="GET /airports?q=dubai">
         <con:config>
           <con:request name="GET airports dubai"
-            URL="${#Project#BASE}/airports?q=dubai" method="GET">
+            URL="${#Project#BASE}/api/airports?q=dubai" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -98,7 +98,7 @@
       <con:testStep type="httprequest" name="GET /airports?q=mumbai">
         <con:config>
           <con:request name="GET airports mumbai"
-            URL="${#Project#BASE}/airports?q=mumbai" method="GET">
+            URL="${#Project#BASE}/api/airports?q=mumbai" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -117,7 +117,7 @@
       <con:testStep type="httprequest" name="GET /destinations">
         <con:config>
           <con:request name="GET destinations"
-            URL="${#Project#BASE}/destinations" method="GET">
+            URL="${#Project#BASE}/api/destinations" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -142,7 +142,7 @@
       <con:testStep type="httprequest" name="GET /airports?q=l">
         <con:config>
           <con:request name="GET airports short q"
-            URL="${#Project#BASE}/airports?q=l" method="GET">
+            URL="${#Project#BASE}/api/airports?q=l" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 400">
               <con:configuration><con:codes>400</con:codes></con:configuration>
             </con:assertion>
@@ -172,7 +172,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-JFK">
         <con:config>
           <con:request name="GET flights LHR-JFK"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=JFK&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=BUSINESS"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=JFK&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=BUSINESS"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -204,7 +204,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-DXB">
         <con:config>
           <con:request name="GET flights LHR-DXB"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=2&amp;cabin=ECONOMY"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=2&amp;cabin=ECONOMY"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -224,7 +224,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-BCN">
         <con:config>
           <con:request name="GET flights LHR-BCN"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=BCN&amp;departureDate=2026-07-20&amp;adults=1&amp;cabin=ECONOMY"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=BCN&amp;departureDate=2026-07-20&amp;adults=1&amp;cabin=ECONOMY"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -244,7 +244,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-NRT">
         <con:config>
           <con:request name="GET flights LHR-NRT"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=NRT&amp;departureDate=2026-08-01&amp;adults=1&amp;cabin=BUSINESS"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=NRT&amp;departureDate=2026-08-01&amp;adults=1&amp;cabin=BUSINESS"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -261,7 +261,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-SYD">
         <con:config>
           <con:request name="GET flights LHR-SYD"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=SYD&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=ECONOMY"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=SYD&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=ECONOMY"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -278,7 +278,7 @@
       <con:testStep type="httprequest" name="GET flights LHR-BOM">
         <con:config>
           <con:request name="GET flights LHR-BOM"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=BOM&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=BOM&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
@@ -295,7 +295,7 @@
       <con:testStep type="httprequest" name="GET flights no date">
         <con:config>
           <con:request name="GET flights no date"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=JFK&amp;adults=1&amp;cabin=ECONOMY"
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=JFK&amp;adults=1&amp;cabin=ECONOMY"
             method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 400">
               <con:configuration><con:codes>400</con:codes></con:configuration>
@@ -321,7 +321,7 @@
       <con:testStep type="httprequest" name="GET status BA117">
         <con:config>
           <con:request name="GET status BA117"
-            URL="${#Project#BASE}/flights/status?flightNumber=BA117" method="GET">
+            URL="${#Project#BASE}/api/flights/status?flightNumber=BA117" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -349,7 +349,7 @@
       <con:testStep type="httprequest" name="GET status BA204">
         <con:config>
           <con:request name="GET status BA204"
-            URL="${#Project#BASE}/flights/status?flightNumber=BA204" method="GET">
+            URL="${#Project#BASE}/api/flights/status?flightNumber=BA204" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -368,7 +368,7 @@
       <con:testStep type="httprequest" name="GET status BA016">
         <con:config>
           <con:request name="GET status BA016"
-            URL="${#Project#BASE}/flights/status?flightNumber=BA016" method="GET">
+            URL="${#Project#BASE}/api/flights/status?flightNumber=BA016" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -384,7 +384,7 @@
       <con:testStep type="httprequest" name="GET status BA107">
         <con:config>
           <con:request name="GET status BA107"
-            URL="${#Project#BASE}/flights/status?flightNumber=BA107" method="GET">
+            URL="${#Project#BASE}/api/flights/status?flightNumber=BA107" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -400,7 +400,7 @@
       <con:testStep type="httprequest" name="GET status by route">
         <con:config>
           <con:request name="GET status by route"
-            URL="${#Project#BASE}/flights/status?from=LHR&amp;to=JFK&amp;date=2026-12-20" method="GET">
+            URL="${#Project#BASE}/api/flights/status?from=LHR&amp;to=JFK&amp;date=2026-12-20" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -429,7 +429,7 @@
       <con:testStep type="httprequest" name="POST /bookings">
         <con:config>
           <con:request name="POST create booking"
-            URL="${#Project#BASE}/bookings" method="POST">
+            URL="${#Project#BASE}/api/bookings" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -464,7 +464,7 @@
       <con:testStep type="httprequest" name="GET /bookings/XYMBA1">
         <con:config>
           <con:request name="GET booking XYMBA1"
-            URL="${#Project#BASE}/bookings/XYMBA1?surname=Wilson" method="GET">
+            URL="${#Project#BASE}/api/bookings/XYMBA1?surname=Wilson" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -492,7 +492,7 @@
       <con:testStep type="httprequest" name="GET /bookings/PLCNR7">
         <con:config>
           <con:request name="GET booking PLCNR7"
-            URL="${#Project#BASE}/bookings/PLCNR7?surname=Johnson" method="GET">
+            URL="${#Project#BASE}/api/bookings/PLCNR7?surname=Johnson" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -511,7 +511,7 @@
       <con:testStep type="httprequest" name="PATCH /bookings/XYMBA1/seat">
         <con:config>
           <con:request name="PATCH seat XYMBA1"
-            URL="${#Project#BASE}/bookings/XYMBA1/seat" method="PATCH">
+            URL="${#Project#BASE}/api/bookings/XYMBA1/seat" method="PATCH">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -534,7 +534,7 @@
       <con:testStep type="httprequest" name="PATCH /bookings/XYMBA1/bags">
         <con:config>
           <con:request name="PATCH bags XYMBA1"
-            URL="${#Project#BASE}/bookings/XYMBA1/bags" method="PATCH">
+            URL="${#Project#BASE}/api/bookings/XYMBA1/bags" method="PATCH">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -554,7 +554,7 @@
       <con:testStep type="httprequest" name="GET /bookings/XXXXXX">
         <con:config>
           <con:request name="GET invalid booking"
-            URL="${#Project#BASE}/bookings/XXXXXX?surname=Smith" method="GET">
+            URL="${#Project#BASE}/api/bookings/XXXXXX?surname=Smith" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 404">
               <con:configuration><con:codes>404</con:codes></con:configuration>
             </con:assertion>
@@ -570,7 +570,7 @@
       <con:testStep type="httprequest" name="GET /bookings/XYMBA1 wrong surname">
         <con:config>
           <con:request name="GET booking wrong surname"
-            URL="${#Project#BASE}/bookings/XYMBA1?surname=WRONGNAME" method="GET">
+            URL="${#Project#BASE}/api/bookings/XYMBA1?surname=WRONGNAME" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 404">
               <con:configuration><con:codes>404</con:codes></con:configuration>
             </con:assertion>
@@ -589,7 +589,7 @@
       <con:testStep type="httprequest" name="POST /checkin XYMBA1">
         <con:config>
           <con:request name="POST checkin XYMBA1"
-            URL="${#Project#BASE}/checkin" method="POST">
+            URL="${#Project#BASE}/api/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -609,7 +609,7 @@
       <con:testStep type="httprequest" name="POST /checkin PLCNR7">
         <con:config>
           <con:request name="POST checkin PLCNR7"
-            URL="${#Project#BASE}/checkin" method="POST">
+            URL="${#Project#BASE}/api/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -626,7 +626,7 @@
       <con:testStep type="httprequest" name="POST /checkin invalid">
         <con:config>
           <con:request name="POST checkin invalid"
-            URL="${#Project#BASE}/checkin" method="POST">
+            URL="${#Project#BASE}/api/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -646,7 +646,7 @@
       <con:testStep type="httprequest" name="POST /checkin empty">
         <con:config>
           <con:request name="POST checkin empty"
-            URL="${#Project#BASE}/checkin" method="POST">
+            URL="${#Project#BASE}/api/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -669,7 +669,7 @@
       <con:testStep type="httprequest" name="GET /avios LHR-JFK business">
         <con:config>
           <con:request name="GET avios LHR-JFK business"
-            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=JFK&amp;cabin=business" method="GET">
+            URL="${#Project#BASE}/api/avios/calculate?from=LHR&amp;to=JFK&amp;cabin=business" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -700,7 +700,7 @@
       <con:testStep type="httprequest" name="GET /avios LHR-DXB economy">
         <con:config>
           <con:request name="GET avios LHR-DXB economy"
-            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
+            URL="${#Project#BASE}/api/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -719,7 +719,7 @@
       <con:testStep type="httprequest" name="GET /avios LHR-BOM economy">
         <con:config>
           <con:request name="GET avios LHR-BOM economy"
-            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=BOM&amp;cabin=economy" method="GET">
+            URL="${#Project#BASE}/api/avios/calculate?from=LHR&amp;to=BOM&amp;cabin=economy" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -741,7 +741,7 @@
       <con:testStep type="httprequest" name="POST /auth/login demo">
         <con:config>
           <con:request name="POST login demo"
-            URL="${#Project#BASE}/auth/login" method="POST">
+            URL="${#Project#BASE}/api/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -767,7 +767,7 @@
       <con:testStep type="httprequest" name="POST /auth/login wrong pwd">
         <con:config>
           <con:request name="POST login wrong pwd"
-            URL="${#Project#BASE}/auth/login" method="POST">
+            URL="${#Project#BASE}/api/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -787,7 +787,7 @@
       <con:testStep type="httprequest" name="POST /auth/register">
         <con:config>
           <con:request name="POST register"
-            URL="${#Project#BASE}/auth/register" method="POST">
+            URL="${#Project#BASE}/api/auth/register" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -810,7 +810,7 @@
       <con:testStep type="httprequest" name="POST /auth/login no email">
         <con:config>
           <con:request name="POST login no email"
-            URL="${#Project#BASE}/auth/login" method="POST">
+            URL="${#Project#BASE}/api/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -833,7 +833,7 @@
       <con:testStep type="httprequest" name="E2E Step1 Search">
         <con:config>
           <con:request name="E2E Step1 Search LHR-DXB"
-            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY" method="GET">
+            URL="${#Project#BASE}/api/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -849,7 +849,7 @@
       <con:testStep type="httprequest" name="E2E Step2 Create Booking">
         <con:config>
           <con:request name="E2E Step2 Book LHR-DXB"
-            URL="${#Project#BASE}/bookings" method="POST">
+            URL="${#Project#BASE}/api/bookings" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
@@ -878,7 +878,7 @@
       <con:testStep type="httprequest" name="E2E Step3 Retrieve">
         <con:config>
           <con:request name="E2E Step3 Retrieve XYMBA1"
-            URL="${#Project#BASE}/bookings/XYMBA1?surname=Wilson" method="GET">
+            URL="${#Project#BASE}/api/bookings/XYMBA1?surname=Wilson" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -900,7 +900,7 @@
       <con:testStep type="httprequest" name="E2E Step4 Avios">
         <con:config>
           <con:request name="E2E Step4 Avios LHR-DXB"
-            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
+            URL="${#Project#BASE}/api/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -916,7 +916,7 @@
       <con:testStep type="httprequest" name="E2E Step5 Status">
         <con:config>
           <con:request name="E2E Step5 Status BA107"
-            URL="${#Project#BASE}/flights/status?flightNumber=BA107" method="GET">
+            URL="${#Project#BASE}/api/flights/status?flightNumber=BA107" method="GET">
             <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
@@ -931,3 +931,4 @@
   </con:testSuite>
 
 </con:soapui-project>
+
