@@ -1,39 +1,42 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <con:soapui-project
   xmlns:con="http://eviware.com/soapui/config"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  name="British Airways API Test Suite"
+  name="British Airways API Tests"
   activeEnvironment="Default"
   soapui-version="5.7.2">
 
   <con:properties>
-    <con:property><con:name>BASE_URL</con:name><con:value>https://first-eight-cyan.vercel.app/api</con:value></con:property>
-    <con:property><con:name>BOOKING_REF</con:name><con:value>XYMBA1</con:value></con:property>
-    <con:property><con:name>BOOKING_SURNAME</con:name><con:value>Wilson</con:value></con:property>
-    <con:property><con:name>AUTH_TOKEN</con:name><con:value></con:value></con:property>
+    <con:property><con:name>BASE</con:name><con:value>https://first-eight-cyan.vercel.app/api</con:value></con:property>
   </con:properties>
 
-
-  <!-- ====================================================
-       TEST SUITE 1: INFRASTRUCTURE
-       ==================================================== -->
+  <!-- ==================================================
+       SUITE 1: INFRASTRUCTURE
+  ================================================== -->
   <con:testSuite name="1 - Infrastructure">
     <con:properties/>
 
     <con:testCase name="TC1.1 Health Check" failOnError="true">
-      <con:testStep type="httprequest" name="GET Health">
+      <con:testStep type="httprequest" name="GET /health">
         <con:config>
-          <con:request name="GET Health" URL="${#Project#BASE_URL}/health" method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET /health"
+            URL="${#Project#BASE}/health" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status is ok">
+            <con:assertion type="JSONPath Match" name="status=ok">
               <con:configuration>
                 <con:expression>$.status</con:expression>
                 <con:expectedContent>ok</con:expectedContent>
               </con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Timestamp exists">
+            <con:assertion type="JSONPath Match" name="service=ba-backend">
+              <con:configuration>
+                <con:expression>$.service</con:expression>
+                <con:expectedContent>ba-backend</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="timestamp present">
               <con:configuration><con:expression>$.timestamp</con:expression></con:configuration>
             </con:assertion>
           </con:request>
@@ -41,30 +44,30 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC1.2 Airport Search London" failOnError="true">
-      <con:testStep type="httprequest" name="GET Airports London">
+    <con:testCase name="TC1.2 Airport Search - London" failOnError="true">
+      <con:testStep type="httprequest" name="GET /airports?q=london">
         <con:config>
-          <con:request name="GET Airports London" URL="${#Project#BASE_URL}/airports?q=london" method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET airports london"
+            URL="${#Project#BASE}/airports?q=london" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration>
                 <con:expression>$.success</con:expression>
                 <con:expectedContent>true</con:expectedContent>
               </con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Count" name="At least 1 airport">
-              <con:configuration>
-                <con:expression>$.data[*]</con:expression>
-                <con:expectedContent>1</con:expectedContent>
-                <con:allowWildcards>true</con:allowWildcards>
-              </con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Match" name="LHR code returned">
+            <con:assertion type="JSONPath Match" name="LHR iataCode">
               <con:configuration>
                 <con:expression>$.data[0].iataCode</con:expression>
                 <con:expectedContent>LHR</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="LHR name contains Heathrow">
+              <con:configuration>
+                <con:expression>$.data[0].name</con:expression>
+                <con:expectedContent>London Heathrow</con:expectedContent>
               </con:configuration>
             </con:assertion>
           </con:request>
@@ -72,14 +75,15 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC1.3 Airport Search Dubai" failOnError="true">
-      <con:testStep type="httprequest" name="GET Airports Dubai">
+    <con:testCase name="TC1.3 Airport Search - Dubai" failOnError="true">
+      <con:testStep type="httprequest" name="GET /airports?q=dubai">
         <con:config>
-          <con:request name="GET Airports Dubai" URL="${#Project#BASE_URL}/airports?q=dubai" method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET airports dubai"
+            URL="${#Project#BASE}/airports?q=dubai" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="DXB returned">
+            <con:assertion type="JSONPath Match" name="DXB iataCode">
               <con:configuration>
                 <con:expression>$.data[0].iataCode</con:expression>
                 <con:expectedContent>DXB</con:expectedContent>
@@ -90,33 +94,63 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC1.4 Get All Destinations" failOnError="true">
-      <con:testStep type="httprequest" name="GET Destinations">
+    <con:testCase name="TC1.4 Airport Search - Mumbai" failOnError="true">
+      <con:testStep type="httprequest" name="GET /airports?q=mumbai">
         <con:config>
-          <con:request name="GET Destinations" URL="${#Project#BASE_URL}/destinations" method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET airports mumbai"
+            URL="${#Project#BASE}/airports?q=mumbai" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="BOM iataCode">
               <con:configuration>
-                <con:expression>$.success</con:expression>
-                <con:expectedContent>true</con:expectedContent>
+                <con:expression>$.data[0].iataCode</con:expression>
+                <con:expectedContent>BOM</con:expectedContent>
               </con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Data array exists">
-              <con:configuration><con:expression>$.data[0]</con:expression></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC1.5 Airport Search Short Query Returns 400" failOnError="false">
-      <con:testStep type="httprequest" name="GET Airports Short Query">
+    <con:testCase name="TC1.5 Destinations List" failOnError="true">
+      <con:testStep type="httprequest" name="GET /destinations">
         <con:config>
-          <con:request name="GET Airports Short" URL="${#Project#BASE_URL}/airports?q=l" method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 400">
+          <con:request name="GET destinations"
+            URL="${#Project#BASE}/destinations" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="success=true">
+              <con:configuration>
+                <con:expression>$.success</con:expression>
+                <con:expectedContent>true</con:expectedContent>
+              </con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="first destination exists">
+              <con:configuration><con:expression>$.data[0].city</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="first destination has code">
+              <con:configuration><con:expression>$.data[0].code</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC1.6 Short Airport Query Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="GET /airports?q=l">
+        <con:config>
+          <con:request name="GET airports short q"
+            URL="${#Project#BASE}/airports?q=l" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 400">
               <con:configuration><con:codes>400</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="success=false">
+              <con:configuration>
+                <con:expression>$.success</con:expression>
+                <con:expectedContent>false</con:expectedContent>
+              </con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
@@ -125,85 +159,97 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 2: FLIGHT SEARCH
-       ==================================================== -->
+  <!-- ==================================================
+       SUITE 2: FLIGHT SEARCH
+       $.data.flights[0].from = "LHR"
+       $.data.flights[0].to  = "JFK"
+       $.data.flights[0].price.grandTotal = string e.g. "1256.00"
+  ================================================== -->
   <con:testSuite name="2 - Flight Search">
     <con:properties/>
 
-    <con:testCase name="TC2.1 Search LHR to JFK Business" failOnError="true">
-      <con:testStep type="httprequest" name="GET Flights LHR-JFK">
+    <con:testCase name="TC2.1 LHR to JFK Business Dec" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-JFK">
         <con:config>
-          <con:request name="GET Flights LHR-JFK"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=JFK&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=BUSINESS"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET flights LHR-JFK"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=JFK&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=BUSINESS"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Flights array exists">
-              <con:configuration><con:expression>$.data.flights[0]</con:expression></con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Match" name="Origin is LHR">
+            <con:assertion type="JSONPath Match" name="first flight from=LHR">
               <con:configuration><con:expression>$.data.flights[0].from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Destination is JFK">
+            <con:assertion type="JSONPath Match" name="first flight to=JFK">
               <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
             </con:assertion>
-          </con:request>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase name="TC2.2 Search LHR to DXB Economy" failOnError="true">
-      <con:testStep type="httprequest" name="GET Flights LHR-DXB">
-        <con:config>
-          <con:request name="GET Flights LHR-DXB"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=2&amp;cabin=ECONOMY"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
-              <con:configuration><con:codes>200</con:codes></con:configuration>
+            <con:assertion type="JSONPath Match" name="first flight number=BA117">
+              <con:configuration><con:expression>$.data.flights[0].flightNumber</con:expression><con:expectedContent>BA117</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Destination is DXB">
-              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Price exists">
+            <con:assertion type="JSONPath Exists" name="price exists">
               <con:configuration><con:expression>$.data.flights[0].price.grandTotal</con:expression></con:configuration>
             </con:assertion>
+            <con:assertion type="JSONPath Match" name="meta count=6">
+              <con:configuration><con:expression>$.data.meta.count</con:expression><con:expectedContent>6</con:expectedContent></con:configuration>
+            </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC2.3 Search LHR to BCN Economy" failOnError="true">
-      <con:testStep type="httprequest" name="GET Flights LHR-BCN">
+    <con:testCase name="TC2.2 LHR to DXB Economy 2 Adults" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-DXB">
         <con:config>
-          <con:request name="GET Flights LHR-BCN"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=BCN&amp;departureDate=2026-07-20&amp;adults=1&amp;cabin=ECONOMY"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET flights LHR-DXB"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=2&amp;cabin=ECONOMY"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Destination is BCN">
+            <con:assertion type="JSONPath Match" name="to=DXB">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="first flight=BA107">
+              <con:configuration><con:expression>$.data.flights[0].flightNumber</con:expression><con:expectedContent>BA107</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC2.3 LHR to BCN Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-BCN">
+        <con:config>
+          <con:request name="GET flights LHR-BCN"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=BCN&amp;departureDate=2026-07-20&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="to=BCN">
               <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>BCN</con:expectedContent></con:configuration>
             </con:assertion>
+            <con:assertion type="JSONPath Match" name="first flight=BA414">
+              <con:configuration><con:expression>$.data.flights[0].flightNumber</con:expression><con:expectedContent>BA414</con:expectedContent></con:configuration>
+            </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC2.4 Search LHR to NRT Business" failOnError="true">
-      <con:testStep type="httprequest" name="GET Flights LHR-NRT">
+    <con:testCase name="TC2.4 LHR to NRT Business" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-NRT">
         <con:config>
-          <con:request name="GET Flights LHR-NRT"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=NRT&amp;departureDate=2026-08-01&amp;adults=1&amp;cabin=BUSINESS"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET flights LHR-NRT"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=NRT&amp;departureDate=2026-08-01&amp;adults=1&amp;cabin=BUSINESS"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Destination is NRT">
+            <con:assertion type="JSONPath Match" name="to=NRT">
               <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>NRT</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -211,14 +257,51 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC2.5 Missing Departure Date Returns 400" failOnError="false">
-      <con:testStep type="httprequest" name="GET Flights No Date">
+    <con:testCase name="TC2.5 LHR to SYD Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-SYD">
         <con:config>
-          <con:request name="GET Flights No Date"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=JFK"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 400">
+          <con:request name="GET flights LHR-SYD"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=SYD&amp;departureDate=2026-12-20&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="to=SYD">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>SYD</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC2.6 LHR to BOM Economy Diwali" failOnError="true">
+      <con:testStep type="httprequest" name="GET flights LHR-BOM">
+        <con:config>
+          <con:request name="GET flights LHR-BOM"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=BOM&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="to=BOM">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>BOM</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC2.7 Missing Date Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="GET flights no date">
+        <con:config>
+          <con:request name="GET flights no date"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=JFK&amp;adults=1&amp;cabin=ECONOMY"
+            method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 400">
               <con:configuration><con:codes>400</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="success=false">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>false</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
@@ -227,31 +310,34 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 3: FLIGHT STATUS
-       ==================================================== -->
+  <!-- ==================================================
+       SUITE 3: FLIGHT STATUS
+       $.data[0].flightNumber, $.data[0].status, $.data[0].gate
+  ================================================== -->
   <con:testSuite name="3 - Flight Status">
     <con:properties/>
 
     <con:testCase name="TC3.1 BA117 On Time" failOnError="true">
-      <con:testStep type="httprequest" name="GET Status BA117">
+      <con:testStep type="httprequest" name="GET status BA117">
         <con:config>
-          <con:request name="GET Status BA117"
-            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA117"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET status BA117"
+            URL="${#Project#BASE}/flights/status?flightNumber=BA117" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Flight number BA117">
+            <con:assertion type="JSONPath Match" name="success=true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="flightNumber=BA117">
               <con:configuration><con:expression>$.data[0].flightNumber</con:expression><con:expectedContent>BA117</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status on-time">
+            <con:assertion type="JSONPath Match" name="status=on-time">
               <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>on-time</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Gate B22">
+            <con:assertion type="JSONPath Match" name="gate=B22">
               <con:configuration><con:expression>$.data[0].gate</con:expression><con:expectedContent>B22</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Terminal 5">
+            <con:assertion type="JSONPath Match" name="terminal=5">
               <con:configuration><con:expression>$.data[0].terminal</con:expression><con:expectedContent>5</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -260,18 +346,17 @@
     </con:testCase>
 
     <con:testCase name="TC3.2 BA204 Delayed" failOnError="true">
-      <con:testStep type="httprequest" name="GET Status BA204">
+      <con:testStep type="httprequest" name="GET status BA204">
         <con:config>
-          <con:request name="GET Status BA204"
-            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA204"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET status BA204"
+            URL="${#Project#BASE}/flights/status?flightNumber=BA204" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Flight BA204">
+            <con:assertion type="JSONPath Match" name="flightNumber=BA204">
               <con:configuration><con:expression>$.data[0].flightNumber</con:expression><con:expectedContent>BA204</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status delayed">
+            <con:assertion type="JSONPath Match" name="status=delayed">
               <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>delayed</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -280,15 +365,14 @@
     </con:testCase>
 
     <con:testCase name="TC3.3 BA016 Scheduled" failOnError="true">
-      <con:testStep type="httprequest" name="GET Status BA016">
+      <con:testStep type="httprequest" name="GET status BA016">
         <con:config>
-          <con:request name="GET Status BA016"
-            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA016"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET status BA016"
+            URL="${#Project#BASE}/flights/status?flightNumber=BA016" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status scheduled">
+            <con:assertion type="JSONPath Match" name="status=scheduled">
               <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>scheduled</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -296,33 +380,34 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC3.4 BA011 Now Boarding" failOnError="true">
-      <con:testStep type="httprequest" name="GET Status BA011">
+    <con:testCase name="TC3.4 BA107 On Time" failOnError="true">
+      <con:testStep type="httprequest" name="GET status BA107">
         <con:config>
-          <con:request name="GET Status BA011"
-            URL="${#Project#BASE_URL}/flights/status?flightNumber=BA011"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET status BA107"
+            URL="${#Project#BASE}/flights/status?flightNumber=BA107" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Status field exists">
-              <con:configuration><con:expression>$.data[0].status</con:expression></con:configuration>
+            <con:assertion type="JSONPath Match" name="status=on-time">
+              <con:configuration><con:expression>$.data[0].status</con:expression><con:expectedContent>on-time</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC3.5 Status by Route LHR-JFK" failOnError="true">
-      <con:testStep type="httprequest" name="GET Status Route LHR-JFK">
+    <con:testCase name="TC3.5 Route Status LHR to JFK" failOnError="true">
+      <con:testStep type="httprequest" name="GET status by route">
         <con:config>
-          <con:request name="GET Status by Route"
-            URL="${#Project#BASE_URL}/flights/status?from=LHR&amp;to=JFK&amp;date=2026-12-20"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET status by route"
+            URL="${#Project#BASE}/flights/status?from=LHR&amp;to=JFK&amp;date=2026-12-20" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Results returned">
+            <con:assertion type="JSONPath Match" name="success=true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="at least one result">
               <con:configuration><con:expression>$.data[0]</con:expression></con:configuration>
             </con:assertion>
           </con:request>
@@ -332,33 +417,43 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 4: BOOKING LIFECYCLE
-       ==================================================== -->
+  <!-- ==================================================
+       SUITE 4: BOOKING LIFECYCLE
+       $.data.reference, $.data.status, $.data.passenger.firstName
+       $.data.outbound.from, $.data.outbound.to, $.data.outbound.cabin
+  ================================================== -->
   <con:testSuite name="4 - Booking Lifecycle">
     <con:properties/>
 
-    <con:testCase name="TC4.1 Create Booking" failOnError="true">
-      <con:testStep type="httprequest" name="POST Create Booking">
+    <con:testCase name="TC4.1 Create Booking LHR-JFK" failOnError="true">
+      <con:testStep type="httprequest" name="POST /bookings">
         <con:config>
-          <con:request name="POST Create Booking"
-            URL="${#Project#BASE_URL}/bookings"
-            method="POST" mediaType="application/json">
+          <con:request name="POST create booking"
+            URL="${#Project#BASE}/bookings" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:requestBody>{"flightOffer":{"id":"1","flightNumber":"BA117","from":"LHR","to":"JFK","departure":"08:30","arrival":"11:45","duration":"7h 15m","stops":0,"aircraft":"777","date":"2026-12-20","prices":{"economy":349,"premiumEconomy":645,"businessClass":1256,"firstClass":2164},"price":{"grandTotal":"349","total":"349","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H15M","segments":[{"departure":{"iataCode":"LHR","at":"2026-12-20T08:30:00"},"arrival":{"iataCode":"JFK","at":"2026-12-20T11:45:00"},"carrierCode":"BA","number":"117","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"John","lastName":"Smith","phone":"07912345678","nationality":"GB"}],"contacts":[]}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 201">
+            <con:requestBody>{"flightOffer":{"id":"1","flightNumber":"BA117","from":"LHR","to":"JFK","departure":"08:30","arrival":"11:45","duration":"7h 15m","stops":0,"aircraft":"777","date":"2026-12-20","prices":{"economy":349,"premiumEconomy":646,"businessClass":1256,"firstClass":2164},"price":{"grandTotal":"349","total":"349","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H15M","segments":[{"departure":{"iataCode":"LHR","at":"2026-12-20T08:30:00"},"arrival":{"iataCode":"JFK","at":"2026-12-20T11:45:00"},"carrierCode":"BA","number":"117","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"John","lastName":"Smith","phone":"07912345678","nationality":"GB"}],"contacts":[]}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200 or 201">
               <con:configuration><con:codes>200,201</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status confirmed">
+            <con:assertion type="JSONPath Match" name="status=confirmed">
               <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Reference exists">
+            <con:assertion type="JSONPath Exists" name="reference exists">
               <con:configuration><con:expression>$.data.reference</con:expression></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="passenger firstName=John">
+              <con:configuration><con:expression>$.data.passenger.firstName</con:expression><con:expectedContent>John</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="outbound from=LHR">
+              <con:configuration><con:expression>$.data.outbound.from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="outbound to=JFK">
+              <con:configuration><con:expression>$.data.outbound.to</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
@@ -366,69 +461,88 @@
     </con:testCase>
 
     <con:testCase name="TC4.2 Retrieve Demo Booking XYMBA1" failOnError="true">
-      <con:testStep type="httprequest" name="GET Booking XYMBA1">
+      <con:testStep type="httprequest" name="GET /bookings/XYMBA1">
         <con:config>
-          <con:request name="GET Booking XYMBA1"
-            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=Wilson"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET booking XYMBA1"
+            URL="${#Project#BASE}/bookings/XYMBA1?surname=Wilson" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Reference XYMBA1">
+            <con:assertion type="JSONPath Match" name="success=true">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="reference=XYMBA1">
               <con:configuration><con:expression>$.data.reference</con:expression><con:expectedContent>XYMBA1</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status confirmed">
+            <con:assertion type="JSONPath Match" name="status=confirmed">
               <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Outbound flight">
-              <con:configuration><con:expression>$.data.outbound.flightNumber</con:expression></con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Match" name="Origin LHR">
+            <con:assertion type="JSONPath Match" name="outbound from=LHR">
               <con:configuration><con:expression>$.data.outbound.from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="aviosEarned exists">
+              <con:configuration><con:expression>$.data.aviosEarned</con:expression></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC4.3 Select Seat on XYMBA1" failOnError="true">
-      <con:testStep type="httprequest" name="PATCH Seat XYMBA1">
+    <con:testCase name="TC4.3 Retrieve Demo Booking PLCNR7" failOnError="true">
+      <con:testStep type="httprequest" name="GET /bookings/PLCNR7">
         <con:config>
-          <con:request name="PATCH Seat XYMBA1"
-            URL="${#Project#BASE_URL}/bookings/XYMBA1/seat"
-            method="PATCH" mediaType="application/json">
+          <con:request name="GET booking PLCNR7"
+            URL="${#Project#BASE}/bookings/PLCNR7?surname=Johnson" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="reference=PLCNR7">
+              <con:configuration><con:expression>$.data.reference</con:expression><con:expectedContent>PLCNR7</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="status=confirmed">
+              <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC4.4 Select Seat on XYMBA1" failOnError="true">
+      <con:testStep type="httprequest" name="PATCH /bookings/XYMBA1/seat">
+        <con:config>
+          <con:request name="PATCH seat XYMBA1"
+            URL="${#Project#BASE}/bookings/XYMBA1/seat" method="PATCH">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:requestBody>{"seat":"14A","segment":"outbound"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+            <con:requestBody>{"seat":"12A","segment":"outbound"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Seat is 14A">
-              <con:configuration><con:expression>$.data.seat</con:expression><con:expectedContent>14A</con:expectedContent></con:configuration>
+            <con:assertion type="JSONPath Match" name="seat=12A">
+              <con:configuration><con:expression>$.data.seat</con:expression><con:expectedContent>12A</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC4.4 Update Baggage on XYMBA1" failOnError="true">
-      <con:testStep type="httprequest" name="PATCH Bags XYMBA1">
+    <con:testCase name="TC4.5 Update Bags on XYMBA1" failOnError="true">
+      <con:testStep type="httprequest" name="PATCH /bookings/XYMBA1/bags">
         <con:config>
-          <con:request name="PATCH Bags XYMBA1"
-            URL="${#Project#BASE_URL}/bookings/XYMBA1/bags"
-            method="PATCH" mediaType="application/json">
+          <con:request name="PATCH bags XYMBA1"
+            URL="${#Project#BASE}/bookings/XYMBA1/bags" method="PATCH">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"checked":2,"cabin":1}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -436,27 +550,28 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC4.5 Invalid Reference Returns 404" failOnError="false">
-      <con:testStep type="httprequest" name="GET Invalid Booking">
+    <con:testCase name="TC4.6 Invalid Reference Returns 404" failOnError="false">
+      <con:testStep type="httprequest" name="GET /bookings/XXXXXX">
         <con:config>
-          <con:request name="GET Invalid Booking"
-            URL="${#Project#BASE_URL}/bookings/XXXXXX?surname=Smith"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+          <con:request name="GET invalid booking"
+            URL="${#Project#BASE}/bookings/XXXXXX?surname=Smith" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 404">
               <con:configuration><con:codes>404</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="success=false">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>false</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC4.6 Wrong Surname Returns 404" failOnError="false">
-      <con:testStep type="httprequest" name="GET Wrong Surname">
+    <con:testCase name="TC4.7 Wrong Surname Returns 404" failOnError="false">
+      <con:testStep type="httprequest" name="GET /bookings/XYMBA1 wrong surname">
         <con:config>
-          <con:request name="GET Wrong Surname"
-            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=WRONG"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+          <con:request name="GET booking wrong surname"
+            URL="${#Project#BASE}/bookings/XYMBA1?surname=WRONGNAME" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 404">
               <con:configuration><con:codes>404</con:codes></con:configuration>
             </con:assertion>
           </con:request>
@@ -466,26 +581,23 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 5: CHECK-IN
-       ==================================================== -->
+  <!-- SUITE 5: CHECK-IN -->
   <con:testSuite name="5 - Check-In">
     <con:properties/>
 
     <con:testCase name="TC5.1 Check-In XYMBA1 Wilson" failOnError="false">
-      <con:testStep type="httprequest" name="POST Check-In XYMBA1">
+      <con:testStep type="httprequest" name="POST /checkin XYMBA1">
         <con:config>
-          <con:request name="POST Check-In XYMBA1"
-            URL="${#Project#BASE_URL}/checkin"
-            method="POST" mediaType="application/json">
+          <con:request name="POST checkin XYMBA1"
+            URL="${#Project#BASE}/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"reference":"XYMBA1","surname":"Wilson"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 400">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200 or 400">
               <con:configuration><con:codes>200,400</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Success field exists">
+            <con:assertion type="JSONPath Exists" name="success field present">
               <con:configuration><con:expression>$.success</con:expression></con:configuration>
             </con:assertion>
           </con:request>
@@ -494,16 +606,15 @@
     </con:testCase>
 
     <con:testCase name="TC5.2 Check-In PLCNR7 Johnson" failOnError="false">
-      <con:testStep type="httprequest" name="POST Check-In PLCNR7">
+      <con:testStep type="httprequest" name="POST /checkin PLCNR7">
         <con:config>
-          <con:request name="POST Check-In PLCNR7"
-            URL="${#Project#BASE_URL}/checkin"
-            method="POST" mediaType="application/json">
+          <con:request name="POST checkin PLCNR7"
+            URL="${#Project#BASE}/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"reference":"PLCNR7","surname":"Johnson"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 400">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200 or 400">
               <con:configuration><con:codes>200,400</con:codes></con:configuration>
             </con:assertion>
           </con:request>
@@ -512,17 +623,19 @@
     </con:testCase>
 
     <con:testCase name="TC5.3 Check-In Invalid Ref Returns 404" failOnError="false">
-      <con:testStep type="httprequest" name="POST Check-In Invalid">
+      <con:testStep type="httprequest" name="POST /checkin invalid">
         <con:config>
-          <con:request name="POST Check-In Invalid"
-            URL="${#Project#BASE_URL}/checkin"
-            method="POST" mediaType="application/json">
+          <con:request name="POST checkin invalid"
+            URL="${#Project#BASE}/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"reference":"XXXXXX","surname":"Nobody"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 404">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 404">
               <con:configuration><con:codes>404</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="success=false">
+              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>false</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
@@ -530,16 +643,15 @@
     </con:testCase>
 
     <con:testCase name="TC5.4 Check-In Missing Fields Returns 400" failOnError="false">
-      <con:testStep type="httprequest" name="POST Check-In No Body">
+      <con:testStep type="httprequest" name="POST /checkin empty">
         <con:config>
-          <con:request name="POST Check-In No Body"
-            URL="${#Project#BASE_URL}/checkin"
-            method="POST" mediaType="application/json">
+          <con:request name="POST checkin empty"
+            URL="${#Project#BASE}/checkin" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 400 or 422">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 400 or 422">
               <con:configuration><con:codes>400,422</con:codes></con:configuration>
             </con:assertion>
           </con:request>
@@ -549,54 +661,34 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 6: AVIOS
-       ==================================================== -->
+  <!-- SUITE 6: AVIOS -->
   <con:testSuite name="6 - Avios">
     <con:properties/>
 
     <con:testCase name="TC6.1 Avios LHR-JFK Business" failOnError="true">
-      <con:testStep type="httprequest" name="GET Avios LHR-JFK Business">
+      <con:testStep type="httprequest" name="GET /avios LHR-JFK business">
         <con:config>
-          <con:request name="GET Avios LHR-JFK Business"
-            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=JFK&amp;cabin=business"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET avios LHR-JFK business"
+            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=JFK&amp;cabin=business" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Avios value exists">
-              <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Match" name="Origin LHR">
+            <con:assertion type="JSONPath Match" name="origin=LHR">
               <con:configuration><con:expression>$.data.origin</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Destination JFK">
+            <con:assertion type="JSONPath Match" name="destination=JFK">
               <con:configuration><con:expression>$.data.destination</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Cabin is business">
+            <con:assertion type="JSONPath Match" name="cabin=business">
               <con:configuration><con:expression>$.data.cabin</con:expression><con:expectedContent>business</con:expectedContent></con:configuration>
             </con:assertion>
-          </con:request>
-        </con:config>
-      </con:testStep>
-    </con:testCase>
-
-    <con:testCase name="TC6.2 Avios LHR-DXB Economy" failOnError="true">
-      <con:testStep type="httprequest" name="GET Avios LHR-DXB Economy">
-        <con:config>
-          <con:request name="GET Avios LHR-DXB Economy"
-            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
-              <con:configuration><con:codes>200</con:codes></con:configuration>
-            </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Avios value exists">
+            <con:assertion type="JSONPath Exists" name="avios value present">
               <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Distance exists">
+            <con:assertion type="JSONPath Exists" name="distanceKm present">
               <con:configuration><con:expression>$.data.distanceKm</con:expression></con:configuration>
             </con:assertion>
           </con:request>
@@ -604,17 +696,35 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC6.3 Avios LHR-SYD First Class" failOnError="true">
-      <con:testStep type="httprequest" name="GET Avios LHR-SYD First">
+    <con:testCase name="TC6.2 Avios LHR-DXB Economy" failOnError="true">
+      <con:testStep type="httprequest" name="GET /avios LHR-DXB economy">
         <con:config>
-          <con:request name="GET Avios LHR-SYD First"
-            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=SYD&amp;cabin=first"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+          <con:request name="GET avios LHR-DXB economy"
+            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Avios greater for First">
+            <con:assertion type="JSONPath Match" name="destination=DXB">
+              <con:configuration><con:expression>$.data.destination</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Exists" name="avios present">
               <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
+    </con:testCase>
+
+    <con:testCase name="TC6.3 Avios LHR-BOM Economy Diwali" failOnError="true">
+      <con:testStep type="httprequest" name="GET /avios LHR-BOM economy">
+        <con:config>
+          <con:request name="GET avios LHR-BOM economy"
+            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=BOM&amp;cabin=economy" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="destination=BOM">
+              <con:configuration><con:expression>$.data.destination</con:expression><con:expectedContent>BOM</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
@@ -623,32 +733,29 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 7: AUTHENTICATION
-       ==================================================== -->
+  <!-- SUITE 7: AUTHENTICATION -->
   <con:testSuite name="7 - Authentication">
     <con:properties/>
 
     <con:testCase name="TC7.1 Login Demo User" failOnError="true">
-      <con:testStep type="httprequest" name="POST Login demo">
+      <con:testStep type="httprequest" name="POST /auth/login demo">
         <con:config>
-          <con:request name="POST Login demo"
-            URL="${#Project#BASE_URL}/auth/login"
-            method="POST" mediaType="application/json">
+          <con:request name="POST login demo"
+            URL="${#Project#BASE}/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"email":"demo@ba.com","password":"demo1234"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Token returned">
+            <con:assertion type="JSONPath Exists" name="token present">
               <con:configuration><con:expression>$.data.token</con:expression></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Email correct">
+            <con:assertion type="JSONPath Match" name="email=demo@ba.com">
               <con:configuration><con:expression>$.data.user.email</con:expression><con:expectedContent>demo@ba.com</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -656,20 +763,19 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC7.2 Login Wrong Password Returns 401" failOnError="false">
-      <con:testStep type="httprequest" name="POST Login Wrong Password">
+    <con:testCase name="TC7.2 Wrong Password Returns 401" failOnError="false">
+      <con:testStep type="httprequest" name="POST /auth/login wrong pwd">
         <con:config>
-          <con:request name="POST Login Wrong Password"
-            URL="${#Project#BASE_URL}/auth/login"
-            method="POST" mediaType="application/json">
+          <con:request name="POST login wrong pwd"
+            URL="${#Project#BASE}/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"email":"demo@ba.com","password":"wrongpassword"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 401">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 401">
               <con:configuration><con:codes>401</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success false">
+            <con:assertion type="JSONPath Match" name="success=false">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>false</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
@@ -678,22 +784,21 @@
     </con:testCase>
 
     <con:testCase name="TC7.3 Register New User" failOnError="true">
-      <con:testStep type="httprequest" name="POST Register">
+      <con:testStep type="httprequest" name="POST /auth/register">
         <con:config>
-          <con:request name="POST Register"
-            URL="${#Project#BASE_URL}/auth/register"
-            method="POST" mediaType="application/json">
+          <con:request name="POST register"
+            URL="${#Project#BASE}/auth/register" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
-            <con:requestBody>{"firstName":"Test","lastName":"SoapUI","email":"soapui.test.12345@ba.test","password":"TestPass123!"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 200 or 201">
+            <con:requestBody>{"firstName":"Test","lastName":"SoapUI","email":"soapui.test.9999@test.com","password":"TestPass123!"}</con:requestBody>
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200 or 201">
               <con:configuration><con:codes>200,201</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Success true">
+            <con:assertion type="JSONPath Match" name="success=true">
               <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Token exists">
+            <con:assertion type="JSONPath Exists" name="token present">
               <con:configuration><con:expression>$.data.token</con:expression></con:configuration>
             </con:assertion>
           </con:request>
@@ -701,17 +806,16 @@
       </con:testStep>
     </con:testCase>
 
-    <con:testCase name="TC7.4 Login Missing Email Returns 400" failOnError="false">
-      <con:testStep type="httprequest" name="POST Login No Email">
+    <con:testCase name="TC7.4 Missing Email Returns 400" failOnError="false">
+      <con:testStep type="httprequest" name="POST /auth/login no email">
         <con:config>
-          <con:request name="POST Login No Email"
-            URL="${#Project#BASE_URL}/auth/login"
-            method="POST" mediaType="application/json">
+          <con:request name="POST login no email"
+            URL="${#Project#BASE}/auth/login" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"password":"demo1234"}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="Status 400 or 422">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 400 or 422">
               <con:configuration><con:codes>400,422</con:codes></con:configuration>
             </con:assertion>
           </con:request>
@@ -721,84 +825,107 @@
 
   </con:testSuite>
 
-  <!-- ====================================================
-       TEST SUITE 8: END-TO-END
-       ==================================================== -->
+  <!-- SUITE 8: END-TO-END BOOKING FLOW -->
   <con:testSuite name="8 - End-to-End Booking Flow">
     <con:properties/>
 
-    <con:testCase name="TC8.1 Search then Book LHR-DXB" failOnError="true">
-
-      <con:testStep type="httprequest" name="Step1 Search LHR-DXB">
+    <con:testCase name="TC8.1 E2E Search LHR-DXB" failOnError="true">
+      <con:testStep type="httprequest" name="E2E Step1 Search">
         <con:config>
-          <con:request name="Step1 Search"
-            URL="${#Project#BASE_URL}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="200">
+          <con:request name="E2E Step1 Search LHR-DXB"
+            URL="${#Project#BASE}/flights/search?from=LHR&amp;to=DXB&amp;departureDate=2026-10-18&amp;adults=1&amp;cabin=ECONOMY" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Has flights">
-              <con:configuration><con:expression>$.success</con:expression><con:expectedContent>true</con:expectedContent></con:configuration>
+            <con:assertion type="JSONPath Match" name="to=DXB">
+              <con:configuration><con:expression>$.data.flights[0].to</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
+    </con:testCase>
 
-      <con:testStep type="httprequest" name="Step2 Create Booking LHR-DXB">
+    <con:testCase name="TC8.2 E2E Create Booking LHR-DXB Priya" failOnError="true">
+      <con:testStep type="httprequest" name="E2E Step2 Create Booking">
         <con:config>
-          <con:request name="Step2 Create Booking"
-            URL="${#Project#BASE_URL}/bookings"
-            method="POST" mediaType="application/json">
+          <con:request name="E2E Step2 Book LHR-DXB"
+            URL="${#Project#BASE}/bookings" method="POST">
             <con:requestHeaders>
               <con:entry key="Content-Type" value="application/json"/>
             </con:requestHeaders>
             <con:requestBody>{"flightOffer":{"id":"2","flightNumber":"BA107","from":"LHR","to":"DXB","departure":"07:00","arrival":"18:00","duration":"7h 0m","stops":0,"aircraft":"777","date":"2026-10-18","prices":{"economy":289,"premiumEconomy":535,"businessClass":1040,"firstClass":1790},"price":{"grandTotal":"289","total":"289","currency":"GBP"},"numberOfStops":0,"itineraries":[{"duration":"PT7H0M","segments":[{"departure":{"iataCode":"LHR","at":"2026-10-18T07:00:00"},"arrival":{"iataCode":"DXB","at":"2026-10-18T18:00:00"},"carrierCode":"BA","number":"107","aircraft":{"code":"777"}}]}]},"travelers":[{"firstName":"Priya","lastName":"Sharma","phone":"07800123456","nationality":"IN"}],"contacts":[]}</con:requestBody>
-            <con:assertion type="Valid HTTP Status Codes" name="200 or 201">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200 or 201">
               <con:configuration><con:codes>200,201</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Status confirmed">
+            <con:assertion type="JSONPath Match" name="status=confirmed">
               <con:configuration><con:expression>$.data.status</con:expression><con:expectedContent>confirmed</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Passenger first name">
+            <con:assertion type="JSONPath Match" name="outbound to=DXB">
+              <con:configuration><con:expression>$.data.outbound.to</con:expression><con:expectedContent>DXB</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="firstName=Priya">
               <con:configuration><con:expression>$.data.passenger.firstName</con:expression><con:expectedContent>Priya</con:expectedContent></con:configuration>
             </con:assertion>
+            <con:assertion type="JSONPath Exists" name="aviosEarned present">
+              <con:configuration><con:expression>$.data.aviosEarned</con:expression></con:configuration>
+            </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
+    </con:testCase>
 
-      <con:testStep type="httprequest" name="Step3 Verify Booking XYMBA1">
+    <con:testCase name="TC8.3 E2E Retrieve XYMBA1 and Verify" failOnError="true">
+      <con:testStep type="httprequest" name="E2E Step3 Retrieve">
         <con:config>
-          <con:request name="Step3 Verify Demo Booking"
-            URL="${#Project#BASE_URL}/bookings/XYMBA1?surname=Wilson"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="200">
+          <con:request name="E2E Step3 Retrieve XYMBA1"
+            URL="${#Project#BASE}/bookings/XYMBA1?surname=Wilson" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Reference correct">
+            <con:assertion type="JSONPath Match" name="reference=XYMBA1">
               <con:configuration><con:expression>$.data.reference</con:expression><con:expectedContent>XYMBA1</con:expectedContent></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Match" name="Route from LHR">
+            <con:assertion type="JSONPath Match" name="from=LHR">
               <con:configuration><con:expression>$.data.outbound.from</con:expression><con:expectedContent>LHR</con:expectedContent></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="to=JFK">
+              <con:configuration><con:expression>$.data.outbound.to</con:expression><con:expectedContent>JFK</con:expectedContent></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
+    </con:testCase>
 
-      <con:testStep type="httprequest" name="Step4 Calculate Avios">
+    <con:testCase name="TC8.4 E2E Calculate Avios LHR-DXB" failOnError="true">
+      <con:testStep type="httprequest" name="E2E Step4 Avios">
         <con:config>
-          <con:request name="Step4 Avios"
-            URL="${#Project#BASE_URL}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy"
-            method="GET" mediaType="application/json">
-            <con:assertion type="Valid HTTP Status Codes" name="200">
+          <con:request name="E2E Step4 Avios LHR-DXB"
+            URL="${#Project#BASE}/avios/calculate?from=LHR&amp;to=DXB&amp;cabin=economy" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
               <con:configuration><con:codes>200</con:codes></con:configuration>
             </con:assertion>
-            <con:assertion type="JSONPath Exists" name="Avios calculated">
+            <con:assertion type="JSONPath Exists" name="avios calculated">
               <con:configuration><con:expression>$.data.avios</con:expression></con:configuration>
             </con:assertion>
           </con:request>
         </con:config>
       </con:testStep>
+    </con:testCase>
 
+    <con:testCase name="TC8.5 E2E Flight Status BA107" failOnError="true">
+      <con:testStep type="httprequest" name="E2E Step5 Status">
+        <con:config>
+          <con:request name="E2E Step5 Status BA107"
+            URL="${#Project#BASE}/flights/status?flightNumber=BA107" method="GET">
+            <con:assertion type="Valid HTTP Status Codes" name="HTTP 200">
+              <con:configuration><con:codes>200</con:codes></con:configuration>
+            </con:assertion>
+            <con:assertion type="JSONPath Match" name="flightNumber=BA107">
+              <con:configuration><con:expression>$.data[0].flightNumber</con:expression><con:expectedContent>BA107</con:expectedContent></con:configuration>
+            </con:assertion>
+          </con:request>
+        </con:config>
+      </con:testStep>
     </con:testCase>
 
   </con:testSuite>
