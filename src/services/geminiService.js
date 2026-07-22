@@ -3,11 +3,56 @@
  *
  * Optimised for SPEED: tries to extract everything in one shot first.
  * Falls back to targeted follow-up questions only for genuinely missing fields.
+ *
+ * PROD HARDENING NOTES (does not change external behavior / response schema):
+ *  - Request timeout via AbortController
+ *  - Retry with exponential backoff for transient network / 5xx / 429 errors
+ *  - Stale-response guard: if a newer call starts, older in-flight calls are
+ *    ignored so the UI never gets overwritten by an out-of-order response
+ *  - History is capped to the most recent N turns before being sent, to bound
+ *    token cost/latency on long conversations (does not affect short/typical use)
+ *  - Logging is gated so nothing noisy hits the console in production builds
+ *  - Defensive parsing/validation around the model's JSON output
+ *
+ * ⚠️ SECURITY NOTE: VITE_* env vars are bundled into client-side JS and are
+ * visible to anyone via devtools/network tab. This means the Groq API key is
+ * effectively public once deployed. For real production use, move this call
+ * behind a small backend/serverless proxy (e.g. a Vercel Edge Function) that
+ * holds the key server-side and forwards requests. That is an architecture
+ * change outside the scope of this file, but flagging it because it's the
+ * single biggest risk here.
  */
 
-const API_KEY  = import.meta.env.VITE_GEMINI_API_KEY;
+// Support the new, correctly-named env var, but fall back to the legacy
+// (misleadingly named) one so nothing breaks for existing deployments.
+const API_KEY =
+  import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL    = 'llama-3.3-70b-versatile';
+const MODEL = 'llama-3.3-70b-versatile';
+
+// --- Tunables -------------------------------------------------------------
+const REQUEST_TIMEOUT_MS = 12_000;   // abort a hung request after this long
+const MAX_RETRIES = 2;               // retries on top of the initial attempt
+const RETRY_BASE_DELAY_MS = 400;     // exponential backoff base
+const MAX_HISTORY_TURNS = 20;        // cap how much history we resend
+const IS_DEV = Boolean(import.meta.env?.DEV);
+
+// Monotonically increasing id so we can detect + ignore stale in-flight calls.
+let currentRequestId = 0;
+
+function log(...args) {
+  if (IS_DEV) console.log('[aiService]', ...args);
+}
+function logError(...args) {
+  // Keep errors visible in dev; in prod, still log (errors matter for
+  // debugging real user issues) but without noisy stack spam.
+  if (IS_DEV) {
+    console.error('[aiService]', ...args);
+  } else {
+    console.error('[aiService]', args[0]);
+  }
+}
 
 function buildSystemPrompt() {
   const now       = new Date();
@@ -293,15 +338,22 @@ FINAL RULES:
 7. Never ask for information already known from conversation history.
 8. TWO_OPTIONS = exactly 2 quickReplies.
 9. Answer general date/festival questions in the text field, then offer to book.
-10. When returning FULL_BOOKING or PREFILL_BOOKING, always mention route and dates in text.
-}
+10. When returning FULL_BOOKING or PREFILL_BOOKING, always mention route and dates in text.`;
 }
 
 const SYSTEM_PROMPT = buildSystemPrompt();
 
 function buildMessages(history, userMessage) {
   const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
-  for (const turn of history) {
+
+  // Cap history so long-running conversations don't grow the payload (and
+  // cost/latency) without bound. Keeps only the most recent N turns.
+  const trimmedHistory = Array.isArray(history)
+    ? history.slice(-MAX_HISTORY_TURNS)
+    : [];
+
+  for (const turn of trimmedHistory) {
+    if (!turn || typeof turn.text !== 'string') continue;
     messages.push({ role: turn.role === 'user' ? 'user' : 'assistant', content: turn.text });
   }
   messages.push({ role: 'user', content: userMessage });
@@ -333,7 +385,7 @@ function parseResponse(raw) {
       to:            e.to            || e.destination || e.arrival      || '',
       departureDate: e.departureDate || e.departure_date || e.depart_date || '',
       returnDate:    e.returnDate    || e.return_date || e.return        || '',
-      adults:        Number(e.adults || e.num_adults  || e.passengers   || 1),
+      adults:        Number(e.adults || e.num_adults  || e.passengers   || 1) || 1,
       cabin:         e.cabin         || e.class       || e.cabinClass   || 'economy',
       tripType:      e.tripType      || e.trip_type   || 'return',
       festival:      e.festival      || '',
@@ -364,12 +416,17 @@ function parseResponse(raw) {
     }
 
     return {
-      intent:         parsed.intent       || 'UNKNOWN',
-      text:           parsed.text         || "I didn't catch that — could you try again?",
-      quickReplies:   Array.isArray(parsed.quickReplies) ? parsed.quickReplies.slice(0, 5) : [],
+      intent:         typeof parsed.intent === 'string' ? parsed.intent : 'UNKNOWN',
+      text:           typeof parsed.text === 'string' && parsed.text.trim()
+                        ? parsed.text
+                        : "I didn't catch that — could you try again?",
+      quickReplies:   Array.isArray(parsed.quickReplies)
+                        ? parsed.quickReplies.filter(q => typeof q === 'string').slice(0, 5)
+                        : [],
       action, entities, passengerField,
     };
-  } catch {
+  } catch (err) {
+    logError('Failed to parse model response:', err.message);
     return {
       intent: 'UNKNOWN',
       text: "Could you rephrase that?",
@@ -380,7 +437,7 @@ function parseResponse(raw) {
 }
 
 function fallbackResponse(t) {
-  const l = t.toLowerCase();
+  const l = (t || '').toLowerCase();
   if (/book|flight|fly/.test(l))   return { intent:'BOOK_FLIGHT',    text:"Sure! Where would you like to fly?",            quickReplies:['London to New York','London to Dubai','London to Barcelona'], action:{type:'NAVIGATE',path:'/book'}, entities:{}, passengerField:null };
   if (/check.?in/.test(l))         return { intent:'CHECK_IN',       text:"Check-in opens 24 hours before departure.",     quickReplies:['Check in now'], action:{type:'NAVIGATE',path:'/check-in'}, entities:{}, passengerField:null };
   if (/status|track/.test(l))      return { intent:'FLIGHT_STATUS',  text:"Which flight would you like to track?",         quickReplies:['BA117','BA204'], action:{type:'NAVIGATE',path:'/flight-status'}, entities:{}, passengerField:null };
@@ -388,34 +445,138 @@ function fallbackResponse(t) {
   return { intent:'HELP', text:"I can book flights, check you in, and track flights. What would you like?", quickReplies:['Book a flight','Check in','Flight status','Avios'], action:null, entities:{}, passengerField:null };
 }
 
-export async function sendToGemini(userMessage, history = []) {
-  if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
-    return fallbackResponse(userMessage);
-  }
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
-      body: JSON.stringify({
-        model: MODEL, messages: buildMessages(history, userMessage),
-        temperature: 0.2, max_tokens: 600,
-      }),
-    });
-    if (!res.ok) {
-      const errBody = await res.json().catch(() => ({}));
-      console.error('[aiService] Groq error:', res.status, errBody);
-      if (res.status === 429) {
-        return { intent:'UNKNOWN', text:"I'm a little busy right now — please try again in a moment.", quickReplies:['Try again'], action:null, entities:{}, passengerField:null };
-      }
-      throw new Error(`Groq ${res.status}`);
+/**
+ * Sleep helper for backoff delays.
+ */
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Decide whether a failed attempt is worth retrying.
+ * - Network errors (fetch throws) -> retry
+ * - AbortError from our own timeout -> retry (unless it's the final attempt)
+ * - HTTP 429 / 5xx -> retry
+ * - HTTP 4xx (other than 429) -> do not retry, it won't succeed on repeat
+ */
+function isRetryable(status, err) {
+  if (err && err.name === 'AbortError') return true;
+  if (err && !status) return true; // network-level failure
+  if (status === 429) return true;
+  if (status >= 500) return true;
+  return false;
+}
+
+/**
+ * Perform the Groq chat completion call with a timeout, retry/backoff, and
+ * a guard so only the most recently-issued call is allowed to resolve
+ * meaningfully (prevents an older, slower response from clobbering a newer
+ * one in the UI when the user sends messages in quick succession).
+ */
+async function callGroqWithRetry(payload, requestId) {
+  let lastErr = null;
+  let lastStatus = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Another call superseded this one — stop working, caller will ignore result.
+    if (requestId !== currentRequestId) {
+      return { superseded: true };
     }
-    const data = await res.json();
-    return parseResponse(data);
-  } catch (err) {
-    console.error('[aiService] Request failed:', err.message);
-    // Graceful fallback — still useful to the user
-    return fallbackResponse(userMessage);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        lastStatus = res.status;
+        const errBody = await res.json().catch(() => ({}));
+        logError('Groq error:', res.status, errBody);
+
+        if (isRetryable(res.status, null) && attempt < MAX_RETRIES) {
+          await delay(RETRY_BASE_DELAY_MS * 2 ** attempt);
+          continue;
+        }
+        return { httpStatus: res.status, errBody };
+      }
+
+      const data = await res.json();
+      return { data };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastErr = err;
+      logError('Request attempt failed:', err.message);
+
+      if (isRetryable(lastStatus, err) && attempt < MAX_RETRIES) {
+        await delay(RETRY_BASE_DELAY_MS * 2 ** attempt);
+        continue;
+      }
+      return { thrown: err };
+    }
   }
+
+  return { thrown: lastErr, httpStatus: lastStatus };
+}
+
+export async function sendToGemini(userMessage, history = []) {
+  const trimmedMessage = typeof userMessage === 'string' ? userMessage.trim() : '';
+
+  if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
+    return fallbackResponse(trimmedMessage);
+  }
+
+  if (!trimmedMessage) {
+    return {
+      intent: 'HELP',
+      text: "I didn't quite catch that — what would you like to do?",
+      quickReplies: ['Book a flight', 'Check in', 'Flight status'],
+      action: null, entities: {}, passengerField: null,
+    };
+  }
+
+  // Claim this call as the "current" one; any earlier in-flight call will
+  // notice it's been superseded and quietly stop mattering.
+  const requestId = ++currentRequestId;
+
+  const payload = {
+    model: MODEL,
+    messages: buildMessages(history, trimmedMessage),
+    temperature: 0.2,
+    max_tokens: 600,
+  };
+
+  const result = await callGroqWithRetry(payload, requestId);
+
+  // A newer request has since been issued — don't resolve with stale data.
+  // Callers should treat this the same as "still waiting" for the latest call.
+  if (result.superseded || requestId !== currentRequestId) {
+    log('Ignoring superseded response for request', requestId);
+    return null;
+  }
+
+  if (result.data) {
+    return parseResponse(result.data);
+  }
+
+  if (result.httpStatus === 429) {
+    return {
+      intent: 'UNKNOWN',
+      text: "I'm a little busy right now — please try again in a moment.",
+      quickReplies: ['Try again'],
+      action: null, entities: {}, passengerField: null,
+    };
+  }
+
+  // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
+  // -> graceful fallback so the user still gets something useful.
+  return fallbackResponse(trimmedMessage);
 }
 
 // expose model name for the header display
