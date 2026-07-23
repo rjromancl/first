@@ -33,7 +33,24 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
     };
   }
 
-  const result = await sendToGemini(text, geminiHistory);
+  let result;
+  try {
+    result = await sendToGemini(text, geminiHistory);
+  } catch (err) {
+    // Gemini call failed (network, quota, API error) — don't let this
+    // bubble up and crash the voice agent, degrade gracefully instead.
+    console.warn('[voiceNLP] sendToGemini failed:', err?.message || err);
+    return {
+      intent: 'HELP',
+      entities: {},
+      passengerField: null,
+      response: {
+        text: "Sorry, I'm having trouble understanding right now — could you try again, or tap a quick reply below?",
+        quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Help'],
+        action: null,
+      },
+    };
+  }
 
   return {
     intent:         result.intent,
@@ -49,18 +66,27 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
 
 // ─── Text-to-Speech ───────────────────────────────────────────────
 /**
- * Pick the best available TTS voice.
+ * Pick the best available TTS voice for the requested language.
  * On first page load getVoices() often returns [] because the browser
  * hasn't loaded the list yet — this helper waits for voiceschanged if
  * the list is empty, with a 2 s timeout fallback.
  */
-function getPreferredVoice(lang) {
+function getPreferredVoice(lang = 'en-GB') {
   return new Promise((resolve) => {
     const synth = window.speechSynthesis;
 
     const pick = () => {
       const voices = synth.getVoices();
+      const langPrefix = lang.split('-')[0]; // e.g. 'ta' from 'ta-IN'
+
       const preferred =
+        // Exact requested locale, preferring a female voice where identifiable
+        voices.find(v => v.lang === lang && /female|samantha|karen|victoria/i.test(v.name)) ||
+        voices.find(v => v.lang === lang) ||
+        // Same language, any region (e.g. asked for ta-IN, accept ta-LK)
+        voices.find(v => v.lang.startsWith(langPrefix) && /female|samantha|karen|victoria/i.test(v.name)) ||
+        voices.find(v => v.lang.startsWith(langPrefix)) ||
+        // Fall back to English if the requested language has no voice installed
         voices.find(v => v.lang.startsWith('en-GB') && /female|samantha|karen|victoria/i.test(v.name)) ||
         voices.find(v => v.lang.startsWith('en-GB')) ||
         voices.find(v => v.lang.startsWith('en-US') && /female|samantha|karen|victoria/i.test(v.name)) ||
@@ -85,7 +111,7 @@ function getPreferredVoice(lang) {
     // Safety timeout — resolve with null so TTS still runs (browser picks default)
     timer = setTimeout(() => {
       synth.removeEventListener('voiceschanged', onVoicesChanged);
-      resolve(pick() ?? null);
+      resolve(pick());
     }, 2000);
   });
 }
@@ -116,22 +142,8 @@ export function speak(text, {
       const finalVoice = voice ?? selectedVoice;
       if (finalVoice) utterance.voice = finalVoice;
 
-      utterance.onend   = resolve;
-      utterance.onerror = (e) => {
-        // 'interrupted' / 'canceled' fires when cancel() is called — treat as resolved
-        if (e.error === 'interrupted' || e.error === 'canceled' || e.error === 'cancelled') {
-          resolve();
-        } else {
-          // Log but still resolve so the app keeps working
-          console.warn('[speak] TTS error:', e.error);
-          resolve();
-        }
-      };
-
-      window.speechSynthesis.speak(utterance);
-
       // iOS/Chrome bug: synthesis silently stops if the tab is backgrounded.
-      // Resuming every 10s keeps it alive.
+      // Resuming every 10s keeps it alive. Self-clears once speech ends.
       const keepAlive = setInterval(() => {
         if (window.speechSynthesis.speaking) {
           window.speechSynthesis.resume();
@@ -140,7 +152,22 @@ export function speak(text, {
         }
       }, 10000);
 
-      utterance.onend = () => { clearInterval(keepAlive); resolve(); };
+      const finish = () => {
+        clearInterval(keepAlive);
+        resolve();
+      };
+
+      utterance.onend = finish;
+      utterance.onerror = (e) => {
+        // 'interrupted' / 'canceled' fires when cancel() is called — treat as resolved
+        if (e.error !== 'interrupted' && e.error !== 'canceled' && e.error !== 'cancelled') {
+          // Log but still resolve so the app keeps working
+          console.warn('[speak] TTS error:', e.error);
+        }
+        finish();
+      };
+
+      window.speechSynthesis.speak(utterance);
     });
   });
 }

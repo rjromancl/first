@@ -126,6 +126,12 @@ export default function BookFlight() {
   const debouncedFetchFrom = useDebounce((q) => fetchAirports(q, setFromSuggestions), 300);
   const debouncedFetchTo   = useDebounce((q) => fetchAirports(q, setToSuggestions),   300);
 
+  // jumpToStep ref — set by voice FULL_BOOKING to skip to passenger step
+  // after the flight is chosen. Declared above handleSearch (moved up from
+  // its original position below handleSelectFlight) so handleSearch can
+  // read/consume it too, not just handleSelectFlight.
+  const jumpToStepRef = useRef(location.state?.jumpToStep || null);
+
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -140,8 +146,29 @@ export default function BookFlight() {
         adults,
         cabin: cabin.toUpperCase(),
       });
-      setFlights(result.flights || []);
-      setStep(2);
+      const results = result.flights || [];
+      setFlights(results);
+
+      // If this search was auto-triggered by the voice one-shot booking flow
+      // (VoiceAgent set autoSearch + jumpToStep), don't stop at the flight
+      // list waiting for a manual "Select" click — auto-pick the best match
+      // for the requested cabin and continue straight to the step voice
+      // already decided on (passenger details). This is what makes "book me
+      // a business class flight..." actually land somewhere other than an
+      // untouched results list.
+      if (jumpToStepRef.current && results.length > 0) {
+        const bestFlight =
+          results.find(f => (f.seatsLeft?.[selectedCabinKey] ?? 0) > 0) || results[0];
+        setSelectedFlight(bestFlight);
+        setStep(jumpToStepRef.current);
+        jumpToStepRef.current = null; // consume it
+      } else if (results.length === 0) {
+        // No flights matched — surface that instead of silently sitting on
+        // an empty Step 2 with no explanation.
+        setStep(2);
+      } else {
+        setStep(2);
+      }
     } catch (err) {
       setSearchError(err.message || 'Flight search failed. Please try again.');
     } finally {
@@ -149,9 +176,6 @@ export default function BookFlight() {
       window.scrollTo(0, 0);
     }
   };
-
-  // jumpToStep ref — set by voice FULL_BOOKING to skip to passenger step after flight select
-  const jumpToStepRef = useRef(location.state?.jumpToStep || null);
 
   const handleSelectFlight = (flight) => {
     setSelectedFlight(flight);
@@ -640,9 +664,11 @@ export default function BookFlight() {
                 </button>
               </div>
 
-              <p className="bookflight__confirm-email">
-                A confirmation email has been sent to <strong>{passenger.email}</strong>
-              </p>
+              {passenger.phone && (
+                <p className="bookflight__confirm-email">
+                  A confirmation SMS/notice will be sent to <strong>{passenger.phone}</strong>
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -650,5 +676,3 @@ export default function BookFlight() {
     </div>
   );
 }
-
-

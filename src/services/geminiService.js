@@ -375,7 +375,16 @@ function normalisePax(raw) {
 function parseResponse(raw) {
   try {
     const text    = raw?.choices?.[0]?.message?.content || '';
-    const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    let cleaned   = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+
+    // Belt-and-suspenders: if the model ignored json_object mode and wrapped
+    // the JSON in conversational prose (e.g. "Sure! Here's the JSON: {...}"),
+    // pull out the first {...} block instead of failing outright.
+    if (cleaned[0] !== '{') {
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (match) cleaned = match[0];
+    }
+
     const parsed  = JSON.parse(cleaned);
 
     // Normalise entities
@@ -550,6 +559,12 @@ export async function sendToGemini(userMessage, history = []) {
     messages: buildMessages(history, trimmedMessage),
     temperature: 0.2,
     max_tokens: 600,
+    // Force strict JSON output at the API level instead of relying solely on
+    // the system prompt's "raw JSON only" instruction — models occasionally
+    // ignore that instruction on conversational-sounding input and reply with
+    // prose instead, which breaks parseResponse(). json_object mode makes
+    // that structurally impossible.
+    response_format: { type: 'json_object' },
   };
 
   const result = await callGroqWithRetry(payload, requestId);

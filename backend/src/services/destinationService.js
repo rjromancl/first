@@ -21,19 +21,41 @@ const OFFERS = [
   { id: 3, title: 'Earn Double Avios',    description: 'Book by 31 July and earn double Avios on all flights.',           discount: '2x Avios',   validUntil: '2026-07-31', destinations: ['ALL'],                  image: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&q=80', promoCode: 'DOUBLEAVIOS', category: 'avios' },
 ];
 
+/**
+ * List destinations, optionally filtered by category and/or popularity.
+ * Accepts query-string style values for `popular` ('true'/'false') as
+ * well as real booleans.
+ */
 function getDestinations({ category, popular } = {}) {
   let list = DESTINATIONS;
-  if (category && category !== 'all') list = list.filter((d) => d.category === category);
-  if (popular !== undefined) list = list.filter((d) => d.popular === (popular === 'true' || popular === true));
+
+  if (category && category !== 'all') {
+    list = list.filter((d) => d.category === category.toLowerCase());
+  }
+
+  if (popular !== undefined && popular !== null && popular !== '') {
+    const wantPopular = popular === true || popular === 'true';
+    list = list.filter((d) => d.popular === wantPopular);
+  }
+
   return list;
 }
 
+/** Look up a single destination by its IATA code. */
 function getDestinationByCode(code) {
+  if (!code || typeof code !== 'string') {
+    throw Object.assign(new Error('getDestinationByCode: a destination code is required'), {
+      statusCode: 400,
+    });
+  }
   return DESTINATIONS.find((d) => d.code.toUpperCase() === code.toUpperCase()) || null;
 }
 
+/** List current offers, optionally filtered by category. */
 function getOffers({ category } = {}) {
-  if (category) return OFFERS.filter((o) => o.category === category);
+  if (category) {
+    return OFFERS.filter((o) => o.category === category.toLowerCase());
+  }
   return OFFERS;
 }
 
