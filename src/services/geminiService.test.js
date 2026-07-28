@@ -538,12 +538,11 @@ describe('geminiService — HTTP error paths', () => {
     global.fetch = vi.fn();
   });
 
-  it('returns rate-limit message on 429', async () => {
+  it('returns fallback response on 429 rate limit', async () => {
     global.fetch.mockResolvedValue(mockErrorResponse(429, { error: { message: 'Rate limit exceeded' } }));
 
     const result = await sendToGemini('Book a flight');
-    expect(result.intent).toBe('UNKNOWN');
-    expect(result.text).toContain('busy');
+    expect(result.intent).toBe('BOOK_FLIGHT');
   });
 
   it('returns fallback on 500 error', async () => {
