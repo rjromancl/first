@@ -85,8 +85,16 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
     result = await sendToGemini(text, geminiHistory);
   } catch (err) {
     console.warn('[voiceNLP] sendToGemini failed:', err?.message || err);
-    // Degrade gracefully using local fallback parser so the user query is never lost
-    return parseVoiceInputFallback(text);
+    return {
+      intent: 'HELP',
+      entities: {},
+      passengerField: null,
+      response: {
+        text: "Sorry, I'm having trouble understanding right now — could you try again, or tap a quick reply below?",
+        quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Help'],
+        action: null,
+      },
+    };
   }
 
   return {
