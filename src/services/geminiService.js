@@ -460,15 +460,67 @@ function parseResponse(raw) {
 
 function fallbackResponse(t) {
   const l = (t || '').toLowerCase();
-  // Check-in must come before flight booking so "Check-in for tomorrow flight"
-  // is correctly classified as CHECK_IN rather than BOOK_FLIGHT.
-  if (/check|boarding/i.test(l))         return { intent:'CHECK_IN',       text:"Check-in opens 24 hours before departure.",     quickReplies:['Check in now'], action:{type:'NAVIGATE',path:'/check-in'}, entities:{}, passengerField:null };
-  // Flight status must come before flight booking so "Track my flight"
-  // is correctly classified as FLIGHT_STATUS rather than BOOK_FLIGHT.
-  if (/status|track|arrival|departure|late|delayed|airport|plane/i.test(l)) return { intent:'FLIGHT_STATUS',  text:"Which flight would you like to track?",         quickReplies:['BA117','BA204'], action:{type:'NAVIGATE',path:'/flight-status'}, entities:{}, passengerField:null };
-  if (/book|flight|fly/i.test(l))         return { intent:'BOOK_FLIGHT',    text:"Sure! Where would you like to fly?",            quickReplies:['London to New York','London to Dubai','London to Barcelona'], action:{type:'NAVIGATE',path:'/book'}, entities:{}, passengerField:null };
-  if (/avios|club|exec|points|rewards|loyalty/i.test(l))   return { intent:'EXECUTIVE_CLUB', text:"Your Avios balance is on the Executive Club page.", quickReplies:['View Avios'], action:{type:'NAVIGATE',path:'/executive-club'}, entities:{}, passengerField:null };
-  return { intent:'HELP', text:"I can book flights, check you in, and track flights. What would you like?", quickReplies:['Book a flight','Check in','Flight status','Avios'], action:null, entities:{}, passengerField:null };
+
+  // Tanglish & English Check-in keywords
+  if (/check|boarding|checkin|pnr|reference|surname/i.test(l)) {
+    return {
+      intent: 'CHECK_IN',
+      text: "Online check-in opens 24 hours before departure. Check-in pannalam!",
+      quickReplies: ['Check in now'],
+      action: { type: 'NAVIGATE', path: '/check-in' },
+      entities: {},
+      passengerField: null
+    };
+  }
+
+  // Tanglish & English Flight status keywords
+  if (/status|track|arrival|departure|late|delayed|airport|plane|enna|epdi/i.test(l)) {
+    return {
+      intent: 'FLIGHT_STATUS',
+      text: "Which flight status would you like to track?",
+      quickReplies: ['BA117', 'BA204'],
+      action: { type: 'NAVIGATE', path: '/flight-status' },
+      entities: {},
+      passengerField: null
+    };
+  }
+
+  // Tanglish & English Booking keywords (pannu, panren, venum, ticket, poganum)
+  if (/book|flight|fly|pannu|panren|venum|ticket|poganum|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
+    // Extract destinations from Tanglish string if present
+    const destMatch = l.match(/(?:to|poganum|chennai|mumbai|delhi|dubai|tokyo|new york|singapore|barcelona)/i);
+    const to = destMatch ? destMatch[0].toUpperCase() : 'JFK';
+
+    return {
+      intent: 'BOOK_FLIGHT',
+      text: "Sure! Flight search panren. Where would you like to fly?",
+      quickReplies: ['London to New York', 'London to Dubai', 'London to Chennai'],
+      action: { type: 'PREFILL_BOOKING', passenger: null },
+      entities: { from: 'LHR', to: to === 'CHENNAI' ? 'MAA' : to, departureDate: '2026-12-20', cabin: 'economy', adults: 1 },
+      passengerField: null
+    };
+  }
+
+  // Tanglish & English Avios keywords
+  if (/avios|club|exec|points|rewards|loyalty|evvalavu/i.test(l)) {
+    return {
+      intent: 'EXECUTIVE_CLUB',
+      text: "Your Avios balance & tier details available on Executive Club page.",
+      quickReplies: ['View Avios'],
+      action: { type: 'NAVIGATE', path: '/executive-club' },
+      entities: {},
+      passengerField: null
+    };
+  }
+
+  return {
+    intent: 'HELP',
+    text: "I can book flights, check in, and track flight status. How can I help you?",
+    quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
+    action: null,
+    entities: {},
+    passengerField: null
+  };
 }
 
 /**
@@ -607,12 +659,7 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return {
-      intent: 'UNKNOWN',
-      text: "I'm a little busy right now — please try again in a moment.",
-      quickReplies: ['Try again'],
-      action: null, entities: {}, passengerField: null,
-    };
+    return fallbackResponse(trimmedMessage);
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
