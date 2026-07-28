@@ -936,3 +936,139 @@
   font-size: 11px;
   font-weight: 600;
 }
+
+/* ===== Multilingual Language Selector ===== */
+.va-lang-selector {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(7,90,170,0.04);
+  border-bottom: 1px solid var(--ba-border);
+  scrollbar-width: none;
+}
+.va-lang-selector::-webkit-scrollbar { display: none; }
+.va-lang-chip {
+  background: #fff;
+  border: 1px solid var(--ba-border);
+  border-radius: 14px;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ba-text-light);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.va-lang-chip:hover {
+  border-color: var(--ba-blue);
+  color: var(--ba-blue);
+}
+.va-lang-chip--active {
+  background: var(--ba-blue);
+  color: #fff;
+  border-color: var(--ba-blue);
+  box-shadow: 0 2px 6px rgba(7,90,170,0.25);
+}
+
+/* ===== Chain-of-Thought Telemetry Panel ===== */
+.va-telemetry-panel {
+  background: #0d1b2a;
+  border: 1px solid rgba(0, 180, 216, 0.4);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  animation: msgFadeIn 0.25s ease;
+}
+.va-telemetry-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00b4d8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.va-telemetry-pulse {
+  width: 6px;
+  height: 6px;
+  background: #00b4d8;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00b4d8;
+  animation: telemetryPulse 1.2s infinite alternate;
+}
+@keyframes telemetryPulse {
+  0% { opacity: 0.4; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+.va-telemetry-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.va-telemetry-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 10.5px;
+  color: #e0e1dd;
+}
+.va-telemetry-time {
+  color: #778da9;
+  font-size: 9.5px;
+}
+.va-telemetry-msg {
+  color: #90e0ef;
+  font-weight: 500;
+}
+
+/* ===== Proactive Smart Deals & Insights ===== */
+.va-proactive-card {
+  background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%);
+  border: 1.5px solid #e0a96d;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(224, 169, 109, 0.15);
+  animation: msgFadeIn 0.25s ease;
+}
+.va-proactive-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #e0a96d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.va-proactive-icon {
+  color: #f4a261;
+}
+.va-proactive-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.va-proactive-deal {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8f9fa;
+  margin: 0;
+}
+.va-proactive-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #e0a96d;
+  background: rgba(224, 169, 109, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}

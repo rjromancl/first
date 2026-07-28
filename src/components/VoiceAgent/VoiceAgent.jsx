@@ -65,6 +65,84 @@ function Waveform({ active }) {
   );
 }
 
+// ── Agent Chain-of-Thought Telemetry Trace ─────────────────────
+function ThoughtTracePanel({ logs }) {
+  if (!logs || logs.length === 0) return null;
+  return (
+    <div className="va-telemetry-panel">
+      <div className="va-telemetry-header">
+        <span className="va-telemetry-pulse" />
+        <span>Agent Telemetry &amp; CoT Trace</span>
+      </div>
+      <div className="va-telemetry-logs">
+        {logs.map((log, idx) => (
+          <div key={idx} className="va-telemetry-line">
+            <span className="va-telemetry-time">{log.time}</span>
+            <span className="va-telemetry-icon">{log.icon}</span>
+            <span className="va-telemetry-msg">{log.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Proactive Smart Deals & Insights ────────────────────────────
+function ProactiveDealsCard({ entities }) {
+  if (!entities || (!entities.to && !entities.destination)) return null;
+  const dest = (entities.to || entities.destination || '').toUpperCase();
+
+  const DEALS = {
+    JFK: { text: 'Upgrade to Club World (Business) for just 12,500 Avios!', perk: 'Access to LHR Galleries First Lounge' },
+    DXB: { text: 'Earn 2x Avios on Dubai flights booked this month!', perk: 'Complimentary Chauffeur Transfer for First Class' },
+    NRT: { text: 'Direct London-Tokyo route operating daily on Boeing 787-9', perk: 'Japanese In-flight Menu & Saké Tasting' },
+    SYD: { text: 'Double Tier Points eligible on Sydney flights!', perk: 'Kangaroo Route Lounge Refresh in Singapore' },
+    BCN: { text: 'Club Europe fares from £149 — includes 2x 32kg bags', perk: 'Fast Track Security & Lounge Access' }
+  };
+
+  const deal = DEALS[dest] || { text: 'Earn Avios on this route with British Airways & Oneworld partners.', perk: 'Flexible Booking Guarantee' };
+
+  return (
+    <div className="va-proactive-card">
+      <div className="va-proactive-header">
+        <FaBolt className="va-proactive-icon" />
+        <span>Proactive Agent Insights — {dest}</span>
+      </div>
+      <div className="va-proactive-body">
+        <p className="va-proactive-deal">💡 {deal.text}</p>
+        <span className="va-proactive-badge">✨ {deal.perk}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Multilingual Voice Accent Selector ─────────────────────────
+function LanguageSelector({ lang, onSelect }) {
+  const LANGUAGES = [
+    { code: 'en-GB', label: '🇬🇧 EN (UK)' },
+    { code: 'en-US', label: '🇺🇸 EN (US)' },
+    { code: 'es-ES', label: '🇪🇸 ES' },
+    { code: 'fr-FR', label: '🇫🇷 FR' },
+    { code: 'de-DE', label: '🇩🇪 DE' },
+    { code: 'hi-IN', label: '🇮🇳 HI' },
+    { code: 'ja-JP', label: '🇯🇵 JP' },
+  ];
+
+  return (
+    <div className="va-lang-selector">
+      {LANGUAGES.map(l => (
+        <button
+          key={l.code}
+          className={`va-lang-chip ${lang === l.code ? 'va-lang-chip--active' : ''}`}
+          onClick={() => onSelect(l.code)}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Booking Summary Card ──────────────────────────────────────────
 function BookingCard({ entities, passenger }) {
   const hasEntities = entities && (entities.to || entities.departureDate);
@@ -165,6 +243,10 @@ export default function VoiceAgent() {
   const [interimText,    setInterimText]    = useState('');
   const [handsFree,      setHandsFree]      = useState(true);
   const [awaitingTwoOpt, setAwaitingTwoOpt] = useState(false);
+  const [selectedLang,   setSelectedLang]   = useState('en-GB');
+  const [telemetryLogs,  setTelemetryLogs]  = useState([
+    { time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }), icon: '🚀', text: 'Agent initialized — RAG vector engine ready' }
+  ]);
   // Captured entities from AI — shown in BookingCard
   const [capturedEntities, setCapturedEntities] = useState({});
   const [capturedPax,      setCapturedPax]      = useState({});
@@ -214,14 +296,23 @@ export default function VoiceAgent() {
     setMessages(p => [...p, { id: mkId(), role: 'agent', text, timestamp: new Date(), quickReplies, action }]);
   }, []);
 
+  const selectedLangRef = useRef(selectedLang);
+  useEffect(() => { selectedLangRef.current = selectedLang; }, [selectedLang]);
+
+  const addTelemetryLog = useCallback((icon, text) => {
+    const time = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    setTelemetryLogs(prev => [...prev.slice(-5), { time, icon, text }]);
+  }, []);
+
   // ── TTS — speaks immediately, does NOT block mic in hands-free ──
   const speakMessage = useCallback(async (text) => {
     if (!ttsEnabledRef.current || !window.speechSynthesis) return;
     const clean = text.replace(/[^\x00-\x7F]/g, ' ').replace(/\s+/g, ' ').trim();
     if (mountedRef.current) setIsSpeaking(true);
-    try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: 'en-GB' }); } catch (_) {}
+    addTelemetryLog('📢', `Speech output: ${selectedLangRef.current}`);
+    try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current }); } catch (_) {}
     if (mountedRef.current) setIsSpeaking(false);
-  }, []);
+  }, [addTelemetryLog]);
 
   // ── Interrupt TTS and start listening immediately ─────────────
   const interruptAndListen = useCallback(() => {
@@ -301,6 +392,7 @@ export default function VoiceAgent() {
     const trimmed = text.trim();
     if (mountedRef.current) setIsProcessing(true);
     addUserMsg(trimmed);
+    addTelemetryLog('🔍', `RAG Vector DB: Searching context for "${trimmed.substring(0, 30)}..."`);
 
     const updatedHistory = [...geminiHistoryRef.current, { role: 'user', text: trimmed }];
 
@@ -308,6 +400,12 @@ export default function VoiceAgent() {
       const { intent, entities, response, passengerField } =
         await parseVoiceInput(trimmed, {}, updatedHistory);
       if (!mountedRef.current) return;
+
+      addTelemetryLog('🧠', `LLM Reasoning: Resolved intent as "${intent || 'QUERY'}"`);
+      if (response?.action) {
+        const actName = typeof response.action === 'string' ? response.action : (response.action.type || 'ACTION');
+        addTelemetryLog('⚡', `Tool Execution: Executing autonomous action [${actName}]`);
+      }
 
       setGeminiHistory([...updatedHistory, { role: 'model', text: response.text }]);
 
@@ -524,7 +622,7 @@ export default function VoiceAgent() {
               {agentStatus === 'listening' ? <Waveform active /> : <FaPlane size={15} />}
             </div>
             <div className="va-header-info">
-              <span className="va-header-name">BA Voice Assistant</span>
+              <span className="va-header-name">BA Advanced Agentic AI</span>
               <span className={`va-status va-status--${agentStatus}`}>
                 {agentStatus === 'listening' && <span className="va-pulse" />}
                 {statusLabel}
@@ -547,6 +645,9 @@ export default function VoiceAgent() {
             <button className="va-icon-btn va-icon-btn--close" onClick={closeVoiceAgent}><FaTimes size={16} /></button>
           </div>
         </div>
+
+        {/* ── Multilingual Language Bar ── */}
+        <LanguageSelector lang={selectedLang} onSelect={setSelectedLang} />
 
         {/* ── Messages ── */}
         <div className="va-messages" role="log" aria-live="polite">
@@ -576,8 +677,14 @@ export default function VoiceAgent() {
             </div>
           ))}
 
+          {/* Proactive Smart Deals Card */}
+          <ProactiveDealsCard entities={capturedEntities} />
+
           {/* Booking summary card */}
           <BookingCard entities={capturedEntities} passenger={capturedPax} />
+
+          {/* Chain-of-Thought Telemetry Trace Panel */}
+          <ThoughtTracePanel logs={telemetryLogs} />
 
           {/* Passenger collection card */}
           {collectingPax && <PassengerCard collected={paxData} currentField={currentField} currentQuestion={currentQ} />}

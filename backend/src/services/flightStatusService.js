@@ -13,120 +13,90 @@
 
 const cache = require('../config/cache');
 const logger = require('../config/logger');
-const { MOCK_FLIGHTS } = require('../mocks/mockData');
 
-const CABIN_PRICE_KEY = {
-  ECONOMY: 'economy',
-  PREMIUM_ECONOMY: 'premiumEconomy',
-  BUSINESS: 'businessClass',
-  FIRST: 'firstClass',
-};
-
-async function searchFlights({
-  originLocationCode,
-  destinationLocationCode,
-  departureDate,
-  returnDate,
-  adults = 1,
-  travelClass = 'ECONOMY',
-  nonStop = false,
-  currencyCode = 'GBP',
-}) {
-  if (!originLocationCode || !destinationLocationCode) {
-    throw Object.assign(
-      new Error('searchFlights: originLocationCode and destinationLocationCode are required'),
-      { statusCode: 400 }
-    );
+/**
+ * Get status for a specific flight by carrier and flight number.
+ */
+async function getFlightStatus({ carrierCode = 'BA', flightNumber, scheduledDepartureDate }) {
+  if (!flightNumber) {
+    throw Object.assign(new Error('flightNumber is required'), { statusCode: 400 });
   }
 
-  const numAdults = parseInt(adults, 10);
-  if (!Number.isInteger(numAdults) || numAdults < 1) {
-    throw Object.assign(new Error('searchFlights: adults must be a positive integer'), {
-      statusCode: 400,
-    });
-  }
+  const cleanNum = flightNumber.toString().replace(/^BA-?/i, '');
+  const key = `${carrierCode.toUpperCase()}${cleanNum}:${scheduledDepartureDate || 'today'}`;
+  logger.info('[flightStatusService] getFlightStatus', { carrierCode, flightNumber: cleanNum, scheduledDepartureDate });
 
-  const origin = originLocationCode.toUpperCase();
-  const destination = destinationLocationCode.toUpperCase();
-  const key = `${origin}-${destination}`;
-  const cacheKey = `flights:${key}:${departureDate}:${numAdults}:${travelClass}`;
+  const cached = cache.get(`status:${key}`);
+  if (cached) return cached;
 
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    logger.debug('Flight search cache hit', { cacheKey });
-    return cached;
-  }
+  // Mock status generator for BA flights
+  const statusList = ['ON_TIME', 'ON_TIME', 'ON_TIME', 'BOARDING', 'SCHEDULED', 'DEPARTED'];
+  const statusIndex = Math.abs((cleanNum.charCodeAt(0) || 0) + parseInt(cleanNum, 10) || 1) % statusList.length;
+  const statusStr = statusList[statusIndex];
 
-  logger.info('[MOCK] Flight search', { key, departureDate, adults: numAdults, travelClass });
-
-  // Find flights for route — try forward, reverse, then first available
-  const base =
-    MOCK_FLIGHTS[key] ||
-    MOCK_FLIGHTS[`${destination}-${origin}`] ||
-    Object.values(MOCK_FLIGHTS)[0];
-
-  if (!base || base.length === 0) {
-    throw Object.assign(new Error('searchFlights: no mock flight data is configured'), {
-      statusCode: 500,
-    });
-  }
-
-  const cabinKey = CABIN_PRICE_KEY[travelClass] || 'economy';
-
-  // Clone and pin to requested departure date
-  let flights = base.map((f) => {
-    const clone = JSON.parse(JSON.stringify(f));
-    clone.date = departureDate || clone.date;
-
-    // Re-stamp segment dates to requested date
-    if (clone.itineraries?.[0]?.segments) {
-      clone.itineraries[0].segments = clone.itineraries[0].segments.map((seg) => ({
-        ...seg,
-        departure: { ...seg.departure, at: `${clone.date}T${seg.departure.at.substring(11)}` },
-        arrival: { ...seg.arrival, at: `${clone.date}T${seg.arrival.at.substring(11)}` },
-      }));
-    }
-
-    // Price for the requested cabin class, scaled by passenger count.
-    // Falls back to the flight's base grandTotal if no per-cabin price exists.
-    const rawCabinPrice = clone.prices?.[cabinKey];
-    const unitPrice = rawCabinPrice != null ? parseFloat(rawCabinPrice) : parseFloat(clone.price?.grandTotal);
-
-    if (Number.isNaN(unitPrice)) {
-      logger.warn('[flightService] Missing price data for flight', { flightId: clone.id, cabinKey });
-    }
-
-    const total = (Number.isNaN(unitPrice) ? 0 : unitPrice * numAdults).toFixed(2);
-    clone.price = { grandTotal: total, total, currency: currencyCode };
-
-    return clone;
-  });
-
-  // Apply nonStop filter
-  if (nonStop === true || nonStop === 'true') {
-    const direct = flights.filter((f) => f.stops === 0);
-    if (direct.length > 0) flights = direct;
-  }
+  const departureDateStr = scheduledDepartureDate || new Date().toISOString().split('T')[0];
 
   const result = {
-    flights,
-    dictionaries: {},
-    meta: { count: flights.length },
+    flightNumber: `${carrierCode.toUpperCase()}${cleanNum}`,
+    carrier: 'British Airways',
+    status: statusStr,
+    departure: {
+      airport: 'LHR',
+      terminal: '5',
+      gate: 'B36',
+      scheduledTime: `${departureDateStr}T10:15:00Z`,
+      estimatedTime: `${departureDateStr}T10:15:00Z`,
+    },
+    arrival: {
+      airport: 'JFK',
+      terminal: '7',
+      gate: '12',
+      scheduledTime: `${departureDateStr}T13:45:00Z`,
+      estimatedTime: `${departureDateStr}T13:45:00Z`,
+    },
+    aircraft: 'Boeing 777-300ER',
   };
 
-  cache.set(cacheKey, result, 300);
+  cache.set(`status:${key}`, result, 120);
   return result;
 }
 
-async function confirmFlightPrice(flightOffer) {
-  if (!flightOffer) {
-    throw Object.assign(new Error('confirmFlightPrice: flightOffer is required'), {
-      statusCode: 400,
-    });
+/**
+ * Get flight status list for a specific origin and destination route.
+ */
+async function getFlightsByRoute({ origin, destination, departureDate }) {
+  if (!origin || !destination) {
+    throw Object.assign(new Error('origin and destination are required'), { statusCode: 400 });
   }
-  // In mock mode just echo back the offer — no Amadeus pricing call needed
-  logger.info('[MOCK] confirmFlightPrice — echoing offer back');
-  return { flightOffers: [flightOffer] };
+
+  const depDate = departureDate || new Date().toISOString().split('T')[0];
+  logger.info('[flightStatusService] getFlightsByRoute', { origin, destination, departureDate: depDate });
+
+  const flights = [
+    {
+      flightNumber: 'BA117',
+      carrier: 'British Airways',
+      status: 'ON_TIME',
+      departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T08:25:00Z` },
+      arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T11:15:00Z` },
+    },
+    {
+      flightNumber: 'BA175',
+      carrier: 'British Airways',
+      status: 'ON_TIME',
+      departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T13:40:00Z` },
+      arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T16:30:00Z` },
+    },
+    {
+      flightNumber: 'BA204',
+      carrier: 'British Airways',
+      status: 'SCHEDULED',
+      departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T18:00:00Z` },
+      arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T20:50:00Z` },
+    },
+  ];
+
+  return { origin, destination, date: depDate, count: flights.length, flights };
 }
 
-module.exports = { searchFlights, confirmFlightPrice };
+module.exports = { getFlightStatus, getFlightsByRoute };
