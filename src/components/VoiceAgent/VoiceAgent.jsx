@@ -121,7 +121,7 @@ function LanguageSelector({ lang, onSelect }) {
   const LANGUAGES = [
     { code: 'en-GB', label: '🇬🇧 EN (UK)' },
     { code: 'en-US', label: '🇺🇸 EN (US)' },
-    { code: 'ta-IN', label: '🇮🇳 தமிழ் (Tamil)' },
+    { code: 'ta-IN', label: '🇮🇳 Tanglish (Tamil)' },
     { code: 'hi-IN', label: '🇮🇳 HI' },
     { code: 'es-ES', label: '🇪🇸 ES' },
     { code: 'fr-FR', label: '🇫🇷 FR' },

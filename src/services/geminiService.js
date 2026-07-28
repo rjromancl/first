@@ -1,4 +1,4 @@
-﻿/**
+/**
  * aiService.js — Groq llama-3.3-70b-versatile
  *
  * Optimised for SPEED: tries to extract everything in one shot first.
@@ -212,6 +212,12 @@ NATIONALITY CODES (use ISO 2-letter):
 British=GB, English/Scottish/Welsh/Irish=GB, Indian=IN, Pakistani=PK, American=US, Australian=AU, Canadian=CA, South African=ZA, Bangladeshi=BD, Sri Lankan=LK, Nigerian=NG, Kenyan=KE, French=FR, German=DE, Italian=IT, Spanish=ES, Portuguese=PT, Dutch=NL, Polish=PL, Romanian=RO, Bulgarian=BG, Filipino=PH, Chinese=CN, Japanese=JP, Korean=KR, Emirati=AE, Saudi=SA, Egyptian=EG, Ghanaian=GH, Jamaican=JM, Turkish=TR, Iranian=IR, Afghan=AF, Nepali=NP
 
 BOOKING DEFAULTS: from=LHR, adults=1, tripType=return, cabin=economy
+
+LANGUAGE & TANGLISH SUPPORT:
+- The user may speak or type in TANGLISH (Tamil written in Latin/English script, e.g., "London to Chennai flight book pannu for 2 adults", "Baggage weight evvalavu for business class?", "Check in pannu for XYMBA1 surname Wilson").
+- Understand Tanglish inputs fluently, extract all parameters (from, to, dates, cabin, passengers, PNR), and execute autonomous actions (`FULL_BOOKING`, `PREFILL_BOOKING`, `NAVIGATE`, `CHECK_IN`).
+- Respond in natural, friendly Tanglish when the user talks in Tanglish (e.g., "Sure! London to New York flight search panren. Departure date Dec 20, 2026.").
+
 
 ═══════════════════════════════════════════════════════
 HYBRID BOOKING LOGIC — READ CAREFULLY
