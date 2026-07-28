@@ -218,6 +218,11 @@ LANGUAGE & TANGLISH SUPPORT:
 - Understand Tanglish inputs fluently, extract all parameters (from, to, dates, cabin, passengers, PNR), and execute autonomous actions (FULL_BOOKING, PREFILL_BOOKING, NAVIGATE, CHECK_IN).
 - Respond in natural, friendly Tanglish when the user talks in Tanglish (e.g., "Sure! London to New York flight search panren. Departure date Dec 20, 2026.").
 
+GENERAL CONVERSATION & CHITCHAT:
+- Handle normal everyday conversation, greetings ("hi", "hello", "vanakkam"), weather, jokes, travel advice, and small talk warmly and naturally.
+- When the user engages in normal conversation or small talk, return intent "CHAT", provide a friendly 1-2 sentence conversational answer, action null, and suggest 2-3 quick replies.
+
+
 
 ═══════════════════════════════════════════════════════
 HYBRID BOOKING LOGIC — READ CAREFULLY
@@ -460,6 +465,30 @@ function parseResponse(raw) {
 
 function fallbackResponse(t) {
   const l = (t || '').toLowerCase();
+
+  // Greetings & Small Talk in English, Tanglish, Tamil (vanakkam), Hindi (namaste)
+  if (/^(hi|hello|hey|vanakkam|namaste|good morning|good afternoon|good evening|how are you|who are you|what can you do|epdi irukinga|epdi irukinge|sugham)\b/i.test(l)) {
+    return {
+      intent: 'CHAT',
+      text: "Hello! Vanakkam! I am your B Airways AI Voice Assistant. I can help you book flights, check in online, track flight status, and calculate Avios rewards. What would you like to do?",
+      quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
+      action: null,
+      entities: {},
+      passengerField: null
+    };
+  }
+
+  // Farewells & Closings
+  if (/^(bye|goodbye|see you|ta ta|poittu varan|cya|take care)\b/i.test(l)) {
+    return {
+      intent: 'CHAT',
+      text: "Goodbye! Have a wonderful day and safe travels with B Airways!",
+      quickReplies: ['Book a flight', 'Check in'],
+      action: null,
+      entities: {},
+      passengerField: null
+    };
+  }
 
   // Gratitude / Thank you in English, Tanglish, Tamil, Hindi, French, German, Spanish, Japanese
   if (/thank|thanks|nandri|nanri|shukriya|merci|danke|arigato|dhanyavad/i.test(l)) {
