@@ -545,10 +545,9 @@ function fallbackResponse(t) {
 
   const routeMatch = l.match(/(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|poganum|-)\s+(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
 
-  // Tanglish & English Booking keywords (pannu, panren, venum, ticket, poganum)
-  if (routeMatch || /book|flight|fly|pannu|panren|venum|ticket|poganum|paris|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
-    const fromCode = routeMatch ? (cityMap[routeMatch[1].toLowerCase().replace(/\s+/g, '')] || 'LHR') : 'LHR';
-    const toCode   = routeMatch ? (cityMap[routeMatch[2].toLowerCase().replace(/\s+/g, '')] || 'CDG') : 'CDG';
+  if (routeMatch) {
+    const fromCode = cityMap[routeMatch[1].toLowerCase().replace(/\s+/g, '')] || 'LHR';
+    const toCode   = cityMap[routeMatch[2].toLowerCase().replace(/\s+/g, '')] || 'CDG';
 
     return {
       intent: 'BOOK_FLIGHT',
@@ -556,6 +555,18 @@ function fallbackResponse(t) {
       quickReplies: ['London to Paris', 'London to New York', 'London to Dubai'],
       action: { type: 'PREFILL_BOOKING', passenger: null },
       entities: { from: fromCode, to: toCode, departureDate: '2026-12-28', cabin: 'economy', adults: 1 },
+      passengerField: null
+    };
+  }
+
+  // Tanglish & English Booking keywords (pannu, panren, venum, ticket, poganum)
+  if (/book|flight|fly|pannu|panren|venum|ticket|poganum|paris|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
+    return {
+      intent: 'BOOK_FLIGHT',
+      text: "Sure! Where would you like to fly?",
+      quickReplies: ['London to New York', 'London to Dubai', 'London to Barcelona'],
+      action: { type: 'NAVIGATE', path: '/book' },
+      entities: {},
       passengerField: null
     };
   }
@@ -718,7 +729,14 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage);
+    return {
+      intent: 'UNKNOWN',
+      text: "I'm a little busy right now — please try again in a moment.",
+      quickReplies: ['Try again'],
+      action: null,
+      entities: {},
+      passengerField: null,
+    };
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
