@@ -487,16 +487,12 @@ function fallbackResponse(t) {
 
   // Tanglish & English Booking keywords (pannu, panren, venum, ticket, poganum)
   if (/book|flight|fly|pannu|panren|venum|ticket|poganum|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
-    // Extract destinations from Tanglish string if present
-    const destMatch = l.match(/(?:to|poganum|chennai|mumbai|delhi|dubai|tokyo|new york|singapore|barcelona)/i);
-    const to = destMatch ? destMatch[0].toUpperCase() : 'JFK';
-
     return {
       intent: 'BOOK_FLIGHT',
-      text: "Sure! Flight search panren. Where would you like to fly?",
-      quickReplies: ['London to New York', 'London to Dubai', 'London to Chennai'],
-      action: { type: 'PREFILL_BOOKING', passenger: null },
-      entities: { from: 'LHR', to: to === 'CHENNAI' ? 'MAA' : to, departureDate: '2026-12-20', cabin: 'economy', adults: 1 },
+      text: "Sure! Where would you like to fly?",
+      quickReplies: ['London to New York', 'London to Dubai', 'London to Barcelona'],
+      action: { type: 'NAVIGATE', path: '/book' },
+      entities: {},
       passengerField: null
     };
   }
@@ -659,7 +655,14 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage);
+    return {
+      intent: 'UNKNOWN',
+      text: "I'm a little busy right now — please try again in a moment.",
+      quickReplies: ['Try again'],
+      action: null,
+      entities: {},
+      passengerField: null,
+    };
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
