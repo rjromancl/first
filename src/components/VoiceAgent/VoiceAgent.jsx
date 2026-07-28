@@ -141,6 +141,33 @@ function LanguageSelector({ lang, onSelect }) {
         </button>
       ))}
     </div>
+// ── Confirmed E-Ticket Card ─────────────────────────────────────
+function TicketCard({ booking }) {
+  if (!booking) return null;
+  const { pnr, paxName, from, to, departureDate, cabin, seat = '14A' } = booking;
+  return (
+    <div className="va-ticket-card">
+      <div className="va-ticket-header">
+        <FaCheckCircle className="va-ticket-check" />
+        <span>CONFIRMED E-TICKET — PNR: <strong className="va-ticket-pnr">{pnr}</strong></span>
+      </div>
+      <div className="va-ticket-body">
+        <div className="va-ticket-route">
+          <span className="va-ticket-code">{from || 'LHR'}</span>
+          <FaArrowRight className="va-ticket-arrow" />
+          <span className="va-ticket-code">{to || 'JFK'}</span>
+        </div>
+        <div className="va-ticket-details">
+          <span>👤 {paxName || 'Passenger'}</span>
+          <span>📅 {departureDate || '2026-12-28'}</span>
+          <span>💺 Seat {seat} ({cabin || 'Economy'})</span>
+        </div>
+        <div className="va-ticket-status">
+          <span>✨ Status: CONFIRMED &amp; TICKETED</span>
+          <small>E-Ticket issued by B Airways</small>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -248,9 +275,9 @@ export default function VoiceAgent() {
   const [telemetryLogs,  setTelemetryLogs]  = useState([
     { time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }), icon: '🚀', text: 'Agent initialized — RAG vector engine ready' }
   ]);
-  // Captured entities from AI — shown in BookingCard
   const [capturedEntities, setCapturedEntities] = useState({});
   const [capturedPax,      setCapturedPax]      = useState({});
+  const [completedBooking, setCompletedBooking] = useState(null);
 
   // Gemini history
   const [geminiHistory, setGeminiHistory] = useState([]);
@@ -461,6 +488,17 @@ export default function VoiceAgent() {
       // ── FULL_BOOKING ───────────────────────────────────────────
       if (response.action?.type === 'FULL_BOOKING') {
         setCollectingPax(false); setCurrentField(null); setCurrentQ(''); setPaxData({});
+        const pnrCode = 'BA-' + Math.floor(10000 + Math.random() * 90000);
+        const paxName = `${response.action.passenger?.firstName || 'Passenger'} ${response.action.passenger?.lastName || ''}`.trim();
+        setCompletedBooking({
+          pnr: pnrCode,
+          paxName,
+          from: entities.from || 'LHR',
+          to: entities.to || 'JFK',
+          departureDate: entities.departureDate || '2026-12-28',
+          cabin: entities.cabin || 'Economy',
+          seat: '14A'
+        });
         const navState = {
           prefillPassenger: response.action.passenger,
           from:       entities.from         || '',
@@ -677,6 +715,9 @@ export default function VoiceAgent() {
               </div>
             </div>
           ))}
+
+          {/* Confirmed E-Ticket Card */}
+          <TicketCard booking={completedBooking} />
 
           {/* Proactive Smart Deals Card */}
           <ProactiveDealsCard entities={capturedEntities} />

@@ -461,6 +461,18 @@ function parseResponse(raw) {
 function fallbackResponse(t) {
   const l = (t || '').toLowerCase();
 
+  // Gratitude / Thank you in English, Tanglish, Tamil, Hindi, French, German, Spanish, Japanese
+  if (/thank|thanks|nandri|nanri|shukriya|merci|danke|arigato|dhanyavad/i.test(l)) {
+    return {
+      intent: 'THANK_YOU',
+      text: "You're very welcome! Have a wonderful trip with B Airways. Let me know if you need anything else!",
+      quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
+      action: null,
+      entities: {},
+      passengerField: null
+    };
+  }
+
   // Tanglish & English Check-in keywords
   if (/check|boarding|checkin|pnr|reference|surname/i.test(l)) {
     return {
