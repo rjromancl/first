@@ -655,7 +655,14 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage);
+    return {
+      intent: 'UNKNOWN',
+      text: "I'm a little busy right now — please try again in a moment.",
+      quickReplies: ['Try again'],
+      action: null,
+      entities: {},
+      passengerField: null,
+    };
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
