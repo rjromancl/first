@@ -121,6 +121,8 @@ app.get('/health', (req, res) => {
   });
 });
 
+const soapRoutes          = require('./routes/soapRoutes');
+
 // ─── API Routes ───────────────────────────────────────────────────
 app.use('/api/auth',         authLimiter,    authRoutes);
 app.use('/api/flights',      amadeusLimiter, flightRoutes);
@@ -131,6 +133,7 @@ app.use('/api/destinations',                 destinationRoutes);
 app.use('/api/offers',                       offerRoutes);
 app.use('/api/avios',        amadeusLimiter, aviosRoutes);
 app.use('/api/rag',          ragRoutes);
+app.use('/soap',             soapRoutes);
 
 // ─── 404 + Error Handling ─────────────────────────────────────────
 app.use(notFound);
