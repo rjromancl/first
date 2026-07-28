@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const logger = require('./config/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { initRAG } = require('./services/ragService');
 
 // ─── Routes ───────────────────────────────────────────────────────
 const authRoutes        = require('./routes/authRoutes');
@@ -19,6 +20,7 @@ const airportRoutes     = require('./routes/airportRoutes');
 const destinationRoutes = require('./routes/destinationRoutes');
 const offerRoutes       = require('./routes/offerRoutes');
 const aviosRoutes       = require('./routes/aviosRoutes');
+const ragRoutes         = require('./routes/ragRoutes');
 
 const app = express();
 
@@ -90,7 +92,25 @@ const amadeusLimiter = rateLimit({
 
 app.use(globalLimiter);
 
-// ─── Health check ─────────────────────────────────────────────────
+// ─── Root & Health check ──────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'British Airways API Server',
+    webAppUrl: 'http://localhost:3000',
+    endpoints: {
+      health: '/health',
+      ragHealth: '/api/rag/health',
+      ragContext: '/api/rag/context (POST)',
+      destinations: '/api/destinations',
+      offers: '/api/offers',
+      flights: '/api/flights/search',
+      avios: '/api/avios/calculate',
+    },
+    message: 'To view the British Airways Web App UI, open http://localhost:3000 in your browser.',
+  });
+});
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -110,6 +130,7 @@ app.use('/api/checkin',                      checkinRoutes);
 app.use('/api/destinations',                 destinationRoutes);
 app.use('/api/offers',                       offerRoutes);
 app.use('/api/avios',        amadeusLimiter, aviosRoutes);
+app.use('/api/rag',          ragRoutes);
 
 // ─── 404 + Error Handling ─────────────────────────────────────────
 app.use(notFound);
@@ -117,6 +138,14 @@ app.use(errorHandler);
 
 // ─── Start ────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '4000');
+
+// Initialise RAG (ChromaDB) before starting the server
+initRAG().then((ok) => {
+  logger.info('RAG service initialised', { ready: ok });
+}).catch((err) => {
+  logger.warn('RAG service failed to initialise', { error: err.message });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   logger.info(`BA Backend running on port ${PORT}`, {
     env: process.env.NODE_ENV || 'development',

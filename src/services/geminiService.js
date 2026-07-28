@@ -23,6 +23,9 @@
  * single biggest risk here.
  */
 
+// RAG: retrieve relevant context from the vector DB before sending to the LLM.
+import { getAugmentedPrompt } from './ragService';
+
 // Support the new, correctly-named env var, but fall back to the legacy
 // (misleadingly named) one so nothing breaks for existing deployments.
 const API_KEY =
@@ -343,8 +346,8 @@ FINAL RULES:
 
 const SYSTEM_PROMPT = buildSystemPrompt();
 
-function buildMessages(history, userMessage) {
-  const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+function buildMessages(history, userMessage, systemPrompt = SYSTEM_PROMPT) {
+  const messages = [{ role: 'system', content: systemPrompt }];
 
   // Cap history so long-running conversations don't grow the payload (and
   // cost/latency) without bound. Keeps only the most recent N turns.
@@ -413,6 +416,10 @@ function parseResponse(raw) {
     } else if (action?.type === 'FULL_BOOKING' && !action.passenger) {
       const pax = parsed.passenger || null;
       if (pax) action.passenger = normalisePax(pax);
+    } else if (action?.type === 'FULL_BOOKING' && action.passenger && !action.passenger.firstName) {
+      // Passenger object exists but only has a `name` field (or other
+      // non-standard shape) — normalise it to firstName/lastName/etc.
+      action.passenger = normalisePax(action.passenger);
     }
 
     // Normalise passengerField
@@ -447,10 +454,14 @@ function parseResponse(raw) {
 
 function fallbackResponse(t) {
   const l = (t || '').toLowerCase();
-  if (/book|flight|fly/.test(l))   return { intent:'BOOK_FLIGHT',    text:"Sure! Where would you like to fly?",            quickReplies:['London to New York','London to Dubai','London to Barcelona'], action:{type:'NAVIGATE',path:'/book'}, entities:{}, passengerField:null };
-  if (/check.?in/.test(l))         return { intent:'CHECK_IN',       text:"Check-in opens 24 hours before departure.",     quickReplies:['Check in now'], action:{type:'NAVIGATE',path:'/check-in'}, entities:{}, passengerField:null };
-  if (/status|track/.test(l))      return { intent:'FLIGHT_STATUS',  text:"Which flight would you like to track?",         quickReplies:['BA117','BA204'], action:{type:'NAVIGATE',path:'/flight-status'}, entities:{}, passengerField:null };
-  if (/avios|club|exec/.test(l))   return { intent:'EXECUTIVE_CLUB', text:"Your Avios balance is on the Executive Club page.", quickReplies:['View Avios'], action:{type:'NAVIGATE',path:'/executive-club'}, entities:{}, passengerField:null };
+  // Check-in must come before flight booking so "Check-in for tomorrow flight"
+  // is correctly classified as CHECK_IN rather than BOOK_FLIGHT.
+  if (/check|boarding/i.test(l))         return { intent:'CHECK_IN',       text:"Check-in opens 24 hours before departure.",     quickReplies:['Check in now'], action:{type:'NAVIGATE',path:'/check-in'}, entities:{}, passengerField:null };
+  // Flight status must come before flight booking so "Track my flight"
+  // is correctly classified as FLIGHT_STATUS rather than BOOK_FLIGHT.
+  if (/status|track|arrival|departure|late|delayed|airport|plane/i.test(l)) return { intent:'FLIGHT_STATUS',  text:"Which flight would you like to track?",         quickReplies:['BA117','BA204'], action:{type:'NAVIGATE',path:'/flight-status'}, entities:{}, passengerField:null };
+  if (/book|flight|fly/i.test(l))         return { intent:'BOOK_FLIGHT',    text:"Sure! Where would you like to fly?",            quickReplies:['London to New York','London to Dubai','London to Barcelona'], action:{type:'NAVIGATE',path:'/book'}, entities:{}, passengerField:null };
+  if (/avios|club|exec|points|rewards|loyalty/i.test(l))   return { intent:'EXECUTIVE_CLUB', text:"Your Avios balance is on the Executive Club page.", quickReplies:['View Avios'], action:{type:'NAVIGATE',path:'/executive-club'}, entities:{}, passengerField:null };
   return { intent:'HELP', text:"I can book flights, check you in, and track flights. What would you like?", quickReplies:['Book a flight','Check in','Flight status','Avios'], action:null, entities:{}, passengerField:null };
 }
 
@@ -535,7 +546,11 @@ async function callGroqWithRetry(payload, requestId) {
 }
 
 export async function sendToGemini(userMessage, history = []) {
-  const trimmedMessage = typeof userMessage === 'string' ? userMessage.trim() : '';
+  // Coerce non-string input (numbers, etc.) to string so the AI can still
+  // process it rather than silently dropping it as empty.
+  const trimmedMessage = typeof userMessage === 'string'
+    ? userMessage.trim()
+    : String(userMessage ?? '').trim();
 
   if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
     return fallbackResponse(trimmedMessage);
@@ -554,9 +569,14 @@ export async function sendToGemini(userMessage, history = []) {
   // notice it's been superseded and quietly stop mattering.
   const requestId = ++currentRequestId;
 
+  // RAG: retrieve relevant context from the vector DB and augment the
+  // system prompt before sending to the LLM. If the vector DB is not
+  // available, getAugmentedPrompt returns the original prompt unchanged.
+  const augmentedPrompt = await getAugmentedPrompt(trimmedMessage, SYSTEM_PROMPT);
+
   const payload = {
     model: MODEL,
-    messages: buildMessages(history, trimmedMessage),
+    messages: buildMessages(history, trimmedMessage, augmentedPrompt),
     temperature: 0.2,
     max_tokens: 600,
     // Force strict JSON output at the API level instead of relying solely on

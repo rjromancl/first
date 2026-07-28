@@ -33,6 +33,7 @@ const airportRoutes     = require('../backend/src/routes/airportRoutes');
 const destinationRoutes = require('../backend/src/routes/destinationRoutes');
 const offerRoutes       = require('../backend/src/routes/offerRoutes');
 const aviosRoutes       = require('../backend/src/routes/aviosRoutes');
+const ragRoutes         = require('../backend/src/routes/ragRoutes');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/checkin',      checkinRoutes);
 app.use('/api/destinations', destinationRoutes);
 app.use('/api/offers',       offerRoutes);
 app.use('/api/avios',        aviosRoutes);
+app.use('/api/rag',          ragRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
