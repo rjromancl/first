@@ -1,7 +1,7 @@
 {
   "name": "ba-backend",
   "version": "1.0.0",
-  "description": "British Airways App Backend — Node.js/Express + Amadeus API",
+  "description": "B Airways App Backend — Node.js/Express + Amadeus API",
   "main": "src/server.js",
   "engines": {
     "node": ">=18.0.0"

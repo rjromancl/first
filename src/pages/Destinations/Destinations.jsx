@@ -35,7 +35,7 @@ export default function Destinations() {
       <div className="page-header">
         <div className="container">
           <h1>Explore Destinations</h1>
-          <p>Discover your next adventure with British Airways</p>
+          <p>Discover your next adventure with B Airways</p>
         </div>
       </div>
 

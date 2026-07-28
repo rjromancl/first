@@ -155,23 +155,23 @@ function getLocalKnowledgeFallback(query) {
   const LOCAL_KNOWLEDGE = [
     {
       keywords: ['baggage', 'luggage', 'bag', 'weight', 'allowance', 'carry-on'],
-      text: 'British Airways Baggage Policy: All tickets include 1 cabin bag (up to 56x45x25cm) plus 1 personal item (up to 40x30x15cm, max 23kg each). Checked baggage allowance: Economy 1x23kg, Premium Economy 2x23kg, Business 2x32kg, First 3x32kg.'
+      text: 'B Airways Baggage Policy: All tickets include 1 cabin bag (up to 56x45x25cm) plus 1 personal item (up to 40x30x15cm, max 23kg each). Checked baggage allowance: Economy 1x23kg, Premium Economy 2x23kg, Business 2x32kg, First 3x32kg.'
     },
     {
       keywords: ['avios', 'executive club', 'tier', 'points', 'miles', 'gold', 'silver', 'bronze', 'blue'],
-      text: 'British Airways Executive Club & Avios: Earn Avios on every flight based on cabin class and distance flown. Tiers: Blue (entry), Bronze (300 Tier Points - priority check-in), Silver (600 Tier Points - lounge access & extra bag), Gold (1500 Tier Points - First lounge & Concorde Room).'
+      text: 'B Airways Executive Club & Avios: Earn Avios on every flight based on cabin class and distance flown. Tiers: Blue (entry), Bronze (300 Tier Points - priority check-in), Silver (600 Tier Points - lounge access & extra bag), Gold (1500 Tier Points - First lounge & Concorde Room).'
     },
     {
       keywords: ['check-in', 'checkin', 'boarding pass', 'pnr', 'reference', 'gate', 'terminal'],
-      text: 'British Airways Check-In Information: Online check-in opens 24 hours prior to departure. Download mobile boarding passes to Apple Wallet / Google Pay. Airport bag-drop closes 60 minutes before long-haul flights (45 minutes for short-haul).'
+      text: 'B Airways Check-In Information: Online check-in opens 24 hours prior to departure. Download mobile boarding passes to Apple Wallet / Google Pay. Airport bag-drop closes 60 minutes before long-haul flights (45 minutes for short-haul).'
     },
     {
       keywords: ['lounge', 'food', 'wifi', 'dining', 'cabin', 'seat', 'business', 'first'],
-      text: 'In-Flight Experience & Lounges: British Airways offers high-speed Wi-Fi across long-haul fleets, complimentary multi-course meals, and in-flight entertainment. Galleries Lounges available for Silver/Gold members and Club World passengers.'
+      text: 'In-Flight Experience & Lounges: B Airways offers high-speed Wi-Fi across long-haul fleets, complimentary multi-course meals, and in-flight entertainment. Galleries Lounges available for Silver/Gold members and Club World passengers.'
     },
     {
       keywords: ['destinations', 'flight', 'new york', 'dubai', 'tokyo', 'sydney', 'mumbai', 'barcelona'],
-      text: 'British Airways Destinations: Flies to over 200 global destinations from London Heathrow (LHR) and London Gatwick (LGW). Major direct routes: New York (JFK), Dubai (DXB), Tokyo (NRT), Sydney (SYD), Mumbai (BOM), Barcelona (BCN).'
+      text: 'B Airways Destinations: Flies to over 200 global destinations from London Heathrow (LHR) and London Gatwick (LGW). Major direct routes: New York (JFK), Dubai (DXB), Tokyo (NRT), Sydney (SYD), Mumbai (BOM), Barcelona (BCN).'
     }
   ];
 
@@ -191,7 +191,7 @@ export function isVectorDBReady() {
 }
 
 /**
- * Seed the collection with initial British Airways knowledge.
+ * Seed the collection with initial B Airways knowledge.
  * This is a no-op — the backend seeds the knowledge base on startup.
  * Kept for backward compatibility with the existing API surface.
  */

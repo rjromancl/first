@@ -49,7 +49,7 @@ export default function DestinationsScreen() {
     >
       <PageHeader
         title="Explore Destinations"
-        subtitle="Discover your next adventure with British Airways"
+        subtitle="Discover your next adventure with B Airways"
       />
 
       {/* Filter chips */}

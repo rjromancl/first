@@ -1,5 +1,5 @@
 /**
- * Central API service layer for the British Airways frontend.
+ * Central API service layer for the B Airways frontend.
  *
  * All HTTP communication with the backend lives here.
  * Pages import from this file — never call axios directly in components.

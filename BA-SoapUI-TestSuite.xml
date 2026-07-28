@@ -2,7 +2,7 @@
 <con:soapui-project
   xmlns:con="http://eviware.com/soapui/config"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  name="British Airways API Tests"
+  name="B Airways API Tests"
   activeEnvironment="Default"
   soapui-version="5.7.2">
 

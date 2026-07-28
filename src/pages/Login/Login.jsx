@@ -62,7 +62,7 @@ export default function Login() {
         <div className="card login__card">
           <div className="login__header">
             <div className="login__logo"><FaPlane size={20} /></div>
-            <h1>British Airways</h1>
+            <h1>B Airways</h1>
             <p>{mode === 'login'
               ? 'Sign in to manage your bookings and earn Avios'
               : 'Join the Executive Club and start earning Avios today'}</p>

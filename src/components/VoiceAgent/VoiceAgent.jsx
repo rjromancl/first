@@ -100,7 +100,7 @@ function ProactiveDealsCard({ entities }) {
     BCN: { text: 'Club Europe fares from £149 — includes 2x 32kg bags', perk: 'Fast Track Security & Lounge Access' }
   };
 
-  const deal = DEALS[dest] || { text: 'Earn Avios on this route with British Airways & Oneworld partners.', perk: 'Flexible Booking Guarantee' };
+  const deal = DEALS[dest] || { text: 'Earn Avios on this route with B Airways & Oneworld partners.', perk: 'Flexible Booking Guarantee' };
 
   return (
     <div className="va-proactive-card">
@@ -612,7 +612,7 @@ export default function VoiceAgent() {
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className={`va-overlay ${isExpanded ? 'va-overlay--expanded' : ''}`}
-         role="dialog" aria-modal="true" aria-label="British Airways Voice Assistant">
+         role="dialog" aria-modal="true" aria-label="B Airways Voice Assistant">
       <div className="va-backdrop" onClick={closeVoiceAgent} />
       <div className={`va-panel ${isExpanded ? 'va-panel--expanded' : ''}`}>
 

@@ -115,12 +115,12 @@ export default function Header() {
       <div className="header__main">
         <div className="container header__main-inner">
           {/* Logo */}
-          <Link to="/" className="header__logo" aria-label="British Airways home">
+          <Link to="/" className="header__logo" aria-label="B Airways home">
             <div className="header__logo-icon">
               <FaPlane size={22} />
             </div>
             <div className="header__logo-text">
-              <span className="header__logo-brand">British Airways</span>
+              <span className="header__logo-brand">B Airways</span>
               <span className="header__logo-tagline">Fly the World</span>
             </div>
           </Link>

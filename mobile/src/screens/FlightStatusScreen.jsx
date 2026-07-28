@@ -58,7 +58,7 @@ export default function FlightStatusScreen() {
     >
       <PageHeader
         title="Flight Status"
-        subtitle="Real-time information on British Airways flights"
+        subtitle="Real-time information on B Airways flights"
       />
 
       <View style={styles.content}>

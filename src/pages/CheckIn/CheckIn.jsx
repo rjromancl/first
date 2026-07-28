@@ -82,7 +82,7 @@ export default function CheckIn() {
 
             <div className="checkin__bp-preview">
               <div className="checkin__bp-header">
-                <strong>British Airways Boarding Pass</strong>
+                <strong>B Airways Boarding Pass</strong>
                 <span>{boardingPass.flight?.number}</span>
               </div>
               <div className="checkin__bp-info">

@@ -4,9 +4,9 @@ const today = new Date();
 
 export const generateFlights = (from, to, date) => {
   const airlines = [
-    { code: 'BA', name: 'British Airways' },
-    { code: 'BA', name: 'British Airways' },
-    { code: 'BA', name: 'British Airways' },
+    { code: 'BA', name: 'B Airways' },
+    { code: 'BA', name: 'B Airways' },
+    { code: 'BA', name: 'B Airways' },
   ];
 
   const departureTimes = ['06:30', '09:15', '12:45', '15:20', '18:00', '21:30'];
@@ -37,7 +37,7 @@ export const generateFlights = (from, to, date) => {
     return {
       id: `BA${100 + i * 13}`,
       flightNumber: `BA${100 + i * 13}`,
-      airline: 'British Airways',
+      airline: 'B Airways',
       from: from || 'LHR',
       to: to || 'JFK',
       departure: dep,

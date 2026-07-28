@@ -1,7 +1,7 @@
 /**
  * ragService.js — Retrieval-Augmented Generation (RAG) service for the backend.
  *
- * This service manages the ChromaDB knowledge base for the British Airways
+ * This service manages the ChromaDB knowledge base for the B Airways
  * voice agent. It:
  *  1. Seeds the collection with comprehensive BA knowledge (destinations,
  *     offers, policies, festival guides, airport info, flight data)
@@ -75,7 +75,7 @@ function buildKnowledgeDocs() {
     },
     {
       id: 'dest-london',
-      text: 'London (LHR) — The home of British Airways. Heathrow is one of the world\'s busiest airports. The city offers historic landmarks like the Tower of London, Buckingham Palace, and the British Museum.',
+      text: 'London (LHR) — The home of B Airways. Heathrow is one of the world\'s busiest airports. The city offers historic landmarks like the Tower of London, Buckingham Palace, and the British Museum.',
       metadata: { category: 'destination', city: 'London', country: 'United Kingdom', iata: 'LHR', fromPrice: 0, climate: 'Temperate', bestTime: 'Year-round' },
     },
     {
@@ -124,7 +124,7 @@ function buildKnowledgeDocs() {
     // ── Check-in info ─────────────────────────────────────────────────
     {
       id: 'checkin-info',
-      text: 'Online check-in opens 24 hours before departure and closes 1 hour before domestic flights or 45 minutes before international flights. You can check in via the British Airways app, website, or at the airport kiosk. Boarding typically begins 30 minutes before departure.',
+      text: 'Online check-in opens 24 hours before departure and closes 1 hour before domestic flights or 45 minutes before international flights. You can check in via the B Airways app, website, or at the airport kiosk. Boarding typically begins 30 minutes before departure.',
       metadata: { category: 'checkin' },
     },
     {
@@ -136,26 +136,26 @@ function buildKnowledgeDocs() {
     // ── Flight status ─────────────────────────────────────────────────
     {
       id: 'flight-status-info',
-      text: 'You can track your flight status in real-time through the British Airways app or website. Flight status includes departure time, arrival time, gate information, and any delays or cancellations. Enter your flight number (e.g., BA117) or booking reference.',
+      text: 'You can track your flight status in real-time through the B Airways app or website. Flight status includes departure time, arrival time, gate information, and any delays or cancellations. Enter your flight number (e.g., BA117) or booking reference.',
       metadata: { category: 'flight-status' },
     },
 
     // ── Executive Club / Avios ────────────────────────────────────────
     {
       id: 'avios-info',
-      text: 'Avios is the currency of the British Airways Executive Club. You earn Avios on every flight and can redeem them for flights, upgrades, and partner rewards. Your Avios balance never expires as long as your account is active. Log in to the Executive Club portal to check your balance.',
+      text: 'Avios is the currency of the B Airways Executive Club. You earn Avios on every flight and can redeem them for flights, upgrades, and partner rewards. Your Avios balance never expires as long as your account is active. Log in to the Executive Club portal to check your balance.',
       metadata: { category: 'executive-club' },
     },
     {
       id: 'executive-club-tiers',
-      text: 'British Airways Executive Club has three tiers: Blue (entry level), Bronze (earned 350+ tier points in a year), and Gold (earned 1500+ tier points in a year). Bronze offers priority check-in and extra baggage. Gold offers lounge access, priority boarding, and 50% bonus Avios.',
+      text: 'B Airways Executive Club has three tiers: Blue (entry level), Bronze (earned 350+ tier points in a year), and Gold (earned 1500+ tier points in a year). Bronze offers priority check-in and extra baggage. Gold offers lounge access, priority boarding, and 50% bonus Avios.',
       metadata: { category: 'executive-club' },
     },
 
     // ── Baggage policy ────────────────────────────────────────────────
     {
       id: 'baggage-policy',
-      text: 'British Airways baggage allowance varies by route and cabin class. Generally, economy passengers on long-haul flights get 1 checked bag (23kg), business class gets 2 bags (32kg each), and first class gets 3 bags (32kg each). Hand luggage allowance is 1 piece up to 23kg.',
+      text: 'B Airways baggage allowance varies by route and cabin class. Generally, economy passengers on long-haul flights get 1 checked bag (23kg), business class gets 2 bags (32kg each), and first class gets 3 bags (32kg each). Hand luggage allowance is 1 piece up to 23kg.',
       metadata: { category: 'baggage' },
     },
 
@@ -201,61 +201,61 @@ function buildKnowledgeDocs() {
     // ── Flight routes (from mockData.js) ─────────────────────────────
     {
       id: 'route-lhr-jfk',
-      text: 'London Heathrow (LHR) to New York JFK — British Airways operates multiple daily flights. Flight numbers include BA117, BA175, BA177, BA179, BA183, BA185. Duration: approximately 7h 15m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to New York JFK — B Airways operates multiple daily flights. Flight numbers include BA117, BA175, BA177, BA179, BA183, BA185. Duration: approximately 7h 15m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
       metadata: { category: 'route', from: 'LHR', to: 'JFK', airline: 'BA' },
     },
     {
       id: 'route-lhr-dxb',
-      text: 'London Heathrow (LHR) to Dubai (DXB) — British Airways operates multiple daily flights. Flight numbers include BA107, BA109, BA111, BA113, BA115, BA119. Duration: approximately 6h 50m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to Dubai (DXB) — B Airways operates multiple daily flights. Flight numbers include BA107, BA109, BA111, BA113, BA115, BA119. Duration: approximately 6h 50m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
       metadata: { category: 'route', from: 'LHR', to: 'DXB', airline: 'BA' },
     },
     {
       id: 'route-lhr-nrt',
-      text: 'London Heathrow (LHR) to Tokyo Narita (NRT) — British Airways operates daily flights. Flight numbers include BA005, BA007, BA009, BA011, BA013, BA015. Duration: approximately 11h 45m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to Tokyo Narita (NRT) — B Airways operates daily flights. Flight numbers include BA005, BA007, BA009, BA011, BA013, BA015. Duration: approximately 11h 45m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
       metadata: { category: 'route', from: 'LHR', to: 'NRT', airline: 'BA' },
     },
     {
       id: 'route-lhr-syd',
-      text: 'London Heathrow (LHR) to Sydney (SYD) — British Airways operates daily flights via Singapore or Dubai. Duration: approximately 21h 30m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
+      text: 'London Heathrow (LHR) to Sydney (SYD) — B Airways operates daily flights via Singapore or Dubai. Duration: approximately 21h 30m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
       metadata: { category: 'route', from: 'LHR', to: 'SYD', airline: 'BA' },
     },
     {
       id: 'route-lhr-sin',
-      text: 'London Heathrow (LHR) to Singapore (SIN) — British Airways operates multiple daily flights. Flight numbers include BA011, BA013, BA015, BA017, BA019, BA021. Duration: approximately 12h 50m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
+      text: 'London Heathrow (LHR) to Singapore (SIN) — B Airways operates multiple daily flights. Flight numbers include BA011, BA013, BA015, BA017, BA019, BA021. Duration: approximately 12h 50m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
       metadata: { category: 'route', from: 'LHR', to: 'SIN', airline: 'BA' },
     },
     {
       id: 'route-lhr-bcn',
-      text: 'London Heathrow (LHR) to Barcelona (BCN) — British Airways operates multiple daily flights. Flight numbers include BA414, BA416, BA418, BA420, BA422, BA424. Duration: approximately 2h 15m. Aircraft: Airbus A320, A319, A321.',
+      text: 'London Heathrow (LHR) to Barcelona (BCN) — B Airways operates multiple daily flights. Flight numbers include BA414, BA416, BA418, BA420, BA422, BA424. Duration: approximately 2h 15m. Aircraft: Airbus A320, A319, A321.',
       metadata: { category: 'route', from: 'LHR', to: 'BCN', airline: 'BA' },
     },
 
     // ── Airport information ───────────────────────────────────────────
     {
       id: 'airport-lhr',
-      text: 'London Heathrow (LHR) — One of the world\'s busiest airports, located 14 miles west of Central London. Terminals 1-5 (Terminal 1 closed in 2018). British Airways operates from Terminal 5. Access via Heathrow Express (15 min to Paddington), Piccadilly Line, or taxi.',
+      text: 'London Heathrow (LHR) — One of the world\'s busiest airports, located 14 miles west of Central London. Terminals 1-5 (Terminal 1 closed in 2018). B Airways operates from Terminal 5. Access via Heathrow Express (15 min to Paddington), Piccadilly Line, or taxi.',
       metadata: { category: 'airport', iata: 'LHR', city: 'London' },
     },
     {
       id: 'airport-jfk',
-      text: 'John F. Kennedy International (JFK) — New York\'s primary international airport, located in Queens. Terminals 1-8. British Airways operates from Terminal 7. Access via AirTrain, subway (E, J, Z, A), or taxi.',
+      text: 'John F. Kennedy International (JFK) — New York\'s primary international airport, located in Queens. Terminals 1-8. B Airways operates from Terminal 7. Access via AirTrain, subway (E, J, Z, A), or taxi.',
       metadata: { category: 'airport', iata: 'JFK', city: 'New York' },
     },
     {
       id: 'airport-dxb',
-      text: 'Dubai International (DXB) — One of the world\'s busiest airports by international passengers. Terminals 1, 3, and 5 (concourse D). British Airways operates from Terminal 3. Access via Metro, taxi, or ride-sharing.',
+      text: 'Dubai International (DXB) — One of the world\'s busiest airports by international passengers. Terminals 1, 3, and 5 (concourse D). B Airways operates from Terminal 3. Access via Metro, taxi, or ride-sharing.',
       metadata: { category: 'airport', iata: 'DXB', city: 'Dubai' },
     },
     {
       id: 'airport-bcn',
-      text: 'Barcelona El Prat (BCN) — Located 12km southwest of Barcelona. Terminals 1 and 2. British Airways operates from Terminal 1. Access via Rodalies (Cercanías) train, Aerobus, or taxi.',
+      text: 'Barcelona El Prat (BCN) — Located 12km southwest of Barcelona. Terminals 1 and 2. B Airways operates from Terminal 1. Access via Rodalies (Cercanías) train, Aerobus, or taxi.',
       metadata: { category: 'airport', iata: 'BCN', city: 'Barcelona' },
     },
 
     // ── Booking info ──────────────────────────────────────────────────
     {
       id: 'booking-info',
-      text: 'You can book flights through the British Airways website, mobile app, or by calling the contact centre. Payment methods accepted include major credit/debit cards (Visa, Mastercard, American Express) and PayPal. After booking, you\'ll receive a confirmation email with your booking reference.',
+      text: 'You can book flights through the B Airways website, mobile app, or by calling the contact centre. Payment methods accepted include major credit/debit cards (Visa, Mastercard, American Express) and PayPal. After booking, you\'ll receive a confirmation email with your booking reference.',
       metadata: { category: 'booking' },
     },
     {
@@ -267,7 +267,7 @@ function buildKnowledgeDocs() {
 }
 
 /**
- * Seed the collection with initial British Airways knowledge.
+ * Seed the collection with initial B Airways knowledge.
  * This should be called once on app startup (or when the collection is empty).
  */
 async function seedKnowledgeBase() {

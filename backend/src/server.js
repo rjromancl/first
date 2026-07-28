@@ -96,7 +96,7 @@ app.use(globalLimiter);
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'British Airways API Server',
+    service: 'B Airways API Server',
     webAppUrl: 'http://localhost:3000',
     endpoints: {
       health: '/health',
@@ -107,7 +107,7 @@ app.get('/', (req, res) => {
       flights: '/api/flights/search',
       avios: '/api/avios/calculate',
     },
-    message: 'To view the British Airways Web App UI, open http://localhost:3000 in your browser.',
+    message: 'To view the B Airways Web App UI, open http://localhost:3000 in your browser.',
   });
 });
 

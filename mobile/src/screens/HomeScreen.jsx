@@ -64,7 +64,7 @@ export default function HomeScreen() {
       >
         <View style={styles.heroTextRow}>
           <Ionicons name="airplane" size={20} color="rgba(255,255,255,0.7)" />
-          <Text style={styles.heroBrand}>British Airways</Text>
+          <Text style={styles.heroBrand}>B Airways</Text>
         </View>
         <Text style={styles.heroTitle}>Fly the World{'\n'}in Comfort &amp; Style</Text>
         <Text style={styles.heroSubtitle}>

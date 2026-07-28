@@ -48,7 +48,7 @@ export default function FlightStatus() {
       <div className="page-header">
         <div className="container">
           <h1>Flight Status</h1>
-          <p>Real-time information on British Airways flights worldwide</p>
+          <p>Real-time information on B Airways flights worldwide</p>
         </div>
       </div>
 

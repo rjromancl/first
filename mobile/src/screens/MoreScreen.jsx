@@ -14,7 +14,7 @@ import { colors, spacing, radius, shadow, text } from '../theme';
 
 const MENU_ITEMS = [
   { icon: 'checkmark-done-circle-outline', label: 'Online Check-in',    desc: 'Check in 24 hours before departure', screen: 'CheckIn',      color: colors.blue },
-  { icon: 'radio-button-on-outline',       label: 'Flight Status',      desc: 'Track any British Airways flight',   screen: 'FlightStatus', color: colors.blue },
+  { icon: 'radio-button-on-outline',       label: 'Flight Status',      desc: 'Track any B Airways flight',   screen: 'FlightStatus', color: colors.blue },
   { icon: 'earth-outline',                 label: 'Destinations',       desc: 'Explore where we fly',               screen: 'Destinations', color: colors.blue },
   { icon: 'star-outline',                  label: 'Executive Club',     desc: 'Avios, tiers and rewards',           screen: 'ExecutiveClub',color: colors.gold },
   { icon: 'person-outline',               label: 'My Account',         desc: 'Sign in or create an account',       screen: 'Login',        color: colors.blue },
@@ -91,7 +91,7 @@ export default function MoreScreen() {
         {/* App info */}
         <View style={styles.appInfo}>
           <Ionicons name="airplane" size={20} color={colors.textLight} />
-          <Text style={styles.appInfoText}>British Airways Mobile v1.0.0</Text>
+          <Text style={styles.appInfoText}>B Airways Mobile v1.0.0</Text>
         </View>
       </View>
     </ScrollView>

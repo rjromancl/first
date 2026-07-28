@@ -42,7 +42,7 @@ export default function CheckInScreen() {
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: `British Airways Boarding Pass\nFlight: ${boardingPass.flight?.number}\nPassenger: ${boardingPass.passenger?.name}\nSeat: ${boardingPass.flight?.seat}\nGate: ${boardingPass.flight?.gate || 'TBD'}` });
+      await Share.share({ message: `B Airways Boarding Pass\nFlight: ${boardingPass.flight?.number}\nPassenger: ${boardingPass.passenger?.name}\nSeat: ${boardingPass.flight?.seat}\nGate: ${boardingPass.flight?.gate || 'TBD'}` });
     } catch {}
   };
 
@@ -70,7 +70,7 @@ export default function CheckInScreen() {
             <View style={styles.bpHeader}>
               <View style={styles.bpHeaderLeft}>
                 <Ionicons name="airplane" size={20} color={colors.white} />
-                <Text style={styles.bpHeaderText}>British Airways</Text>
+                <Text style={styles.bpHeaderText}>B Airways</Text>
               </View>
               <Text style={styles.bpFlight}>{boardingPass.flight?.number}</Text>
             </View>

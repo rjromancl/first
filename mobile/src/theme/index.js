@@ -1,5 +1,5 @@
 /**
- * British Airways brand design tokens for React Native.
+ * B Airways brand design tokens for React Native.
  * All colours, spacing, typography and shadow helpers live here.
  * Import from any screen: import { colors, spacing, text } from '../theme';
  */

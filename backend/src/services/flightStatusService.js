@@ -38,7 +38,7 @@ async function getFlightStatus({ carrierCode = 'BA', flightNumber, scheduledDepa
 
   const result = {
     flightNumber: `${carrierCode.toUpperCase()}${cleanNum}`,
-    carrier: 'British Airways',
+    carrier: 'B Airways',
     status: statusStr,
     departure: {
       airport: 'LHR',
@@ -75,21 +75,21 @@ async function getFlightsByRoute({ origin, destination, departureDate }) {
   const flights = [
     {
       flightNumber: 'BA117',
-      carrier: 'British Airways',
+      carrier: 'B Airways',
       status: 'ON_TIME',
       departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T08:25:00Z` },
       arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T11:15:00Z` },
     },
     {
       flightNumber: 'BA175',
-      carrier: 'British Airways',
+      carrier: 'B Airways',
       status: 'ON_TIME',
       departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T13:40:00Z` },
       arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T16:30:00Z` },
     },
     {
       flightNumber: 'BA204',
-      carrier: 'British Airways',
+      carrier: 'B Airways',
       status: 'SCHEDULED',
       departure: { airport: origin, terminal: '5', scheduledTime: `${depDate}T18:00:00Z` },
       arrival: { airport: destination, terminal: '7', scheduledTime: `${depDate}T20:50:00Z` },

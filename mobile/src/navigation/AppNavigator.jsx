@@ -42,7 +42,7 @@ function BAHeaderTitle() {
   return (
     <View style={styles.headerTitle}>
       <Ionicons name="airplane" size={18} color={colors.white} />
-      <Text style={styles.headerTitleText}>British Airways</Text>
+      <Text style={styles.headerTitleText}>B Airways</Text>
     </View>
   );
 }

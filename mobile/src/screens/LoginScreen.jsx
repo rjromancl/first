@@ -73,7 +73,7 @@ export default function LoginScreen() {
           <View style={styles.logoWrap}>
             <Ionicons name="airplane" size={32} color={colors.white} />
           </View>
-          <Text style={styles.headerTitle}>British Airways</Text>
+          <Text style={styles.headerTitle}>B Airways</Text>
           <Text style={styles.headerSubtitle}>
             {mode === 'login'
               ? 'Sign in to manage bookings and earn Avios'

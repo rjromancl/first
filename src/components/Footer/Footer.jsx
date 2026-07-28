@@ -105,7 +105,7 @@ export default function Footer() {
                 <div className="footer__logo-icon">
                   <FaPlane size={18} />
                 </div>
-                <span>British Airways</span>
+                <span>B Airways</span>
               </Link>
               <p className="footer__tagline">
                 We take more people to more destinations than any other UK airline.
@@ -165,7 +165,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div className="footer__legal">
-            <p>© {new Date().getFullYear()} British Airways Plc. All rights reserved. Waterside, PO Box 365, Harmondsworth, UB7 0GB.</p>
+            <p>© {new Date().getFullYear()} B Airways Plc. All rights reserved. Waterside, PO Box 365, Harmondsworth, UB7 0GB.</p>
             <div className="footer__legal-links">
               <a href="/" className="footer__legal-link">Privacy Policy</a>
               <a href="/" className="footer__legal-link">Cookie Policy</a>

@@ -1,5 +1,5 @@
 /**
- * British Airways Mobile — root entry point.
+ * B Airways Mobile — root entry point.
  *
  * Wires together:
  *  - AppProvider  (global state: auth, bookings, notifications)

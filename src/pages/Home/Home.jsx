@@ -64,7 +64,7 @@ export default function Home() {
         </div>
         <div className="container home__hero-content">
           <div className="home__hero-text">
-            <span className="home__hero-eyebrow">British Airways</span>
+            <span className="home__hero-eyebrow">B Airways</span>
             <h1 className="home__hero-title">
               Fly the World<br />
               <span>in Comfort &amp; Style</span>
@@ -359,7 +359,7 @@ export default function Home() {
             <div className="home__features-text">
               <h2 className="section-title">Your Comfort Is Our Priority</h2>
               <p className="section-subtitle">
-                Every British Airways flight is designed around your comfort, from the moment you board to the moment you land.
+                Every B Airways flight is designed around your comfort, from the moment you board to the moment you land.
               </p>
               <div className="home__features-list">
                 {features.map((f) => (

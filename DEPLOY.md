@@ -1,4 +1,4 @@
-# Deployment Guide — British Airways App
+# Deployment Guide — B Airways App
 
 ## Architecture
 

@@ -61,13 +61,13 @@ describe('vectorService — RAG API wrapper', () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: { context: 'British Airways offers flights to London Heathrow (LHR).' },
+          data: { context: 'B Airways offers flights to London Heathrow (LHR).' },
         }),
       });
 
     const results = await queryDocuments('flights to London', 5);
     expect(results).toHaveLength(1);
-    expect(results[0].text).toContain('British Airways');
+    expect(results[0].text).toContain('B Airways');
   });
 
   it('queryDocuments returns empty array on error', async () => {
