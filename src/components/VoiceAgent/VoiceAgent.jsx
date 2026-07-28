@@ -121,10 +121,11 @@ function LanguageSelector({ lang, onSelect }) {
   const LANGUAGES = [
     { code: 'en-GB', label: '🇬🇧 EN (UK)' },
     { code: 'en-US', label: '🇺🇸 EN (US)' },
+    { code: 'ta-IN', label: '🇮🇳 தமிழ் (Tamil)' },
+    { code: 'hi-IN', label: '🇮🇳 HI' },
     { code: 'es-ES', label: '🇪🇸 ES' },
     { code: 'fr-FR', label: '🇫🇷 FR' },
     { code: 'de-DE', label: '🇩🇪 DE' },
-    { code: 'hi-IN', label: '🇮🇳 HI' },
     { code: 'ja-JP', label: '🇯🇵 JP' },
   ];
 
