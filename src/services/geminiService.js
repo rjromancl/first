@@ -526,14 +526,36 @@ function fallbackResponse(t) {
     };
   }
 
+  // Route / City extraction matching (e.g. "london to paris", "london to dubai", "london to chennai", "paris", "chennai")
+  const cityMap = {
+    london: 'LHR', heathrow: 'LHR', gatwick: 'LGW',
+    paris: 'CDG', cdg: 'CDG',
+    newyork: 'JFK', 'new york': 'JFK', jfk: 'JFK',
+    dubai: 'DXB', dxb: 'DXB',
+    tokyo: 'NRT', nrt: 'NRT',
+    sydney: 'SYD', syd: 'SYD',
+    mumbai: 'BOM', bom: 'BOM',
+    chennai: 'MAA', maa: 'MAA',
+    delhi: 'DEL', del: 'DEL',
+    barcelona: 'BCN', bcn: 'BCN',
+    singapore: 'SIN', sin: 'SIN',
+    amsterdam: 'AMS', ams: 'AMS',
+    rome: 'FCO', fco: 'FCO'
+  };
+
+  const routeMatch = l.match(/(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|poganum|-)\s+(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
+
   // Tanglish & English Booking keywords (pannu, panren, venum, ticket, poganum)
-  if (/book|flight|fly|pannu|panren|venum|ticket|poganum|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
+  if (routeMatch || /book|flight|fly|pannu|panren|venum|ticket|poganum|paris|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
+    const fromCode = routeMatch ? (cityMap[routeMatch[1].toLowerCase().replace(/\s+/g, '')] || 'LHR') : 'LHR';
+    const toCode   = routeMatch ? (cityMap[routeMatch[2].toLowerCase().replace(/\s+/g, '')] || 'CDG') : 'CDG';
+
     return {
       intent: 'BOOK_FLIGHT',
-      text: "Sure! Where would you like to fly?",
-      quickReplies: ['London to New York', 'London to Dubai', 'London to Barcelona'],
-      action: { type: 'NAVIGATE', path: '/book' },
-      entities: {},
+      text: `Sure! Searching flights from ${fromCode} to ${toCode}...`,
+      quickReplies: ['London to Paris', 'London to New York', 'London to Dubai'],
+      action: { type: 'PREFILL_BOOKING', passenger: null },
+      entities: { from: fromCode, to: toCode, departureDate: '2026-12-28', cabin: 'economy', adults: 1 },
       passengerField: null
     };
   }
@@ -696,14 +718,7 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return {
-      intent: 'UNKNOWN',
-      text: "I'm a little busy right now — please try again in a moment.",
-      quickReplies: ['Try again'],
-      action: null,
-      entities: {},
-      passengerField: null,
-    };
+    return fallbackResponse(trimmedMessage);
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
