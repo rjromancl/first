@@ -463,8 +463,13 @@ function parseResponse(raw) {
   }
 }
 
-function fallbackResponse(t) {
+function fallbackResponse(t, errorReason = null) {
   const l = (t || '').toLowerCase();
+  const notice = errorReason === 429
+    ? '⚠️ Notice: Groq LLM Rate Limit (HTTP 429) hit — switched to Local Intent Resolver.'
+    : errorReason === 'network'
+      ? '⚠️ Notice: LLM Network Connection failed — switched to Local Intent Resolver.'
+      : null;
 
   // Greetings & Small Talk in English, Tanglish, Tamil (vanakkam), Hindi (namaste)
   if (/^(hi|hello|hey|vanakkam|namaste|good morning|good afternoon|good evening|how are you|who are you|what can you do|epdi irukinga|epdi irukinge|sugham)\b/i.test(l)) {
@@ -474,7 +479,8 @@ function fallbackResponse(t) {
       quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
       action: null,
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -486,7 +492,8 @@ function fallbackResponse(t) {
       quickReplies: ['Book a flight', 'Check in'],
       action: null,
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -498,7 +505,8 @@ function fallbackResponse(t) {
       quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
       action: null,
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -510,7 +518,8 @@ function fallbackResponse(t) {
       quickReplies: ['Check in now'],
       action: { type: 'NAVIGATE', path: '/check-in' },
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -522,7 +531,8 @@ function fallbackResponse(t) {
       quickReplies: ['BA117', 'BA204'],
       action: { type: 'NAVIGATE', path: '/flight-status' },
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -555,7 +565,8 @@ function fallbackResponse(t) {
       quickReplies: ['London to Paris', 'London to New York', 'London to Dubai'],
       action: { type: 'PREFILL_BOOKING', passenger: null },
       entities: { from: fromCode, to: toCode, departureDate: '2026-12-28', cabin: 'economy', adults: 1 },
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -567,7 +578,8 @@ function fallbackResponse(t) {
       quickReplies: ['London to New York', 'London to Dubai', 'London to Barcelona'],
       action: { type: 'NAVIGATE', path: '/book' },
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -579,7 +591,8 @@ function fallbackResponse(t) {
       quickReplies: ['View Avios'],
       action: { type: 'NAVIGATE', path: '/executive-club' },
       entities: {},
-      passengerField: null
+      passengerField: null,
+      diagnosticNotice: notice
     };
   }
 
@@ -589,7 +602,8 @@ function fallbackResponse(t) {
     quickReplies: ['Book a flight', 'Check in', 'Flight status', 'Avios'],
     action: null,
     entities: {},
-    passengerField: null
+    passengerField: null,
+    diagnosticNotice: notice
   };
 }
 
@@ -729,12 +743,12 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage);
+    return fallbackResponse(trimmedMessage, 429);
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
   // -> graceful fallback so the user still gets something useful.
-  return fallbackResponse(trimmedMessage);
+  return fallbackResponse(trimmedMessage, 'network');
 }
 
 // expose model name for the header display

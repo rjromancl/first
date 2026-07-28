@@ -430,6 +430,9 @@ export default function VoiceAgent() {
       if (!mountedRef.current) return;
 
       addTelemetryLog('🧠', `LLM Reasoning: Resolved intent as "${intent || 'QUERY'}"`);
+      if (response?.diagnosticNotice) {
+        addTelemetryLog('⚠️', response.diagnosticNotice);
+      }
       if (response?.action) {
         const actName = typeof response.action === 'string' ? response.action : (response.action.type || 'ACTION');
         addTelemetryLog('⚡', `Tool Execution: Executing autonomous action [${actName}]`);
