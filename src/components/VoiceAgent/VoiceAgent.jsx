@@ -308,7 +308,7 @@ export default function VoiceAgent() {
   // ── TTS — speaks immediately, does NOT block mic in hands-free ──
   const speakMessage = useCallback(async (text) => {
     if (!ttsEnabledRef.current || !window.speechSynthesis) return;
-    const clean = text.replace(/[^\x00-\x7F]/g, ' ').replace(/\s+/g, ' ').trim();
+    const clean = text.replace(/[\*\_\#\`]/g, '').replace(/\s+/g, ' ').trim();
     if (mountedRef.current) setIsSpeaking(true);
     addTelemetryLog('📢', `Speech output: ${selectedLangRef.current}`);
     try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current }); } catch (_) {}
