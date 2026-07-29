@@ -1,14 +1,14 @@
 /**
- * ragService.js — Advanced Retrieval-Augmented Generation (RAG) frontend service
+ * ragService.js — Advanced Multilingual Retrieval-Augmented Generation (RAG) Service
  *
- * Retrieves relevant, domain-curated context from the backend ChromaDB & Hybrid search RAG API
- * for a user query, then formats it as an augmented context block prepended to the system prompt
- * for the LLM.
+ * Combines ChromaDB vector database queries with an instant multilingual semantic corpus
+ * to supply accurate, ground-truth British Airways policies (Baggage, Executive Club,
+ * Lounges, Check-in, UK261, Cabin Classes) for user queries in Tamil (தமிழ்), Tanglish,
+ * Hindi, Spanish, French, German, Japanese, and English.
  */
-import { initVectorDB, isVectorDBReady } from './vectorService';
+import { initVectorDB, queryDocuments, getLocalKnowledgeFallback } from './vectorService';
 
 const IS_DEV = Boolean(import.meta.env?.DEV);
-
 const MAX_CONTEXT_DOCS = 5;
 
 function log(...args) {
@@ -24,52 +24,41 @@ function logError(...args) {
 }
 
 /**
- * Retrieve relevant context for a user query from the backend RAG API.
+ * Retrieve relevant RAG context for a user query.
  *
- * @param {string} userMessage  The user's voice input or text prompt
- * @returns {Promise<string|null>} Formatted context string, or null if no relevant documents found
+ * @param {string} userMessage  The user's query or voice transcript
+ * @returns {Promise<string|null>} Formatted RAG context string, or null
  */
 export async function getContext(userMessage) {
   if (!userMessage || typeof userMessage !== 'string' || !userMessage.trim()) {
     return null;
   }
 
-  // Ensure vector DB connection / backend RAG status is initialized
-  await initVectorDB();
-  if (!isVectorDBReady()) {
-    log('Vector DB / backend RAG not ready, skipping RAG');
-    return null;
-  }
-
   try {
-    const response = await fetch('/api/rag/context', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: userMessage.trim(), topK: MAX_CONTEXT_DOCS }),
-    });
-
-    if (!response.ok) {
-      log('RAG API returned non-OK status:', response.status);
-      return null;
+    // 1. Try querying backend ChromaDB API or vector service
+    const results = await queryDocuments(userMessage.trim(), MAX_CONTEXT_DOCS);
+    if (results && results.length > 0 && results[0].text) {
+      log(`Retrieved RAG context (${results[0].text.length} chars)`);
+      return results[0].text;
     }
 
-    const data = await response.json();
-
-    if (!data.success || !data.data.context) {
-      log('No context returned from RAG API');
-      return null;
+    // 2. Hybrid fallback check against multilingual corpus
+    const fallback = getLocalKnowledgeFallback(userMessage.trim());
+    if (fallback && fallback.length > 0 && fallback[0].text) {
+      log(`Retrieved local multilingual RAG context (${fallback[0].text.length} chars)`);
+      return fallback[0].text;
     }
 
-    log(`Retrieved RAG context (${data.data.context.length} chars)`, data.data.intent);
-    return data.data.context;
-  } catch (err) {
-    logError('Failed to get RAG context:', err.message);
     return null;
+  } catch (err) {
+    logError('Failed to retrieve RAG context:', err.message);
+    const fallback = getLocalKnowledgeFallback(userMessage);
+    return fallback && fallback[0] ? fallback[0].text : null;
   }
 }
 
 /**
- * Build a system prompt augmented with RAG context.
+ * Build a system prompt augmented with retrieved RAG knowledge context.
  *
  * @param {string} basePrompt  The original system prompt
  * @param {string|null} context  The RAG context (or null)
@@ -83,25 +72,25 @@ export function buildAugmentedPrompt(basePrompt, context) {
   return `${basePrompt}
 
 ═══════════════════════════════════════════════════════
-OFFICIAL BRITISH AIRWAYS KNOWLEDGE BASE CONTEXT (RAG):
+OFFICIAL BRITISH AIRWAYS KNOWLEDGE BASE CONTEXT (MULTILINGUAL RAG):
 ═══════════════════════════════════════════════════════
 ${context}
 
 ═══════════════════════════════════════════════════════
-INSTRUCTIONS FOR RESPONDING:
-1. Speak in plain, clear, natural everyday conversational English (or natural Tanglish if the user speaks Tanglish). Never use technical jargon, raw JSON, or robotic phrases.
-2. Use the official British Airways context above as your ground truth for baggage, tier points, lounges, cabin classes, and UK261 queries.
-3. Share numbers, sizes, and policy details in simple, friendly sentences.
-4. Deliver answers warmly, concisely, and naturally as a helpful British Airways representative.
+INSTRUCTIONS FOR RESPONDING WITH RAG CONTEXT:
+1. Use the official British Airways context above as your absolute ground truth for baggage, tier points, lounges, cabin classes, and policy queries.
+2. If the user spoke/typed in Tamil (தமிழ்), Tanglish, Hindi, Spanish, French, German, Japanese, or English, respond in that EXACT same language/script!
+3. Share exact numbers, weight limits (e.g. 23kg, 32kg), and policy rules in warm, friendly, concise sentences.
+4. Always output structural JSON matching the system schema.
 ═══════════════════════════════════════════════════════`;
 }
 
 /**
  * Get RAG context and build an augmented system prompt in one call.
  *
- * @param {string} userMessage  The user's voice input
- * @param {string} basePrompt   The original system prompt
- * @returns {Promise<string>} The augmented (or original) system prompt
+ * @param {string} userMessage  The user's query
+ * @param {string} basePrompt   The base system prompt
+ * @returns {Promise<string>}   The augmented system prompt
  */
 export async function getAugmentedPrompt(userMessage, basePrompt) {
   const context = await getContext(userMessage);
