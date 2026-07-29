@@ -409,8 +409,8 @@ export default function VoiceAgent() {
     setCurrentQ(question);
     addAgentMsg(question);
     await speakMessage(question);
-    if (mountedRef.current && !isProcessingRef.current) {
-      setTimeout(() => { if (mountedRef.current) startListening(); }, 200);
+    if (mountedRef.current) {
+      setTimeout(() => { if (mountedRef.current) startListening(); }, 150);
     }
   }, [addAgentMsg, speakMessage, startListening]);
 

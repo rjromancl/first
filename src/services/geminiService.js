@@ -463,13 +463,91 @@ function parseResponse(raw) {
   }
 }
 
-function fallbackResponse(t, errorReason = null) {
+function fallbackResponse(t, errorReason = null, history = []) {
   const l = (t || '').toLowerCase();
   const notice = errorReason === 429
     ? '⚠️ Notice: Groq LLM Rate Limit (HTTP 429) hit — switched to Local Intent Resolver.'
     : errorReason === 'network'
       ? '⚠️ Notice: LLM Network Connection failed — switched to Local Intent Resolver.'
       : null;
+
+  // Passenger Field collection check from conversation history
+  const lastModelMsg = Array.isArray(history)
+    ? [...history].reverse().find(m => m && m.role === 'model')?.text || ''
+    : '';
+
+  const cleanVal = (t || '').replace(/my (first |last )?name is/i, '').replace(/i am/i, '').replace(/my phone number is/i, '').trim();
+
+  if (/first name/i.test(lastModelMsg)) {
+    return {
+      intent: 'PASSENGER_FIELD',
+      text: `Got it, ${cleanVal}! What is your last name?`,
+      quickReplies: [],
+      action: null,
+      entities: {},
+      passengerField: {
+        collected: { firstName: cleanVal },
+        nextField: 'lastName',
+        nextQuestion: 'What is your last name?',
+        allCollected: false,
+      },
+      diagnosticNotice: notice,
+    };
+  }
+
+  if (/last name/i.test(lastModelMsg)) {
+    return {
+      intent: 'PASSENGER_FIELD',
+      text: `Thanks! What is your phone number?`,
+      quickReplies: [],
+      action: null,
+      entities: {},
+      passengerField: {
+        collected: { lastName: cleanVal },
+        nextField: 'phone',
+        nextQuestion: 'What is your phone number?',
+        allCollected: false,
+      },
+      diagnosticNotice: notice,
+    };
+  }
+
+  if (/phone|telephone/i.test(lastModelMsg)) {
+    return {
+      intent: 'PASSENGER_FIELD',
+      text: `Got your phone number! What is your nationality?`,
+      quickReplies: ['British', 'Indian', 'American'],
+      action: null,
+      entities: {},
+      passengerField: {
+        collected: { phone: cleanVal },
+        nextField: 'nationality',
+        nextQuestion: 'What is your nationality?',
+        allCollected: false,
+      },
+      diagnosticNotice: notice,
+    };
+  }
+
+  if (/nationality|country/i.test(lastModelMsg)) {
+    return {
+      intent: 'PASSENGER_FIELD',
+      text: `Thank you! All passenger details recorded. Navigating to complete your booking.`,
+      quickReplies: [],
+      action: {
+        type: 'FULL_BOOKING',
+        passenger: { firstName: 'Passenger', lastName: '', phone: '', nationality: cleanVal }
+      },
+      entities: {},
+      passengerField: {
+        collected: { nationality: cleanVal },
+        nextField: null,
+        nextQuestion: null,
+        allCollected: true,
+      },
+      diagnosticNotice: notice,
+    };
+  }
 
   // Greetings & Small Talk in English, Tanglish, Tamil (vanakkam), Hindi (namaste)
   if (/^(hi|hello|hey|vanakkam|namaste|good morning|good afternoon|good evening|how are you|who are you|what can you do|epdi irukinga|epdi irukinge|sugham)\b/i.test(l)) {
@@ -695,7 +773,7 @@ export async function sendToGemini(userMessage, history = []) {
     : String(userMessage ?? '').trim();
 
   if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
-    return fallbackResponse(trimmedMessage);
+    return fallbackResponse(trimmedMessage, null, history);
   }
 
   if (!trimmedMessage) {
@@ -743,12 +821,12 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage, 429);
+    return fallbackResponse(trimmedMessage, 429, history);
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
   // -> graceful fallback so the user still gets something useful.
-  return fallbackResponse(trimmedMessage, 'network');
+  return fallbackResponse(trimmedMessage, 'network', history);
 }
 
 // expose model name for the header display
