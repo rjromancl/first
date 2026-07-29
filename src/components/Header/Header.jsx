@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { LANGUAGES, getTranslation } from '../../utils/translations';
 import {
   FaPlane, FaBars, FaTimes, FaUser, FaChevronDown,
   FaMicrophone, FaBell, FaSignOutAlt, FaTicketAlt,
@@ -48,13 +49,17 @@ const navItems = [
 ];
 
 export default function Header() {
-  const { isAuthenticated, user, logout, notifications, toggleVoiceAgent } = useApp();
+  const { isAuthenticated, user, logout, notifications, toggleVoiceAgent, language, setLanguage } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
   const headerRef = useRef(null);
+
+  const currentLangObj = LANGUAGES.find(l => l.code === (language || 'en-GB')) || LANGUAGES[0];
+  const t = (key) => getTranslation(language || 'en-GB', key);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -67,6 +72,7 @@ export default function Header() {
       if (headerRef.current && !headerRef.current.contains(e.target)) {
         setActiveDropdown(null);
         setUserMenuOpen(false);
+        setLangMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -87,12 +93,42 @@ export default function Header() {
       <div className="header__topbar">
         <div className="container header__topbar-inner">
           <div className="header__topbar-links">
-            <button className="header__topbar-btn">
-              <FaGlobe size={12} />
-              <span>EN – GBP</span>
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button 
+                className="header__topbar-btn"
+                onClick={() => setLangMenuOpen(!langMenuOpen)}
+                title="Change Language"
+              >
+                <FaGlobe size={12} />
+                <span>{currentLangObj.label}</span>
+                <FaChevronDown size={9} style={{ marginLeft: 4 }} />
+              </button>
+              {langMenuOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 4,
+                  background: '#0a192f', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 8, padding: '6px 0', zIndex: 1000, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  minWidth: 160
+                }}>
+                  {LANGUAGES.map(l => (
+                    <button
+                      key={l.code}
+                      onClick={() => { setLanguage(l.code); setLangMenuOpen(false); }}
+                      style={{
+                        display: 'block', width: '100%', padding: '8px 14px', textAlign: 'left',
+                        background: language === l.code ? 'rgba(235, 34, 39, 0.2)' : 'transparent',
+                        color: language === l.code ? '#eb2227' : '#ffffff', border: 'none',
+                        cursor: 'pointer', fontSize: '13px', fontWeight: language === l.code ? '600' : '400'
+                      }}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <a href="tel:+448444930787" className="header__topbar-link">
-              Call us: 0844 493 0787
+              {t('callUs')}
             </a>
           </div>
           <div className="header__topbar-links">

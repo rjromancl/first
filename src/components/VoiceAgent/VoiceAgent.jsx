@@ -24,6 +24,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useVoiceRecognition } from '../../hooks/useVoiceRecognition';
 import { parseVoiceInput, speak, stopSpeaking } from '../../utils/voiceNLP';
+import { LANGUAGES, getTranslation } from '../../utils/translations';
 import './VoiceAgent.css';
 
 // ── Constants ────────────────────────────────────────────────────
@@ -118,17 +119,6 @@ function ProactiveDealsCard({ entities }) {
 
 // ── Multilingual Voice Accent Selector ─────────────────────────
 function LanguageSelector({ lang, onSelect }) {
-  const LANGUAGES = [
-    { code: 'en-GB', label: '🇬🇧 EN (UK)' },
-    { code: 'en-US', label: '🇺🇸 EN (US)' },
-    { code: 'ta-IN', label: '🇮🇳 Tanglish (Tamil)' },
-    { code: 'hi-IN', label: '🇮🇳 HI' },
-    { code: 'es-ES', label: '🇪🇸 ES' },
-    { code: 'fr-FR', label: '🇫🇷 FR' },
-    { code: 'de-DE', label: '🇩🇪 DE' },
-    { code: 'ja-JP', label: '🇯🇵 JP' },
-  ];
-
   return (
     <div className="va-lang-selector">
       {LANGUAGES.map(l => (
@@ -141,6 +131,9 @@ function LanguageSelector({ lang, onSelect }) {
         </button>
       ))}
     </div>
+  );
+}
+
 // ── Confirmed E-Ticket Card ─────────────────────────────────────
 function TicketCard({ booking }) {
   if (!booking) return null;
@@ -254,13 +247,34 @@ function TwoOptions({ options, onChoose, disabled }) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────
 export default function VoiceAgent() {
-  const { voiceAgentOpen, closeVoiceAgent, setSearchParams } = useApp();
+  const { voiceAgentOpen, closeVoiceAgent, setSearchParams, language, setLanguage } = useApp();
   const navigate = useNavigate();
 
   // UI
-  const [messages,       setMessages]       = useState([WELCOME]);
+  const [selectedLang,   setSelectedLang]   = useState(language || 'en-GB');
+
+  useEffect(() => {
+    if (language && language !== selectedLang) {
+      setSelectedLang(language);
+    }
+  }, [language]);
+
+  const handleSelectLang = (code) => {
+    setSelectedLang(code);
+    if (setLanguage) setLanguage(code);
+  };
+
+  const [messages,       setMessages]       = useState([{
+    id: 'welcome', role: 'agent', timestamp: new Date(),
+    text: getTranslation(selectedLang, 'voiceWelcome'),
+    quickReplies: [
+      getTranslation(selectedLang, 'qrBookFlight'),
+      getTranslation(selectedLang, 'qrCheckIn'),
+      getTranslation(selectedLang, 'qrStatus'),
+      getTranslation(selectedLang, 'qrAvios'),
+    ],
+  }]);
   const [inputText,      setInputText]      = useState('');
   const [isProcessing,   setIsProcessing]   = useState(false);
   const [isSpeaking,     setIsSpeaking]     = useState(false);
@@ -271,7 +285,6 @@ export default function VoiceAgent() {
   const [interimText,    setInterimText]    = useState('');
   const [handsFree,      setHandsFree]      = useState(true);
   const [awaitingTwoOpt, setAwaitingTwoOpt] = useState(false);
-  const [selectedLang,   setSelectedLang]   = useState('en-GB');
   const [telemetryLogs,  setTelemetryLogs]  = useState([
     { time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }), icon: '🚀', text: 'Agent initialized — RAG vector engine ready' }
   ]);
@@ -374,7 +387,7 @@ export default function VoiceAgent() {
   } = useVoiceRecognition({
     onResult: handleVoiceResult,
     onError:  handleVoiceError,
-    lang:     'en-GB',
+    lang:     selectedLang,
     continuous: collectingPax,
   });
 
@@ -689,7 +702,7 @@ export default function VoiceAgent() {
         </div>
 
         {/* ── Multilingual Language Bar ── */}
-        <LanguageSelector lang={selectedLang} onSelect={setSelectedLang} />
+        <LanguageSelector lang={selectedLang} onSelect={handleSelectLang} />
 
         {/* ── Messages ── */}
         <div className="va-messages" role="log" aria-live="polite">

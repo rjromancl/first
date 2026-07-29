@@ -6,6 +6,7 @@ const AppContext = createContext(null);
 const initialState = {
   user: null,
   isAuthenticated: false,
+  language: 'en-GB',
   bookings: [],
   searchParams: {
     tripType: 'return', from: '', to: '',
@@ -19,6 +20,8 @@ const initialState = {
 
 function appReducer(state, action) {
   switch (action.type) {
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.payload };
     case 'LOGIN':
       return { ...state, user: action.payload, isAuthenticated: true };
     case 'LOGOUT':
@@ -52,8 +55,10 @@ function loadInitialState() {
   try {
     const savedUser     = localStorage.getItem('ba_user');
     const savedBookings = localStorage.getItem('ba_bookings');
+    const savedLang     = localStorage.getItem('ba_lang');
     return {
       ...initialState,
+      language:        savedLang || 'en-GB',
       user:            savedUser     ? JSON.parse(savedUser)     : null,
       isAuthenticated: !!savedUser,
       bookings:        savedBookings ? JSON.parse(savedBookings) : [],
@@ -88,7 +93,12 @@ export function AppProvider({ children }) {
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    localStorage.setItem('ba_lang', state.language || 'en-GB');
+  }, [state.language]);
+
   // ── Actions ───────────────────────────────────────────────────
+  const setLanguage = lang => dispatch({ type: 'SET_LANGUAGE', payload: lang });
   const login = (userData, token) => {
     if (token) localStorage.setItem('ba_token', token);
     dispatch({ type: 'LOGIN', payload: userData });
@@ -112,7 +122,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       ...state,
-      login, logout,
+      setLanguage, login, logout,
       setSearchParams, setSelectedFlight,
       addBooking, updateBooking, setBookings,
       addNotification, dismissNotification,
