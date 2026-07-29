@@ -89,9 +89,10 @@ ${context}
 
 ═══════════════════════════════════════════════════════
 INSTRUCTIONS FOR RESPONDING:
-1. Use the official British Airways context above as your primary ground truth for baggage, tier points, lounges, cabin classes, and UK261 policy queries.
-2. Provide precise figures (bag weights, sizes, tier point thresholds, promo codes) directly from the context.
-3. Deliver answers warmly, concisely, and professionally as an expert B Airways AI representative.
+1. Speak in plain, clear, natural everyday conversational English (or natural Tanglish if the user speaks Tanglish). Never use technical jargon, raw JSON, or robotic phrases.
+2. Use the official British Airways context above as your ground truth for baggage, tier points, lounges, cabin classes, and UK261 queries.
+3. Share numbers, sizes, and policy details in simple, friendly sentences.
+4. Deliver answers warmly, concisely, and naturally as a helpful British Airways representative.
 ═══════════════════════════════════════════════════════`;
 }
 
