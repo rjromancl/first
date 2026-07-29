@@ -1,33 +1,15 @@
 /**
- * ragService.js — Retrieval-Augmented Generation (RAG) service
+ * ragService.js — Advanced Retrieval-Augmented Generation (RAG) frontend service
  *
- * Retrieves relevant context from the backend ChromaDB knowledge base
- * for a user query, then formats it as a context string that can be
- * prepended to the system prompt before sending to the LLM.
- *
- * The RAG pipeline:
- *   1. Send the user query to the backend /api/rag/context endpoint
- *   2. The backend queries ChromaDB for semantically similar documents
- *   3. Filter by relevance (distance threshold)
- *   4. Format the results as a concise context string
- *   5. Return the context (or null if no relevant docs found)
- *
- * If the backend RAG endpoint is not available, the service gracefully
- * returns null and the app continues without RAG context.
+ * Retrieves relevant, domain-curated context from the backend ChromaDB & Hybrid search RAG API
+ * for a user query, then formats it as an augmented context block prepended to the system prompt
+ * for the LLM.
  */
 import { initVectorDB, isVectorDBReady } from './vectorService';
 
 const IS_DEV = Boolean(import.meta.env?.DEV);
 
-// Maximum number of relevant documents to include in context
-const MAX_CONTEXT_DOCS = 3;
-
-// Distance threshold — lower is more similar (Chroma uses cosine distance)
-// Only include documents with distance below this threshold
-const RELEVANCE_THRESHOLD = 0.7;
-
-// Maximum total characters of context to include (to bound prompt size)
-const MAX_CONTEXT_CHARS = 2000;
+const MAX_CONTEXT_DOCS = 5;
 
 function log(...args) {
   if (IS_DEV) console.log('[ragService]', ...args);
@@ -44,12 +26,11 @@ function logError(...args) {
 /**
  * Retrieve relevant context for a user query from the backend RAG API.
  *
- * @param {string} userMessage  The user's voice input
- * @returns {Promise<string|null>}  Formatted context string, or null if no
- *                                   relevant documents were found
+ * @param {string} userMessage  The user's voice input or text prompt
+ * @returns {Promise<string|null>} Formatted context string, or null if no relevant documents found
  */
 export async function getContext(userMessage) {
-  if (!userMessage || typeof userMessage !== 'string') {
+  if (!userMessage || typeof userMessage !== 'string' || !userMessage.trim()) {
     return null;
   }
 
@@ -61,11 +42,10 @@ export async function getContext(userMessage) {
   }
 
   try {
-    // Call the backend RAG API endpoint
     const response = await fetch('/api/rag/context', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: userMessage, topK: MAX_CONTEXT_DOCS }),
+      body: JSON.stringify({ query: userMessage.trim(), topK: MAX_CONTEXT_DOCS }),
     });
 
     if (!response.ok) {
@@ -80,7 +60,7 @@ export async function getContext(userMessage) {
       return null;
     }
 
-    log(`Retrieved RAG context (${data.data.context.length} chars)`);
+    log(`Retrieved RAG context (${data.data.context.length} chars)`, data.data.intent);
     return data.data.context;
   } catch (err) {
     logError('Failed to get RAG context:', err.message);
@@ -93,7 +73,7 @@ export async function getContext(userMessage) {
  *
  * @param {string} basePrompt  The original system prompt
  * @param {string|null} context  The RAG context (or null)
- * @returns {string}  The augmented system prompt
+ * @returns {string} The augmented system prompt
  */
 export function buildAugmentedPrompt(basePrompt, context) {
   if (!context) {
@@ -103,14 +83,15 @@ export function buildAugmentedPrompt(basePrompt, context) {
   return `${basePrompt}
 
 ═══════════════════════════════════════════════════════
-RELEVANT CONTEXT FROM KNOWLEDGE BASE (RAG):
+OFFICIAL BRITISH AIRWAYS KNOWLEDGE BASE CONTEXT (RAG):
 ═══════════════════════════════════════════════════════
 ${context}
 
 ═══════════════════════════════════════════════════════
-Use the above context to provide accurate, specific answers. If the context
-contains relevant information, incorporate it into your response. If not,
-rely on your general knowledge.
+INSTRUCTIONS FOR RESPONDING:
+1. Use the official British Airways context above as your primary ground truth for baggage, tier points, lounges, cabin classes, and UK261 policy queries.
+2. Provide precise figures (bag weights, sizes, tier point thresholds, promo codes) directly from the context.
+3. Deliver answers warmly, concisely, and professionally as an expert B Airways AI representative.
 ═══════════════════════════════════════════════════════`;
 }
 
@@ -119,7 +100,7 @@ rely on your general knowledge.
  *
  * @param {string} userMessage  The user's voice input
  * @param {string} basePrompt   The original system prompt
- * @returns {Promise<string>}  The augmented (or original) system prompt
+ * @returns {Promise<string>} The augmented (or original) system prompt
  */
 export async function getAugmentedPrompt(userMessage, basePrompt) {
   const context = await getContext(userMessage);

@@ -1,361 +1,517 @@
 /**
- * ragService.js — Retrieval-Augmented Generation (RAG) service for the backend.
+ * ragService.js — Advanced Retrieval-Augmented Generation (RAG) service for British Airways.
  *
- * This service manages the ChromaDB knowledge base for the B Airways
- * voice agent. It:
- *  1. Seeds the collection with comprehensive BA knowledge (destinations,
- *     offers, policies, festival guides, airport info, flight data)
- *  2. Queries the collection for semantically similar documents given a
- *     user query
- *  3. Formats the results as a concise context string for the LLM
+ * Provides an enterprise-grade hybrid retrieval architecture combining:
+ *  1. Dense Vector Similarity Search via ChromaDB
+ *  2. Sparse BM25 / Keyword Frequency Scoring with Term Weighting & Bigram matching
+ *  3. Reciprocal Rank Fusion (RRF) reranking
+ *  4. Intent classification & entity extraction (IATA, Flight No., Tier, Cabin)
+ *  5. Domain-specific British Airways Query Expansion (synonym resolution)
+ *  6. Comprehensive, structured knowledge base covering destinations, Executive Club,
+ *     lounges, cabin classes, baggage policies, UK261 compensation, airports, and family services.
  *
- * The service is designed to be resilient: if ChromaDB is not running or
- * the connection fails, all operations gracefully degrade (return empty
- * results) so the app continues to work without RAG.
+ * If ChromaDB is unavailable, gracefully falls back to the in-memory BM25 hybrid engine.
  */
-const { getCollection, initChroma, isReady, COLLECTION_NAME } = require('../config/chroma');
+const { getCollection, initChroma, isReady } = require('../config/chroma');
 const logger = require('../config/logger');
 
-// Maximum number of relevant documents to include in context
-const MAX_CONTEXT_DOCS = 5;
-
-// Distance threshold — lower is more similar (Chroma uses cosine distance)
-// Only include documents with distance below this threshold
-const RELEVANCE_THRESHOLD = 0.7;
-
-// Maximum total characters of context to include (to bound prompt size)
-const MAX_CONTEXT_CHARS = 3000;
+// Configuration bounds
+const MAX_CONTEXT_DOCS = 6;
+const RELEVANCE_THRESHOLD = 0.85; // Cosine distance threshold for vector search
+const MAX_CONTEXT_CHARS = 3500;
 
 /**
- * Build the comprehensive knowledge base documents.
- * Each document has an id, text, and metadata.
+ * British Airways Synonym & Terminology Mapping for Query Expansion
+ */
+const BA_SYNONYM_MAP = {
+  'business class': ['club world', 'club europe', 'club suite'],
+  'first class': ['first', 'concorde room'],
+  'economy': ['world traveller', 'euro traveller'],
+  'premium economy': ['world traveller plus'],
+  'points': ['avios', 'tier points'],
+  'miles': ['avios'],
+  'rewards': ['avios', 'reward flight saver', 'rfs'],
+  'gold card': ['gold', 'executive club gold', 'concorde room'],
+  'silver card': ['silver', 'executive club silver', 'galleries lounge'],
+  'bronze card': ['bronze', 'executive club bronze'],
+  'lounge': ['galleries club', 'galleries first', 'concorde room', 't5 lounge'],
+  'luggage': ['baggage', 'cabin bag', 'checked bag', 'hand luggage'],
+  'carry on': ['cabin bag', 'hand luggage', 'personal item'],
+  'delay': ['uk261', 'eu261', 'delay compensation', 'duty of care'],
+  'cancelled': ['cancellation', 'uk261', 'rebooking', 'refund'],
+  'compensation': ['uk261', 'eu261', 'flight delay claim'],
+  'terminal 5': ['t5', 'heathrow t5', 'lhr t5'],
+  'heathrow': ['lhr', 'london heathrow'],
+  'gatwick': ['lgw', 'london gatwick'],
+  'jfk': ['new york jfk', 'terminal 8'],
+  'dubai': ['dxb'],
+  'tokyo': ['nrt', 'narita'],
+  'sydney': ['syd'],
+  'singapore': ['sin'],
+  'barcelona': ['bcn'],
+};
+
+/**
+ * Build the comprehensive B Airways knowledge base.
  */
 function buildKnowledgeDocs() {
   return [
-    // ── Destinations (from destinationService.js) ─────────────────────
+    // ── Destinations ──────────────────────────────────────────────────
     {
       id: 'dest-newyork',
-      text: 'New York (JFK) — The city that never sleeps. Iconic skyline, world-class dining, art and culture. Popular attractions: Times Square, Central Park, Brooklyn Bridge, Metropolitan Museum. Best time to visit: April–June, September–November. Flight time from London: 7h 30m. From price: £399.',
+      text: 'New York (JFK) — Daily direct flights from London Heathrow (LHR Terminal 5 and Terminal 3). Flight time: 7h 30m. Served by Boeing 777 and Airbus A350-1000 with Club Suite. Popular attractions: Times Square, Central Park, Broadway. Currency: USD.',
       metadata: { category: 'destination', city: 'New York', country: 'United States', iata: 'JFK', fromPrice: 399, climate: 'Temperate', bestTime: 'Apr-Jun, Sep-Nov' },
     },
     {
       id: 'dest-dubai',
-      text: 'Dubai (DXB) — Where luxury meets modernity. Soaring skyscrapers, desert safaris and beaches. Highlights: Burj Khalifa, Dubai Mall, Palm Jumeirah, Desert Safari. Best time to visit: November–March. Flight time from London: 6h 45m. From price: £299.',
+      text: 'Dubai (DXB) — Multiple daily direct flights from London Heathrow (LHR T5). Flight time: 6h 45m. Served by Boeing 787 Dreamliner and Airbus A380 with First and Club World. Highlights: Burj Khalifa, Palm Jumeirah, Desert Safari. Currency: AED.',
       metadata: { category: 'destination', city: 'Dubai', country: 'UAE', iata: 'DXB', fromPrice: 299, climate: 'Hot Desert', bestTime: 'Nov-Mar' },
     },
     {
       id: 'dest-tokyo',
-      text: 'Tokyo (NRT) — Ancient tradition meets futuristic innovation. Highlights: Shibuya Crossing, Senso-ji Temple, Mount Fuji, Shinjuku. Best time to visit: March–May, September–November. Flight time from London: 11h 50m. From price: £649.',
+      text: 'Tokyo Narita (NRT) & Haneda (HND) — Direct long-haul flights from London Heathrow (LHR T5). Flight time: 11h 50m. Features Club Suite and World Traveller Plus. Highlights: Shibuya Crossing, Mount Fuji, Ginza. Currency: JPY.',
       metadata: { category: 'destination', city: 'Tokyo', country: 'Japan', iata: 'NRT', fromPrice: 649, climate: 'Humid Subtropical', bestTime: 'Mar-May, Sep-Nov' },
     },
     {
       id: 'dest-sydney',
-      text: 'Sydney (SYD) — Harbourside beauty with stunning beaches, world-class cuisine and outdoor adventures. Highlights: Sydney Opera House, Bondi Beach, Harbour Bridge, Blue Mountains. Best time to visit: September–November, March–May. Flight time from London: 21h 30m. From price: £799.',
+      text: 'Sydney (SYD) — B Airways flagship kangaroo route from London Heathrow (LHR T5) via Singapore (SIN). Flight time: 21h 30m total. Aircraft: Boeing 787-9 / 777-300ER with First, Club World, World Traveller Plus, World Traveller. Currency: AUD.',
       metadata: { category: 'destination', city: 'Sydney', country: 'Australia', iata: 'SYD', fromPrice: 799, climate: 'Oceanic', bestTime: 'Sep-Nov, Mar-May' },
     },
     {
       id: 'dest-cape-town',
-      text: 'Cape Town (CPT) — At the foot of Table Mountain, a city of astounding natural beauty and vibrant culture. Highlights: Table Mountain, Cape of Good Hope, Boulders Beach, Winelands. Best time to visit: November–February. Flight time from London: 11h 20m. From price: £449.',
+      text: 'Cape Town (CPT) — Direct flights from London Heathrow (LHR T5) and seasonal flights from London Gatwick (LGW). Flight time: 11h 20m. Overnight flights with minimal time zone difference (+1/2h). Currency: ZAR.',
       metadata: { category: 'destination', city: 'Cape Town', country: 'South Africa', iata: 'CPT', fromPrice: 449, climate: 'Mediterranean', bestTime: 'Nov-Feb' },
     },
     {
       id: 'dest-singapore',
-      text: 'Singapore (SIN) — A sparkling city-state fusing futuristic architecture, lush gardens and incredible food. Highlights: Gardens by the Bay, Marina Bay Sands, Sentosa, Hawker Centres. Best time to visit: February–April. Flight time from London: 12h 55m. From price: £579.',
+      text: 'Singapore Changi (SIN) — Daily direct flights from London Heathrow (LHR T5). Flight time: 12h 55m. Serves as stopover hub for Sydney (SYD). Features BA Lounge at Changi T1 with Concorde Bar. Currency: SGD.',
       metadata: { category: 'destination', city: 'Singapore', country: 'Singapore', iata: 'SIN', fromPrice: 579, climate: 'Tropical', bestTime: 'Feb-Apr' },
     },
     {
       id: 'dest-barcelona',
-      text: 'Barcelona (BCN) — Gaudí\'s masterpieces, sun-drenched beaches and a food scene that rivals Paris. Highlights: Sagrada Família, Park Güell, Las Ramblas, Camp Nou. Best time to visit: April–June, September–October. Flight time from London: 2h 15m. From price: £89.',
+      text: 'Barcelona (BCN) — Frequent short-haul flights from London Heathrow (LHR T5) and London Gatwick (LGW). Flight time: 2h 15m. Served by Airbus A320/A321 with Club Europe and Euro Traveller. Currency: EUR.',
       metadata: { category: 'destination', city: 'Barcelona', country: 'Spain', iata: 'BCN', fromPrice: 89, climate: 'Mediterranean', bestTime: 'Apr-Jun, Sep-Oct' },
     },
     {
       id: 'dest-maldives',
-      text: 'Maldives (MLE) — Crystal-clear lagoons, overwater bungalows and pristine coral reefs. Best time to visit: November–April. Flight time from London: 10h 30m. From price: £899.',
+      text: 'Maldives Male (MLE) — Direct leisure flights from London Heathrow (LHR T5). Flight time: 10h 30m. Popular luxury holiday destination with overwater villas. Currency: MVR / USD.',
       metadata: { category: 'destination', city: 'Maldives', country: 'Maldives', iata: 'MLE', fromPrice: 899, climate: 'Tropical', bestTime: 'Nov-Apr' },
     },
     {
       id: 'dest-london',
-      text: 'London (LHR) — The home of B Airways. Heathrow is one of the world\'s busiest airports. The city offers historic landmarks like the Tower of London, Buckingham Palace, and the British Museum.',
+      text: 'London Heathrow (LHR) — Principal hub of B Airways. Operating predominantly from Terminal 5 (T5 A, B, C gates) and Terminal 3. Features Concorde Room, Galleries First, Galleries Club South/North lounges, and T5 Arrivals Lounge.',
       metadata: { category: 'destination', city: 'London', country: 'United Kingdom', iata: 'LHR', fromPrice: 0, climate: 'Temperate', bestTime: 'Year-round' },
     },
     {
       id: 'dest-mumbai',
-      text: 'Mumbai (BOM) — India\'s financial capital and home to Bollywood. Visit the Gateway of India, Marine Drive, and explore the local street food. Best time to visit: November to February.',
-      metadata: { category: 'destination', city: 'Mumbai', country: 'India', iata: 'BOM', fromPrice: 0, climate: 'Tropical Monsoon', bestTime: 'Nov-Feb' },
-    },
-    {
-      id: 'dest-paris',
-      text: 'Paris (CDG) — The City of Light, famous for the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral. Best time to visit: April to June or September to October.',
-      metadata: { category: 'destination', city: 'Paris', country: 'France', iata: 'CDG', fromPrice: 0, climate: 'Temperate', bestTime: 'Apr-Jun, Sep-Oct' },
-    },
-    {
-      id: 'dest-amsterdam',
-      text: 'Amsterdam (AMS) — Known for its canals, museums, and cycling culture. Visit the Rijksmuseum, Van Gogh Museum, and take a boat tour through the historic canals. Best time: April-May or September-October.',
-      metadata: { category: 'destination', city: 'Amsterdam', country: 'Netherlands', iata: 'AMS', fromPrice: 0, climate: 'Temperate', bestTime: 'Apr-May, Sep-Oct' },
-    },
-    {
-      id: 'dest-rome',
-      text: 'Rome (FCO) — The Eternal City, rich in ancient history. Visit the Colosseum, Vatican City, and the Roman Forum. Best time to visit: April-June or September-November.',
-      metadata: { category: 'destination', city: 'Rome', country: 'Italy', iata: 'FCO', fromPrice: 0, climate: 'Mediterranean', bestTime: 'Apr-Jun, Sep-Nov' },
-    },
-    {
-      id: 'dest-istanbul',
-      text: 'Istanbul (IST) — Straddles Europe and Asia. Visit Hagia Sophia, the Grand Bazaar, and the Blue Mosque. Best time to visit: April-June or September-October.',
-      metadata: { category: 'destination', city: 'Istanbul', country: 'Turkey', iata: 'IST', fromPrice: 0, climate: 'Humid Subtropical', bestTime: 'Apr-Jun, Sep-Oct' },
+      text: 'Mumbai (BOM) — Double daily direct flights from London Heathrow (LHR T5). Flight time: 9h 15m. Served by Boeing 777 and 787 Dreamliner with Club Suite, World Traveller Plus, and World Traveller. Currency: INR.',
+      metadata: { category: 'destination', city: 'Mumbai', country: 'India', iata: 'BOM', fromPrice: 489, climate: 'Tropical Monsoon', bestTime: 'Nov-Feb' },
     },
 
-    // ── Offers (from destinationService.js) ───────────────────────────
+    // ── Executive Club & Avios ─────────────────────────────────────────
     {
-      id: 'offer-summer-sale',
-      text: 'Summer Escape Sale — Save up to 30% on selected flights to Europe this summer. Valid until 2026-08-31. Destinations: BCN, MAD, FCO, GVA. Promo code: SUMMER30.',
-      metadata: { category: 'offer', title: 'Summer Escape Sale', discount: '30% off', validUntil: '2026-08-31', promoCode: 'SUMMER30' },
+      id: 'ec-avios-overview',
+      text: 'B Airways Executive Club & Avios: Avios is the reward currency of B Airways. Members earn Avios based on cash spent on flights, cabin class, and tier bonus (Blue 0%, Bronze 25%, Silver 50%, Gold 100%). Avios can be spent on Reward Flights, upgrades to Club World/First, hotel bookings, and car rentals. Avios do not expire as long as there is 1 transaction every 36 months.',
+      metadata: { category: 'executive-club', topic: 'avios-overview' },
     },
     {
-      id: 'offer-business-deal',
-      text: 'Business Class Deal — Upgrade to Business for less on long-haul routes this autumn. From £999. Valid until 2026-09-30. Destinations: JFK, LAX, SIN, NRT. Promo code: BIZCLASS.',
-      metadata: { category: 'offer', title: 'Business Class Deal', discount: 'From £999', validUntil: '2026-09-30', promoCode: 'BIZCLASS' },
+      id: 'ec-tier-blue',
+      text: 'Executive Club Blue Tier: Entry-level membership. Benefits include earning Avios on flights and partner purchases, saving passenger details for fast booking, member-only promotional offers, and free high-speed Wi-Fi messaging on equipped aircraft.',
+      metadata: { category: 'executive-club', tier: 'Blue', tierPointsRequired: 0 },
     },
     {
-      id: 'offer-double-avios',
-      text: 'Earn Double Avios — Book by 31 July and earn double Avios on all flights. Valid until 2026-07-31. Promo code: DOUBLEAVIOS.',
-      metadata: { category: 'offer', title: 'Earn Double Avios', discount: '2x Avios', validUntil: '2026-07-31', promoCode: 'DOUBLEAVIOS' },
-    },
-
-    // ── Check-in info ─────────────────────────────────────────────────
-    {
-      id: 'checkin-info',
-      text: 'Online check-in opens 24 hours before departure and closes 1 hour before domestic flights or 45 minutes before international flights. You can check in via the B Airways app, website, or at the airport kiosk. Boarding typically begins 30 minutes before departure.',
-      metadata: { category: 'checkin' },
+      id: 'ec-tier-bronze',
+      text: 'Executive Club Bronze Tier (oneworld Ruby): Achieved by earning 300 Tier Points and flying 2 BA flights in a membership year. Benefits: Priority check-in at Business Class counters, free seat selection 7 days before departure (excluding exit rows), 25% bonus Avios on flights, and priority Group 3 boarding.',
+      metadata: { category: 'executive-club', tier: 'Bronze', tierPointsRequired: 300 },
     },
     {
-      id: 'boarding-pass',
-      text: 'Your boarding pass can be obtained during online check-in. It contains your flight number, seat number, gate information, and boarding time. You can store it on your phone or print it. At the airport, have it ready for security and boarding.',
-      metadata: { category: 'boarding-pass' },
-    },
-
-    // ── Flight status ─────────────────────────────────────────────────
-    {
-      id: 'flight-status-info',
-      text: 'You can track your flight status in real-time through the B Airways app or website. Flight status includes departure time, arrival time, gate information, and any delays or cancellations. Enter your flight number (e.g., BA117) or booking reference.',
-      metadata: { category: 'flight-status' },
-    },
-
-    // ── Executive Club / Avios ────────────────────────────────────────
-    {
-      id: 'avios-info',
-      text: 'Avios is the currency of the B Airways Executive Club. You earn Avios on every flight and can redeem them for flights, upgrades, and partner rewards. Your Avios balance never expires as long as your account is active. Log in to the Executive Club portal to check your balance.',
-      metadata: { category: 'executive-club' },
+      id: 'ec-tier-silver',
+      text: 'Executive Club Silver Tier (oneworld Sapphire): Achieved by earning 600 Tier Points and flying 4 BA flights in a membership year. Benefits: Access to BA Business Class / Galleries Club lounges worldwide for member + 1 guest regardless of cabin booked, free seat selection at time of booking, priority check-in, 50% bonus Avios, extra checked bag allowance (2x32kg in Economy), and Group 2 boarding.',
+      metadata: { category: 'executive-club', tier: 'Silver', tierPointsRequired: 600 },
     },
     {
-      id: 'executive-club-tiers',
-      text: 'B Airways Executive Club has three tiers: Blue (entry level), Bronze (earned 350+ tier points in a year), and Gold (earned 1500+ tier points in a year). Bronze offers priority check-in and extra baggage. Gold offers lounge access, priority boarding, and 50% bonus Avios.',
-      metadata: { category: 'executive-club' },
+      id: 'ec-tier-gold',
+      text: 'Executive Club Gold Tier (oneworld Emerald): Achieved by earning 1500 Tier Points and flying 4 BA flights in a membership year. Benefits: Access to First Class / Galleries First lounges and Galleries Club lounges for member + 1 guest, access to Heathrow T5 First Wing (dedicated check-in and private security), free seat selection including exit rows at booking, 100% bonus Avios, extra baggage, Group 1 boarding, and Gold Priority Reward redemptions.',
+      metadata: { category: 'executive-club', tier: 'Gold', tierPointsRequired: 1500 },
+    },
+    {
+      id: 'ec-tier-concorde',
+      text: 'Concorde Room Card & Gold Guest List: Awarded to elite Executive Club members earning 5000 Tier Points (5000 TP for Concorde Room Card, 3000 TP for Gold Guest List). Grants access to the exclusive Concorde Room lounges at London Heathrow T5 and New York JFK T8 with private dining booths, cabanas, and full waiter service.',
+      metadata: { category: 'executive-club', tier: 'Gold Guest List', tierPointsRequired: 5000 },
+    },
+    {
+      id: 'ec-reward-flight-saver',
+      text: 'Reward Flight Saver (RFS): Fixed low cash fee + Avios option for BA reward flights. European short-haul RFS starts from 4,750 Avios + £1 cash each way. Long-haul RFS in Club World to New York starts from 80,000 Avios + £350 return cash. Companion Vouchers from BA American Express cards double the value by allowing 2 passengers to travel for the Avios of 1.',
+      metadata: { category: 'executive-club', topic: 'rfs-companion-voucher' },
     },
 
-    // ── Baggage policy ────────────────────────────────────────────────
+    // ── Airport Lounges ───────────────────────────────────────────────
     {
-      id: 'baggage-policy',
-      text: 'B Airways baggage allowance varies by route and cabin class. Generally, economy passengers on long-haul flights get 1 checked bag (23kg), business class gets 2 bags (32kg each), and first class gets 3 bags (32kg each). Hand luggage allowance is 1 piece up to 23kg.',
-      metadata: { category: 'baggage' },
+      id: 'lounge-galleries-club',
+      text: 'B Airways Galleries Club Lounges: Located at LHR T5 (South, North, B Gates), LGW South, JFK T8, and major global outstations. Eligible access: Passengers flying in Club World, Club Europe, or Business Class on oneworld airlines; Executive Club Silver & Gold members + 1 guest; oneworld Sapphire & Emerald members. Amenities: Hot & cold buffet dining, complimentary champagne & wines, high-speed Wi-Fi, shower suites, business zone.',
+      metadata: { category: 'lounge', name: 'Galleries Club' },
+    },
+    {
+      id: 'lounge-galleries-first',
+      text: 'B Airways Galleries First Lounge: Located at London Heathrow T5 (South) and London Gatwick South. Eligible access: Executive Club Gold members and oneworld Emerald members + 1 guest, traveling in any cabin. Features elevated à la carte dining, Champagne Bar, quiet work pods, and direct access via The First Wing at LHR T5.',
+      metadata: { category: 'lounge', name: 'Galleries First' },
+    },
+    {
+      id: 'lounge-concorde-room',
+      text: 'The Concorde Room: Ultra-exclusive flagship lounges at London Heathrow Terminal 5 and New York JFK Terminal 8. Eligible access: Customers flying in First Class on B Airways, Concorde Room Card holders, and Gold Guest List members + 1 guest. Features private dining rooms, Forty Winks sleep suites, vintage champagne, and luxury terrace service.',
+      metadata: { category: 'lounge', name: 'Concorde Room' },
     },
 
-    // ── Seat selection ────────────────────────────────────────────────
+    // ── Cabin Classes & Amenities ─────────────────────────────────────
     {
-      id: 'seat-selection',
-      text: 'You can select your seat during booking or online check-in. Seat selection is free for most cabins, but premium seats (aisle, window, extra legroom) may incur a fee. You can also select seats for your entire party at the same time.',
-      metadata: { category: 'seats' },
+      id: 'cabin-world-traveller',
+      text: 'World Traveller (Long-Haul Economy): Ergonomic seats with adjustable headrests, 31-inch seat pitch, personal 10-inch HD entertainment screen with noise-reducing headphones, complimentary multi-course meal with bar service, and USB power sockets at every seat.',
+      metadata: { category: 'cabin', cabin: 'World Traveller' },
+    },
+    {
+      id: 'cabin-world-traveller-plus',
+      text: 'World Traveller Plus (Premium Economy): Dedicated quiet cabin with wider seats, up to 38-inch legroom, greater recline, footrest, 12-inch screen, premium dining served on fine china, glass of sparkling wine on arrival, amenity kit, and double baggage allowance (2x23kg checked bags).',
+      metadata: { category: 'cabin', cabin: 'World Traveller Plus' },
+    },
+    {
+      id: 'cabin-club-suite',
+      text: 'Club World & Club Suite (Business Class): Features direct aisle access, sliding privacy door (on Club Suite), 79-inch fully flat bed, White Company luxury bedding & amenity kit, 18.5-inch HD screen, multi-course fine dining curated by top chefs, fine wines and champagne, lounge access, priority check-in & boarding, and 2x32kg checked baggage allowance.',
+      metadata: { category: 'cabin', cabin: 'Club World' },
+    },
+    {
+      id: 'cabin-first-class',
+      text: 'First Class: Premier luxury travel with private suite, 198cm (6ft 6in) fully flat bed with mattress topper & Meridian pajamas, Temperley London amenity bag, multi-course à la carte dining on demand, Laurent-Perrier Grand Siècle champagne, access to The First Wing, Concorde Room lounge access, and 3x32kg baggage allowance.',
+      metadata: { category: 'cabin', cabin: 'First' },
+    },
+    {
+      id: 'cabin-club-europe',
+      text: 'Club Europe (Short-Haul Business Class): Located at the front of short-haul aircraft with middle seat guaranteed empty for extra space and privacy. Includes hot meal service with champagne/drinks, priority check-in, Fast Track security, Galleries Club lounge access, priority Group 1 boarding, and 2x32kg checked baggage.',
+      metadata: { category: 'cabin', cabin: 'Club Europe' },
     },
 
-    // ── Festival travel guides ────────────────────────────────────────
+    // ── Baggage Policies ──────────────────────────────────────────────
     {
-      id: 'christmas-travel',
-      text: 'Christmas is a peak travel period. Popular destinations include New York (JFK), Dubai (DXB), and Sydney (SYD). Book early as prices are higher and seats fill up quickly. Typical Christmas travel dates are December 20-28.',
-      metadata: { category: 'festival', festival: 'Christmas' },
+      id: 'baggage-hand-luggage',
+      text: 'B Airways Cabin / Hand Baggage Policy: ALL tickets include 2 cabin items: 1 Handbag/Laptop bag (up to 40x30x15cm, must fit under seat ahead) + 1 Cabin Bag (up to 56x45x25cm, placed in overhead locker). Maximum weight per item is 23kg (50lbs), provided passenger can lift it unaided into overhead bin.',
+      metadata: { category: 'baggage', type: 'hand-luggage' },
     },
     {
-      id: 'diwali-travel',
-      text: 'Diwali is a major festival for Indian travelers. Popular destinations include Mumbai (BOM), Dubai (DXB), and Delhi. Book early as this is a peak period. Diwali typically falls in October or November.',
-      metadata: { category: 'festival', festival: 'Diwali' },
+      id: 'baggage-checked-allowance',
+      text: 'Checked Baggage Allowance by Cabin: Basic Economy (Hand Baggage Only / HBO) = 0 checked bags. Standard Economy (World Traveller) = 1 bag up to 23kg (90x75x43cm). World Traveller Plus = 2 bags up to 23kg each. Club Europe / Club World = 2 bags up to 32kg each. First Class = 3 bags up to 32kg each.',
+      metadata: { category: 'baggage', type: 'checked-allowance' },
     },
     {
-      id: 'easter-travel',
-      text: 'Easter holidays are popular for short-haul European flights. Top destinations include Barcelona (BCN), Rome (FCO), and Amsterdam (AMS). Easter typically falls in March or April.',
-      metadata: { category: 'festival', festival: 'Easter' },
+      id: 'baggage-tier-allowance',
+      text: 'Executive Club Member Baggage Bonuses: Executive Club Silver and Gold members (and oneworld Sapphire/Emerald) get 1 additional free checked bag on all tickets except Basic/HBO fares, and an increased weight limit of 32kg per bag in Economy. Bronze members get priority baggage tag dropping.',
+      metadata: { category: 'baggage', type: 'tier-bonus' },
     },
     {
-      id: 'summer-travel',
-      text: 'Summer is peak season for European travel. Popular destinations include Barcelona (BCN), Dubai (DXB), and Greek islands. Book well in advance for the best prices. Summer holidays typically run from late July to early September.',
-      metadata: { category: 'festival', festival: 'Summer' },
-    },
-    {
-      id: 'eid-travel',
-      text: 'Eid is a major travel period for Muslim travelers. Popular destinations include Dubai (DXB), Istanbul (IST), and Mumbai (BOM). Book early as this is a peak period. Eid ul-Fitr and Eid ul-Adha both fall in spring/autumn respectively.',
-      metadata: { category: 'festival', festival: 'Eid' },
-    },
-    {
-      id: 'new-year-travel',
-      text: 'New Year is a popular travel period. Popular destinations include Sydney (SYD), Dubai (DXB), and New York (JFK). Book early as prices are higher and seats fill up quickly. Typical New Year travel dates are December 29 - January 3.',
-      metadata: { category: 'festival', festival: 'New Year' },
+      id: 'baggage-excess-and-sports',
+      text: 'Excess Baggage & Sporting Equipment: Additional bags can be purchased online at ba.com up to 24h before departure at up to 30% discount vs airport fees. Overweight bags (23kg-32kg) incur a £65/$100 heavy bag fee at airport (waived for Club/First & Silver/Gold members). Golf bags, skis, and bikes travel as part of checked baggage allowance if within weight & dimensions.',
+      metadata: { category: 'baggage', type: 'excess-sports' },
     },
 
-    // ── Flight routes (from mockData.js) ─────────────────────────────
+    // ── UK261 / EU261 Delay & Cancellation Rights ─────────────────────
+    {
+      id: 'uk261-compensation-delay',
+      text: 'UK261 / EU261 Flight Delay Rights: If your B Airways flight is delayed by 2+ hours (short-haul) or 3+ hours (long-haul), BA must provide Duty of Care: complimentary food/drink vouchers, 2 phone calls/emails. If delayed 3+ hours on arrival due to BA fault (non-extraordinary circumstance), cash compensation applies: £220 for flights <1500km; £350 for flights 1500-3500km; £520 for flights >3500km delayed over 4 hours.',
+      metadata: { category: 'uk261', topic: 'delay-rights' },
+    },
+    {
+      id: 'uk261-compensation-cancellation',
+      text: 'UK261 Cancellation Rights & Refunds: If your flight is cancelled by B Airways, you are entitled to a full refund within 7 days OR rebooking on the next available flight (including partner airlines) at no extra charge. If cancelled with less than 14 days notice, UK261 compensation of £220-£520 applies unless caused by extraordinary weather or air traffic control strikes.',
+      metadata: { category: 'uk261', topic: 'cancellation-rights' },
+    },
+    {
+      id: 'uk261-duty-of-care',
+      text: 'UK261 Overnight Duty of Care & Hotel Accommodation: If a flight delay or cancellation requires an overnight stay, B Airways provides complimentary hotel accommodation, transport between airport and hotel, and evening dinner & breakfast. If passengers arrange their own hotel due to high disruption, BA reimburses reasonable costs upon claim submission.',
+      metadata: { category: 'uk261', topic: 'hotel-duty-of-care' },
+    },
+
+    // ── Airport Operations & Hubs ─────────────────────────────────────
+    {
+      id: 'airport-lhr-t5',
+      text: 'London Heathrow Terminal 5 (LHR T5): B Airways main hub terminal. Divided into T5A (Main Terminal), T5B (Satellite), and T5C (Satellite reached via underground transit train). Features The First Wing (Zones E/F) for Gold/First passengers with direct security line to Galleries First lounge. Express baggage drop in Zone C/D.',
+      metadata: { category: 'airport', iata: 'LHR', terminal: '5' },
+    },
+    {
+      id: 'airport-lhr-terminals',
+      text: 'London Heathrow Terminal 3 (LHR T3): Select BA flights operate from T3 (including flights to Accra, Austin, Las Vegas, Phoenix, São Paulo). Features BA T3 Galleries Club & First Lounges as well as access to Cathay Pacific and Qantas lounges for Sapphire/Emerald members.',
+      metadata: { category: 'airport', iata: 'LHR', terminal: '3' },
+    },
+    {
+      id: 'airport-lgw-south',
+      text: 'London Gatwick South Terminal (LGW): Hub for BA leisure short-haul and long-haul routes (Caribbean, Orlando, Cape Town seasonal). Features dedicated BA Gatwick Club and First Lounge on Mezzanine level.',
+      metadata: { category: 'airport', iata: 'LGW', terminal: 'South' },
+    },
+    {
+      id: 'airport-jfk-t8',
+      text: 'New York JFK Terminal 8: B Airways operates jointly with American Airlines from JFK T8. Features co-branded premium lounges: Chelsea Lounge (First Class / Concorde Room Card), Soho Lounge (Gold / Emerald), and Greenwich Lounge (Silver / Business Class).',
+      metadata: { category: 'airport', iata: 'JFK', terminal: '8' },
+    },
+
+    // ── Flight Routes ─────────────────────────────────────────────────
     {
       id: 'route-lhr-jfk',
-      text: 'London Heathrow (LHR) to New York JFK — B Airways operates multiple daily flights. Flight numbers include BA117, BA175, BA177, BA179, BA183, BA185. Duration: approximately 7h 15m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to New York JFK — B Airways operates up to 8 daily non-stop flights. Flight numbers include BA117, BA175, BA177, BA179, BA183, BA185. Duration: 7h 15m westbound, 6h 45m eastbound. Aircraft: Boeing 777-300ER and Airbus A350-1000 with Club Suite.',
       metadata: { category: 'route', from: 'LHR', to: 'JFK', airline: 'BA' },
     },
     {
       id: 'route-lhr-dxb',
-      text: 'London Heathrow (LHR) to Dubai (DXB) — B Airways operates multiple daily flights. Flight numbers include BA107, BA109, BA111, BA113, BA115, BA119. Duration: approximately 6h 50m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to Dubai (DXB) — B Airways operates 3 daily non-stop flights (BA105, BA107, BA109). Duration: 6h 50m outbound, 7h 30m return. Aircraft: Boeing 787-10 Dreamliner and Airbus A380 with First Class & Club Suite.',
       metadata: { category: 'route', from: 'LHR', to: 'DXB', airline: 'BA' },
     },
     {
       id: 'route-lhr-nrt',
-      text: 'London Heathrow (LHR) to Tokyo Narita (NRT) — B Airways operates daily flights. Flight numbers include BA005, BA007, BA009, BA011, BA013, BA015. Duration: approximately 11h 45m. Aircraft: Boeing 777, 787 Dreamliner, Airbus A380.',
+      text: 'London Heathrow (LHR) to Tokyo Narita / Haneda (NRT/HND) — Daily direct flights (BA005 / BA007). Flight duration: 13h 40m via polar route. Features Club Suite and World Traveller Plus.',
       metadata: { category: 'route', from: 'LHR', to: 'NRT', airline: 'BA' },
     },
     {
       id: 'route-lhr-syd',
-      text: 'London Heathrow (LHR) to Sydney (SYD) — B Airways operates daily flights via Singapore or Dubai. Duration: approximately 21h 30m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
+      text: 'London Heathrow (LHR) to Sydney (SYD) — Daily flight BA015 operating via Singapore Changi (SIN). Flight duration: LHR-SIN 12h 50m, 1h 50m stopover, SIN-SYD 7h 45m. Total 21h 30m.',
       metadata: { category: 'route', from: 'LHR', to: 'SYD', airline: 'BA' },
     },
     {
-      id: 'route-lhr-sin',
-      text: 'London Heathrow (LHR) to Singapore (SIN) — B Airways operates multiple daily flights. Flight numbers include BA011, BA013, BA015, BA017, BA019, BA021. Duration: approximately 12h 50m. Aircraft: Boeing 787 Dreamliner, 777, Airbus A380.',
-      metadata: { category: 'route', from: 'LHR', to: 'SIN', airline: 'BA' },
-    },
-    {
       id: 'route-lhr-bcn',
-      text: 'London Heathrow (LHR) to Barcelona (BCN) — B Airways operates multiple daily flights. Flight numbers include BA414, BA416, BA418, BA420, BA422, BA424. Duration: approximately 2h 15m. Aircraft: Airbus A320, A319, A321.',
+      text: 'London Heathrow (LHR) to Barcelona (BCN) — Up to 6 daily short-haul flights (BA472, BA474, BA478, BA480). Duration: 2h 15m. Served by Airbus A320neo family with Club Europe and Euro Traveller.',
       metadata: { category: 'route', from: 'LHR', to: 'BCN', airline: 'BA' },
     },
 
-    // ── Airport information ───────────────────────────────────────────
+    // ── Special Customer Services ─────────────────────────────────────
     {
-      id: 'airport-lhr',
-      text: 'London Heathrow (LHR) — One of the world\'s busiest airports, located 14 miles west of Central London. Terminals 1-5 (Terminal 1 closed in 2018). B Airways operates from Terminal 5. Access via Heathrow Express (15 min to Paddington), Piccadilly Line, or taxi.',
-      metadata: { category: 'airport', iata: 'LHR', city: 'London' },
+      id: 'service-family-travel',
+      text: 'Family Travel & Bassinet Seats: Families with infants under 2 travel with free seat selection at booking. Free carry-on stroller (buggy) up to 117x38x38cm can be taken to airplane door and retrieved at arrival gate. Complimentary bassinet / carrycot seats available on long-haul flights (must reserve in advance via Manage My Booking). Infant milk and baby food can be carried through airport security.',
+      metadata: { category: 'service', topic: 'family-infant' },
     },
     {
-      id: 'airport-jfk',
-      text: 'John F. Kennedy International (JFK) — New York\'s primary international airport, located in Queens. Terminals 1-8. B Airways operates from Terminal 7. Access via AirTrain, subway (E, J, Z, A), or taxi.',
-      metadata: { category: 'airport', iata: 'JFK', city: 'New York' },
+      id: 'service-special-meals',
+      text: 'Special Dietary Meals: B Airways offers 14 special meal types free of charge on flights with meal service: Kosher (KSML), Halal (MOML), Hindu Non-Vegetarian (HNML), Vegan (VGML), Gluten Friendly (GFML), Diabetic (DBML), Low Sodium (LSML), Child Meal (CHML). Must be ordered at least 24 hours before departure via Manage My Booking.',
+      metadata: { category: 'service', topic: 'special-meals' },
     },
     {
-      id: 'airport-dxb',
-      text: 'Dubai International (DXB) — One of the world\'s busiest airports by international passengers. Terminals 1, 3, and 5 (concourse D). B Airways operates from Terminal 3. Access via Metro, taxi, or ride-sharing.',
-      metadata: { category: 'airport', iata: 'DXB', city: 'Dubai' },
-    },
-    {
-      id: 'airport-bcn',
-      text: 'Barcelona El Prat (BCN) — Located 12km southwest of Barcelona. Terminals 1 and 2. B Airways operates from Terminal 1. Access via Rodalies (Cercanías) train, Aerobus, or taxi.',
-      metadata: { category: 'airport', iata: 'BCN', city: 'Barcelona' },
+      id: 'service-special-assistance',
+      text: 'Special Assistance & Accessibility: Wheelchair assistance, airport escort, blind/deaf assistance, and medical clearance services available free of charge. Assistance must be requested at least 48 hours before departure. Guide and assistance dogs travel free in cabin on certified routes.',
+      metadata: { category: 'service', topic: 'accessibility' },
     },
 
-    // ── Booking info ──────────────────────────────────────────────────
+    // ── Offers & Promotions ───────────────────────────────────────────
     {
-      id: 'booking-info',
-      text: 'You can book flights through the B Airways website, mobile app, or by calling the contact centre. Payment methods accepted include major credit/debit cards (Visa, Mastercard, American Express) and PayPal. After booking, you\'ll receive a confirmation email with your booking reference.',
-      metadata: { category: 'booking' },
+      id: 'offer-summer-sale',
+      text: 'Summer Escape Sale — Save up to 30% on selected flights to Europe and North America. Valid for travel through 31 August 2026. Use promo code: SUMMER30 at checkout on ba.com.',
+      metadata: { category: 'offer', title: 'Summer Escape Sale', discount: '30% off', validUntil: '2026-08-31', promoCode: 'SUMMER30' },
     },
     {
-      id: 'manage-booking',
-      text: 'You can manage your booking online using your booking reference and surname. Changes include seat selection, baggage addition, meal preferences, and flight changes. Note that change fees may apply depending on your fare type. Online check-in opens 24 hours before departure.',
-      metadata: { category: 'manage-booking' },
+      id: 'offer-business-deal',
+      text: 'Business Class Sale — Upgrade to Club World for less on long-haul routes. Flights to New York JFK from £1,299 return. Promo code: BIZCLASS. Valid until 30 September 2026.',
+      metadata: { category: 'offer', title: 'Business Class Deal', discount: 'From £1299', validUntil: '2026-09-30', promoCode: 'BIZCLASS' },
+    },
+    {
+      id: 'offer-double-avios',
+      text: 'Double Avios Promotion — Earn 2x Avios on all direct B Airways flights booked before 31 August 2026. Opt-in required in Executive Club account prior to booking. Code: DOUBLEAVIOS.',
+      metadata: { category: 'offer', title: 'Double Avios', discount: '2x Avios', validUntil: '2026-08-31', promoCode: 'DOUBLEAVIOS' },
+    },
+    {
+      id: 'offer-companion-voucher',
+      text: 'BA American Express Companion Voucher: Earned by spending threshold on BA Amex cards. Entitles primary cardholder to book a second companion seat on any BA reward flight for zero additional Avios (taxes & fees payable), or 50% discount on Avios for solo traveler.',
+      metadata: { category: 'offer', title: 'Companion Voucher' },
     },
   ];
 }
 
 /**
- * Seed the collection with initial B Airways knowledge.
- * This should be called once on app startup (or when the collection is empty).
+ * Classify user query intent & extract entity tokens.
+ * @param {string} queryText
+ * @returns {{ intent: string, entities: { iata: string[], flight: string[], tier: string[], cabin: string[] } }}
  */
-async function seedKnowledgeBase() {
-  const collection = await getCollection();
-  if (!collection) {
-    logger.warn('Cannot seed knowledge base — ChromaDB not available');
-    return false;
+function classifyQueryIntent(queryText) {
+  const q = queryText.toLowerCase();
+  const entities = {
+    iata: [],
+    flight: [],
+    tier: [],
+    cabin: [],
+  };
+
+  // Extract IATA codes
+  const iataMatches = queryText.match(/\b(LHR|JFK|DXB|NRT|HND|SYD|SIN|BCN|MLE|CPT|BOM|LGW|LCY|CDG|AMS|FCO|IST)\b/gi);
+  if (iataMatches) {
+    entities.iata = Array.from(new Set(iataMatches.map(code => code.toUpperCase())));
   }
 
-  try {
-    // Check if we already have data
-    const count = await collection.count();
-    if (count > 0) {
-      logger.info('Knowledge base already seeded', { count });
-      return true;
+  // Extract Flight Numbers
+  const flightMatches = queryText.match(/\bBA\s?\d{1,4}\b/gi);
+  if (flightMatches) {
+    entities.flight = Array.from(new Set(flightMatches.map(f => f.replace(/\s+/g, '').toUpperCase())));
+  }
+
+  // Extract Tier
+  if (/\bgold\b/i.test(q)) entities.tier.push('Gold');
+  if (/\bsilver\b/i.test(q)) entities.tier.push('Silver');
+  if (/\bbronze\b/i.test(q)) entities.tier.push('Bronze');
+  if (/\bblue\b/i.test(q)) entities.tier.push('Blue');
+
+  // Extract Cabin
+  if (/\b(club world|club europe|club suite|business class|business)\b/i.test(q)) entities.cabin.push('Club World');
+  if (/\b(first class|first)\b/i.test(q)) entities.cabin.push('First');
+  if (/\b(world traveller plus|premium economy)\b/i.test(q)) entities.cabin.push('World Traveller Plus');
+  if (/\b(world traveller|economy)\b/i.test(q)) entities.cabin.push('World Traveller');
+
+  // Classify intent
+  let intent = 'GENERAL';
+  if (/\b(uk261|eu261|compensation|delay|delayed|cancel|cancelled|refund|claim|rights)\b/i.test(q)) {
+    intent = 'UK261';
+  } else if (/\b(baggage|luggage|bag|carry-on|handbag|suitcase|allowance|weight|excess)\b/i.test(q)) {
+    intent = 'BAGGAGE';
+  } else if (/\b(lounge|galleries|concorde room|the first wing|shower|dining|food in lounge)\b/i.test(q)) {
+    intent = 'LOUNGE';
+  } else if (/\b(avios|tier|tier points|executive club|membership|gold|silver|bronze|blue|reward flight)\b/i.test(q)) {
+    intent = 'EXECUTIVE_CLUB';
+  } else if (/\b(cabin|seat|flat bed|club suite|legroom|world traveller|first class)\b/i.test(q)) {
+    intent = 'CABIN';
+  } else if (/\b(terminal|t5|t3|heathrow|gatwick|jfk|gate|airport)\b/i.test(q)) {
+    intent = 'AIRPORT';
+  } else if (/\b(flight|route|duration|flight time|direct flight)\b/i.test(q)) {
+    intent = 'ROUTE';
+  } else if (/\b(sale|discount|promo|code|offer|deal)\b/i.test(q)) {
+    intent = 'OFFER';
+  } else if (/\b(baby|infant|child|bassinet|stroller|buggy|special meal|kosher|halal|vegan|wheelchair|assistance)\b/i.test(q)) {
+    intent = 'SERVICE';
+  }
+
+  return { intent, entities };
+}
+
+/**
+ * Expand user query with British Airways domain terms.
+ * @param {string} queryText
+ * @returns {string} Expanded query string
+ */
+function expandBAQuery(queryText) {
+  let expanded = queryText.toLowerCase();
+
+  for (const [key, synonyms] of Object.entries(BA_SYNONYM_MAP)) {
+    const reg = new RegExp(`\\b${key}\\b`, 'gi');
+    if (reg.test(expanded)) {
+      expanded += ' ' + synonyms.join(' ');
     }
-  } catch (err) {
-    logger.warn('Failed to check collection count', { error: err.message });
   }
 
-  const docs = buildKnowledgeDocs();
-  const ids = docs.map((d) => d.id);
-  const texts = docs.map((d) => d.text);
-  const metadatas = docs.map((d) => d.metadata);
-
-  try {
-    await collection.add({ ids, documents: texts, metadatas });
-    logger.info('Knowledge base seeded', { documents: docs.length });
-    return true;
-  } catch (err) {
-    logger.error('Failed to seed knowledge base', { error: err.message });
-    return false;
-  }
+  return expanded;
 }
 
 /**
- * Query the collection for documents semantically similar to the query.
- * @param {string} queryText  The user's message
- * @param {number} topK       Number of results to return (default 5)
- * @returns {Promise<Array<{text: string, metadata: object, distance: number}>>}
+ * Calculate BM25 / Sparse term-match score for a document.
+ * @param {object} doc
+ * @param {string[]} queryTokens
+ * @param {object} intentData
+ * @returns {number}BM25 score
  */
-async function queryDocuments(queryText, topK = MAX_CONTEXT_DOCS) {
-  const collection = await getCollection();
-  if (!collection) return [];
+function calculateBM25Score(doc, queryTokens, intentData) {
+  if (!queryTokens || queryTokens.length === 0) return 0;
 
-  try {
-    const results = await collection.query({
-      queryTexts: [queryText],
-      nResults: topK,
-    });
+  const textLower = doc.text.toLowerCase();
+  const metaStr = JSON.stringify(doc.metadata).toLowerCase();
+  const idLower = doc.id.toLowerCase();
 
-    const docs = results.documents[0] || [];
-    const metadatas = results.metadatas[0] || [];
-    const distances = results.distances[0] || [];
+  let score = 0;
+  const k1 = 1.2;
+  const b = 0.75;
+  const avgdl = 40;
+  const docLen = textLower.split(/\s+/).length;
 
-    return docs.map((text, i) => ({
-      text: text || '',
-      metadata: metadatas[i] || {},
-      distance: distances[i] !== undefined ? distances[i] : 1,
-    }));
-  } catch (err) {
-    logger.error('Failed to query documents', { error: err.message });
-    return [];
+  for (const token of queryTokens) {
+    if (token.length < 2) continue;
+
+    let tf = 0;
+    // Count exact occurrences in text
+    const textMatches = (textLower.match(new RegExp(`\\b${token}\\b`, 'g')) || []).length;
+    tf += textMatches * 2;
+
+    // Count in metadata
+    if (metaStr.includes(token)) tf += 3;
+    if (idLower.includes(token)) tf += 4;
+
+    if (tf > 0) {
+      const idf = 1.5; // Fixed IDF scaling factor for domain corpus
+      const tfNorm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (docLen / avgdl)));
+      score += idf * tfNorm;
+    }
   }
+
+  // Entity Boosts
+  const { entities, intent } = intentData;
+
+  // IATA Match
+  if (entities.iata && entities.iata.length > 0) {
+    const docIata = doc.metadata?.iata || '';
+    if (entities.iata.includes(docIata.toUpperCase()) || entities.iata.some(i => textLower.includes(i.toLowerCase()))) {
+      score += 8.0;
+    }
+  }
+
+  // Flight Match
+  if (entities.flight && entities.flight.length > 0) {
+    if (entities.flight.some(f => textLower.includes(f.toLowerCase()) || idLower.includes(f.toLowerCase()))) {
+      score += 10.0;
+    }
+  }
+
+  // Tier Match
+  if (entities.tier && entities.tier.length > 0) {
+    const docTier = doc.metadata?.tier || '';
+    if (entities.tier.some(t => t.toLowerCase() === docTier.toLowerCase() || textLower.includes(t.toLowerCase()))) {
+      score += 6.0;
+    }
+  }
+
+  // Cabin Match
+  if (entities.cabin && entities.cabin.length > 0) {
+    const docCabin = doc.metadata?.cabin || '';
+    if (entities.cabin.some(c => c.toLowerCase() === docCabin.toLowerCase() || textLower.includes(c.toLowerCase()))) {
+      score += 6.0;
+    }
+  }
+
+  // Intent Category Match
+  const cat = doc.metadata?.category || '';
+  if (intent !== 'GENERAL') {
+    if (
+      (intent === 'UK261' && cat === 'uk261') ||
+      (intent === 'BAGGAGE' && cat === 'baggage') ||
+      (intent === 'LOUNGE' && cat === 'lounge') ||
+      (intent === 'EXECUTIVE_CLUB' && cat === 'executive-club') ||
+      (intent === 'CABIN' && cat === 'cabin') ||
+      (intent === 'AIRPORT' && cat === 'airport') ||
+      (intent === 'ROUTE' && cat === 'route') ||
+      (intent === 'OFFER' && cat === 'offer') ||
+      (intent === 'SERVICE' && cat === 'service')
+    ) {
+      score += 5.0;
+    }
+  }
+
+  return score;
 }
 
 /**
- * Retrieve relevant context for a user query.
- * @param {string} userMessage  The user's voice input
-/**
- * Fallback similarity query over buildKnowledgeDocs() when ChromaDB is not connected.
- * Calculates term-matching relevance scores so the voice agent ALWAYS receives RAG context.
+ * Execute Sparse BM25 / Keyword search over built-in knowledge base.
+ * @param {string} expandedQuery
+ * @param {object} intentData
+ * @param {number} topK
+ * @returns {Array<{id: string, text: string, metadata: object, bm25Score: number}>}
  */
-function queryFallbackDocs(queryText, topK = 3) {
+function queryBM25Docs(expandedQuery, intentData, topK = 10) {
   const docs = buildKnowledgeDocs();
-  const tokens = queryText.toLowerCase().split(/\W+/).filter(t => t.length > 2);
-  if (tokens.length === 0) return [];
+  const queryTokens = expandedQuery
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 1);
+
+  if (queryTokens.length === 0) return [];
 
   const scored = docs.map(doc => {
-    const textLower = doc.text.toLowerCase();
-    const metaStr = JSON.stringify(doc.metadata).toLowerCase();
-    let score = 0;
-
-    tokens.forEach(token => {
-      if (textLower.includes(token)) score += 2;
-      if (metaStr.includes(token)) score += 3;
-    });
-
+    const score = calculateBM25Score(doc, queryTokens, intentData);
     return { doc, score };
   }).filter(item => item.score > 0);
 
@@ -365,78 +521,210 @@ function queryFallbackDocs(queryText, topK = 3) {
     id: item.doc.id,
     text: item.doc.text,
     metadata: item.doc.metadata,
-    distance: 0.1,
+    bm25Score: item.score,
   }));
 }
 
 /**
- * Retrieve relevant context for a user query.
- * If ChromaDB is connected, uses vector embedding search.
- * Otherwise, uses in-memory knowledge base search.
+ * Reciprocal Rank Fusion (RRF) Reranker.
+ * Combines rankings from Dense Vector Search and Sparse BM25 Search.
  *
- * @param {string} userMessage  The user's voice input
- * @returns {Promise<string|null>}  Formatted context string, or null if no
- *                                   relevant documents were found
+ * @param {Array<{id: string, text: string, metadata: object, distance: number}>} vectorDocs
+ * @param {Array<{id: string, text: string, metadata: object, bm25Score: number}>} bm25Docs
+ * @param {number} topK
+ * @returns {Array<{id: string, text: string, metadata: object, rrfScore: number}>}
  */
-async function getContext(userMessage) {
-  if (!userMessage || typeof userMessage !== 'string') {
-    return null;
+function reciprocalRankFusion(vectorDocs, bm25Docs, topK = MAX_CONTEXT_DOCS) {
+  const kRRF = 60; // RRF constant
+  const scoreMap = new Map();
+
+  // Process Vector Ranks
+  vectorDocs.forEach((doc, rank) => {
+    const id = doc.id || doc.metadata?.id || doc.text.substring(0, 30);
+    const score = 1.0 / (kRRF + (rank + 1));
+
+    scoreMap.set(id, {
+      doc,
+      rrfScore: score,
+      vectorRank: rank + 1,
+      bm25Rank: null,
+    });
+  });
+
+  // Process BM25 Ranks
+  bm25Docs.forEach((item, rank) => {
+    const id = item.id;
+    const score = 1.0 / (kRRF + (rank + 1));
+
+    if (scoreMap.has(id)) {
+      const existing = scoreMap.get(id);
+      existing.rrfScore += score;
+      existing.bm25Rank = rank + 1;
+    } else {
+      scoreMap.set(id, {
+        doc: {
+          id: item.id,
+          text: item.text,
+          metadata: item.metadata,
+          distance: 0.2,
+        },
+        rrfScore: score,
+        vectorRank: null,
+        bm25Rank: rank + 1,
+      });
+    }
+  });
+
+  const ranked = Array.from(scoreMap.values());
+  ranked.sort((a, b) => b.rrfScore - a.rrfScore);
+
+  return ranked.slice(0, topK).map(item => ({
+    id: item.doc.id || item.doc.metadata?.id || 'doc',
+    text: item.doc.text,
+    metadata: item.doc.metadata,
+    rrfScore: item.rrfScore,
+  }));
+}
+
+/**
+ * Seed ChromaDB with initial knowledge base if connected.
+ */
+async function seedKnowledgeBase() {
+  const collection = await getCollection();
+  if (!collection) {
+    logger.warn('Cannot seed knowledge base — ChromaDB not available');
+    return false;
   }
 
   try {
-    let results = [];
+    const count = await collection.count();
+    if (count > 0) {
+      logger.info('ChromaDB knowledge base already seeded', { count });
+      return true;
+    }
+  } catch (err) {
+    logger.warn('Failed to check ChromaDB collection count', { error: err.message });
+  }
+
+  const docs = buildKnowledgeDocs();
+  const ids = docs.map((d) => d.id);
+  const texts = docs.map((d) => d.text);
+  const metadatas = docs.map((d) => d.metadata);
+
+  try {
+    await collection.add({ ids, documents: texts, metadatas });
+    logger.info('ChromaDB knowledge base seeded', { documents: docs.length });
+    return true;
+  } catch (err) {
+    logger.error('Failed to seed ChromaDB knowledge base', { error: err.message });
+    return false;
+  }
+}
+
+/**
+ * Query ChromaDB vector collection.
+ */
+async function queryVectorDocuments(queryText, topK = 10) {
+  const collection = await getCollection();
+  if (!collection) return [];
+
+  try {
+    const results = await collection.query({
+      queryTexts: [queryText],
+      nResults: topK,
+    });
+
+    const ids = results.ids[0] || [];
+    const docs = results.documents[0] || [];
+    const metadatas = results.metadatas[0] || [];
+    const distances = results.distances[0] || [];
+
+    return docs.map((text, i) => ({
+      id: ids[i] || `vec-${i}`,
+      text: text || '',
+      metadata: metadatas[i] || {},
+      distance: distances[i] !== undefined ? distances[i] : 1.0,
+    }));
+  } catch (err) {
+    logger.error('Failed to query ChromaDB documents', { error: err.message });
+    return [];
+  }
+}
+
+/**
+ * Main RAG context retriever function.
+ * Performs Hybrid Search (Vector + BM25) with Intent Classification and Reciprocal Rank Fusion.
+ *
+ * @param {string} userMessage  The user's voice input or chat prompt
+ * @returns {Promise<string|null>} Formatted context string for LLM, or null if no relevant context
+ */
+async function getContext(userMessage) {
+  if (!userMessage || typeof userMessage !== 'string' || !userMessage.trim()) {
+    return null;
+  }
+
+  const queryClean = userMessage.trim();
+
+  try {
+    // Step 1: Intent & Entity Extraction
+    const intentData = classifyQueryIntent(queryClean);
+
+    // Step 2: Query Expansion (BA Terminology mapping)
+    const expandedQuery = expandBAQuery(queryClean);
+
+    // Step 3: Vector Search (if ChromaDB ready)
+    let vectorResults = [];
     if (isReady()) {
-      results = await queryDocuments(userMessage, MAX_CONTEXT_DOCS);
-    } else {
-      results = queryFallbackDocs(userMessage, MAX_CONTEXT_DOCS);
+      vectorResults = await queryVectorDocuments(expandedQuery, 8);
+      // Filter distance threshold
+      vectorResults = vectorResults.filter(d => d.distance < RELEVANCE_THRESHOLD);
     }
 
-    if (!results || results.length === 0) {
-      logger.debug('No relevant documents found for query');
+    // Step 4: Sparse BM25 Search
+    const bm25Results = queryBM25Docs(expandedQuery, intentData, 8);
+
+    // Step 5: Reciprocal Rank Fusion (RRF) Reranking
+    const rrfResults = reciprocalRankFusion(vectorResults, bm25Results, MAX_CONTEXT_DOCS);
+
+    if (!rrfResults || rrfResults.length === 0) {
+      logger.debug('No relevant RAG documents found for query', { query: queryClean });
       return null;
     }
 
-    // Filter by relevance threshold
-    const relevantDocs = results.filter(
-      (doc) => doc.distance !== undefined && doc.distance < RELEVANCE_THRESHOLD
-    );
-
-    if (relevantDocs.length === 0) {
-      logger.debug('No documents above relevance threshold');
-      return null;
-    }
-
-    // Format the context
-    const contextParts = relevantDocs.map((doc) => {
+    // Step 6: Format Context Snippets for LLM
+    const contextParts = rrfResults.map((doc, idx) => {
       const category = doc.metadata?.category || 'general';
-      return `[${category}] ${doc.text}`;
+      const topic = doc.metadata?.topic || doc.metadata?.title || doc.id || `doc-${idx + 1}`;
+      return `[${category.toUpperCase()} | ${topic}]\n${doc.text}`;
     });
 
     let context = contextParts.join('\n\n');
 
-    // Truncate if too long
+    // Truncate length to fit context budget
     if (context.length > MAX_CONTEXT_CHARS) {
       context = context.substring(0, MAX_CONTEXT_CHARS) + '...';
     }
 
-    logger.info('Retrieved RAG context', {
-      docs: relevantDocs.length,
+    logger.info('Retrieved advanced RAG context', {
+      intent: intentData.intent,
+      entities: intentData.entities,
+      docsCount: rrfResults.length,
       chars: context.length,
-      query: userMessage.substring(0, 50),
+      query: queryClean.substring(0, 50),
     });
 
     return context;
   } catch (err) {
-    logger.error('Failed to get RAG context', { error: err.message });
+    logger.error('Failed to retrieve RAG context', { error: err.message });
     return null;
   }
 }
 
 /**
- * Get RAG context and build an augmented system prompt in one call.
- * @param {string} userMessage  The user's voice input
- * @param {string} basePrompt   The original system prompt
- * @returns {Promise<string>}  The augmented (or original) system prompt
+ * Build augmented prompt with ground-truth instructions.
+ * @param {string} userMessage
+ * @param {string} basePrompt
+ * @returns {Promise<string>} Augmented prompt
  */
 async function getAugmentedPrompt(userMessage, basePrompt) {
   const context = await getContext(userMessage);
@@ -447,36 +735,39 @@ async function getAugmentedPrompt(userMessage, basePrompt) {
   return `${basePrompt}
 
 ═══════════════════════════════════════════════════════
-RELEVANT CONTEXT FROM KNOWLEDGE BASE (RAG):
+OFFICIAL BRITISH AIRWAYS KNOWLEDGE BASE CONTEXT (RAG):
 ═══════════════════════════════════════════════════════
 ${context}
 
 ═══════════════════════════════════════════════════════
-Use the above context to provide accurate, specific answers. If the context
-contains relevant information, incorporate it into your response. If not,
-rely on your general knowledge.
+CRITICAL INSTRUCTIONS FOR RESPONDING:
+1. Use the official British Airways context above as your primary ground truth for answering questions about flights, baggage, Executive Club, lounges, and UK261 compensation.
+2. If specific details (e.g. baggage weight limits, Tier Points thresholds, promo codes) are present in the context, quote them accurately.
+3. Keep your tone professional, warm, and helpful as a premier British Airways customer assistant.
 ═══════════════════════════════════════════════════════`;
 }
 
 /**
- * Initialise the RAG service — connect to ChromaDB and seed the knowledge base.
- * Should be called once on server startup.
+ * Initialise RAG service on server startup.
  */
 async function initRAG() {
   const ok = await initChroma();
   if (!ok) {
-    logger.warn('ChromaDB not available — RAG will be disabled');
-    return false;
+    logger.warn('ChromaDB not available — hybrid BM25 search will handle RAG requests');
+  } else {
+    await seedKnowledgeBase();
   }
-
-  await seedKnowledgeBase();
   return true;
 }
 
 module.exports = {
   initRAG,
   seedKnowledgeBase,
-  queryDocuments,
+  queryVectorDocuments,
+  queryBM25Docs,
+  classifyQueryIntent,
+  expandBAQuery,
+  reciprocalRankFusion,
   getContext,
   getAugmentedPrompt,
   isReady,
