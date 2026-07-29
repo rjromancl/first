@@ -89,8 +89,13 @@ function buildKnowledgeDocs() {
     },
     {
       id: 'dest-barcelona',
-      text: 'Barcelona (BCN) — Frequent short-haul flights from London Heathrow (LHR T5) and London Gatwick (LGW). Flight time: 2h 15m. Served by Airbus A320/A321 with Club Europe and Euro Traveller. Currency: EUR.',
+      text: 'Barcelona (BCN) — Gaudí\'s masterpieces, sun-drenched beaches and a food scene that rivals Paris. Highlights: Sagrada Família, Park Güell, Las Ramblas, Camp Nou. Best time to visit: April–June, September–October. Flight time from London: 2h 15m. From price: £89.',
       metadata: { category: 'destination', city: 'Barcelona', country: 'Spain', iata: 'BCN', fromPrice: 89, climate: 'Mediterranean', bestTime: 'Apr-Jun, Sep-Oct' },
+    },
+    {
+      id: 'dest-paris',
+      text: 'Paris (CDG) — The City of Light, world famous for the Eiffel Tower, Louvre Museum, Notre-Dame Cathedral, and world-class dining. Multiple daily direct flights from London Heathrow (LHR T5). Flight time: 1h 15m. From price: £79.',
+      metadata: { category: 'destination', city: 'Paris', country: 'France', iata: 'CDG', fromPrice: 79, climate: 'Temperate', bestTime: 'Apr-Jun, Sep-Oct' },
     },
     {
       id: 'dest-maldives',
@@ -272,6 +277,11 @@ function buildKnowledgeDocs() {
       metadata: { category: 'route', from: 'LHR', to: 'SYD', airline: 'BA' },
     },
     {
+      id: 'route-lhr-cdg',
+      text: 'London Heathrow (LHR) to Paris Charles de Gaulle (CDG) — B Airways operates up to 7 daily short-haul flights (BA304, BA306, BA308, BA314, BA316, BA318). Duration: 1h 15m. Served by Airbus A320 and A321 with Club Europe and Euro Traveller.',
+      metadata: { category: 'route', from: 'LHR', to: 'CDG', airline: 'BA' },
+    },
+    {
       id: 'route-lhr-bcn',
       text: 'London Heathrow (LHR) to Barcelona (BCN) — Up to 6 daily short-haul flights (BA472, BA474, BA478, BA480). Duration: 2h 15m. Served by Airbus A320neo family with Club Europe and Euro Traveller.',
       metadata: { category: 'route', from: 'LHR', to: 'BCN', airline: 'BA' },
@@ -332,11 +342,15 @@ function classifyQueryIntent(queryText) {
     cabin: [],
   };
 
-  // Extract IATA codes
-  const iataMatches = queryText.match(/\b(LHR|JFK|DXB|NRT|HND|SYD|SIN|BCN|MLE|CPT|BOM|LGW|LCY|CDG|AMS|FCO|IST)\b/gi);
+  // Extract IATA codes & city names
+  const iataMatches = queryText.match(/\b(LHR|JFK|DXB|NRT|HND|SYD|SIN|BCN|MLE|CPT|BOM|LGW|LCY|CDG|ORY|AMS|FCO|IST)\b/gi);
   if (iataMatches) {
     entities.iata = Array.from(new Set(iataMatches.map(code => code.toUpperCase())));
   }
+  if (/\bparis\b/i.test(q) && !entities.iata.includes('CDG')) entities.iata.push('CDG');
+  if (/\blondon\b/i.test(q) && !entities.iata.includes('LHR')) entities.iata.push('LHR');
+  if (/\bnew york\b/i.test(q) && !entities.iata.includes('JFK')) entities.iata.push('JFK');
+  if (/\bdubai\b/i.test(q) && !entities.iata.includes('DXB')) entities.iata.push('DXB');
 
   // Extract Flight Numbers
   const flightMatches = queryText.match(/\bBA\s?\d{1,4}\b/gi);
@@ -358,7 +372,9 @@ function classifyQueryIntent(queryText) {
 
   // Classify intent
   let intent = 'GENERAL';
-  if (/\b(uk261|eu261|compensation|delay|delayed|cancel|cancelled|refund|claim|rights)\b/i.test(q)) {
+  if (/\b(book|booking|reserve|ticket|fly to|want to book)\b/i.test(q)) {
+    intent = 'BOOKING';
+  } else if (/\b(uk261|eu261|compensation|delay|delayed|cancel|cancelled|refund|claim|rights)\b/i.test(q)) {
     intent = 'UK261';
   } else if (/\b(baggage|luggage|bag|carry-on|handbag|suitcase|allowance|weight|excess)\b/i.test(q)) {
     intent = 'BAGGAGE';
@@ -441,11 +457,18 @@ function calculateBM25Score(doc, queryTokens, intentData) {
   // Entity Boosts
   const { entities, intent } = intentData;
 
-  // IATA Match
+  // IATA & Route Origin/Destination Match
   if (entities.iata && entities.iata.length > 0) {
-    const docIata = doc.metadata?.iata || '';
-    if (entities.iata.includes(docIata.toUpperCase()) || entities.iata.some(i => textLower.includes(i.toLowerCase()))) {
-      score += 8.0;
+    const docIata = (doc.metadata?.iata || '').toUpperCase();
+    const docFrom = (doc.metadata?.from || '').toUpperCase();
+    const docTo   = (doc.metadata?.to || '').toUpperCase();
+    if (
+      entities.iata.includes(docIata) ||
+      entities.iata.includes(docFrom) ||
+      entities.iata.includes(docTo) ||
+      entities.iata.some(i => textLower.includes(i.toLowerCase()))
+    ) {
+      score += 10.0;
     }
   }
 
