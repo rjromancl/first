@@ -189,11 +189,10 @@ export const bookingsAPI = {
 // CHECK-IN
 // ════════════════════════════════════════════════════════════════
 export const checkinAPI = {
-  checkIn: (reference, surname) =>
+  checkIn: (reference) =>
     unwrap(
       http.post("/checkin", {
         reference,
-        surname,
       })
     ),
 };

@@ -9,10 +9,11 @@ const { v4: uuidv4 } = require('uuid');
  *  - Available 24h – 1h before scheduled departure
  *  - Cannot check in if already checked in
  *  - Returns a boarding pass object with barcode
+ *  - Lookup by booking reference only (no surname required)
  */
-async function checkIn({ reference, surname }) {
-  if (!reference || !surname) {
-    throw Object.assign(new Error('Booking reference and surname are required'), {
+async function checkIn({ reference }) {
+  if (!reference) {
+    throw Object.assign(new Error('Booking reference is required'), {
       statusCode: 400,
     });
   }
@@ -20,11 +21,6 @@ async function checkIn({ reference, surname }) {
   const booking = BookingStore.findByRef(reference);
   if (!booking) {
     throw Object.assign(new Error('Booking not found'), { statusCode: 404 });
-  }
-
-  const storedLastName = booking.passenger?.lastName || '';
-  if (storedLastName.toLowerCase() !== surname.toLowerCase()) {
-    throw Object.assign(new Error('Surname does not match booking'), { statusCode: 400 });
   }
 
   if (booking.status === 'cancelled') {

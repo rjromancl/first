@@ -8,7 +8,6 @@ export default function CheckIn() {
   const { addNotification } = useApp();
 
   const [ref, setRef]               = useState('');
-  const [surname, setSurname]       = useState('');
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState('');
   const [boardingPass, setBoardingPass] = useState(null);
@@ -18,11 +17,11 @@ export default function CheckIn() {
     setError('');
     setLoading(true);
     try {
-      const result = await checkinAPI.checkIn(ref.trim().toUpperCase(), surname.trim());
+      const result = await checkinAPI.checkIn(ref.trim().toUpperCase());
       setBoardingPass(result.boardingPass);
       addNotification({ type: 'success', message: result.alreadyCheckedIn ? 'Already checked in — boarding pass retrieved.' : 'Check-in successful!' });
     } catch (err) {
-      setError(err.message || 'Check-in failed. Please verify your booking reference and surname.');
+      setError(err.message || 'Check-in failed. Please verify your booking reference.');
     } finally {
       setLoading(false);
     }
@@ -54,10 +53,6 @@ export default function CheckIn() {
                   style={{ textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, fontSize: 18 }}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Surname (as on passport)</label>
-                <input className="form-control" placeholder="e.g. Wilson" value={surname} onChange={e => setSurname(e.target.value)} required />
-              </div>
 
               {error && <div className="checkin__error">{error}</div>}
 
@@ -70,8 +65,8 @@ export default function CheckIn() {
 
             <div className="checkin__demo">
               <strong>Demo bookings:</strong>
-              <button onClick={() => { setRef('XYMBA1'); setSurname('Wilson'); }}>XYMBA1 / Wilson (Business LHR→JFK)</button>
-              <button onClick={() => { setRef('PLCNR7'); setSurname('Johnson'); }}>PLCNR7 / Johnson (Economy LHR→CDG)</button>
+              <button onClick={() => { setRef('XYMBA1'); }}>XYMBA1 (Business LHR→JFK)</button>
+              <button onClick={() => { setRef('PLCNR7'); }}>PLCNR7 (Economy LHR→CDG)</button>
             </div>
           </div>
         ) : (
@@ -148,7 +143,7 @@ export default function CheckIn() {
               <button className="btn btn-secondary" onClick={() => addNotification({ type: 'info', message: 'Boarding pass emailed!' })}>
                 <FaEnvelope size={13} /> Email
               </button>
-              <button className="btn btn-secondary" onClick={() => { setBoardingPass(null); setRef(''); setSurname(''); }}>
+              <button className="btn btn-secondary" onClick={() => { setBoardingPass(null); setRef(''); }}>
                 Check In Another
               </button>
             </div>

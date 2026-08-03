@@ -7,8 +7,9 @@ const { performCheckIn } = require('../controllers/checkinController');
 router.post(
   '/',
   [
-    body('reference').isLength({ min: 6, max: 6 }).withMessage('Reference must be 6 characters'),
-    body('surname').notEmpty().trim().withMessage('Surname required'),
+    body('reference')
+      .isLength({ min: 6, max: 6 })
+      .withMessage('Reference must be 6 characters'),
   ],
   validate,
   performCheckIn
