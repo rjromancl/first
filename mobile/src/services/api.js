@@ -1,45 +1,43 @@
 /**
- * Central API service layer — React Native port.
+ * api.js — Central HTTP layer for the BA mobile app.
  *
- * Mirrors the web app's api.jsx exactly, but:
- *  - Uses AsyncStorage instead of localStorage for the JWT token
- *  - Base URL comes from EXPO_PUBLIC_API_URL (set in .env)
+ * Mirrors the web app's api.jsx but uses:
+ *  - expo-constants for the base URL
+ *  - SecureStore for JWT (no localStorage)
+ *  - axios instance with request/response interceptors
  */
-
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api';
+  process.env.EXPO_PUBLIC_API_URL ||
+  Constants.expoConfig?.extra?.apiUrl ||
+  'https://first-eight-cyan.vercel.app/api';
 
-// ── Axios instance ────────────────────────────────────────────────
+const TOKEN_KEY = 'ba_token';
+
+// ── Axios instance ───────────────────────────────────────────────
 const http = axios.create({
   baseURL: BASE_URL,
   timeout: 20000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Request interceptor: attach JWT if present ────────────────────
-http.interceptors.request.use(
-  async (config) => {
-    try {
-      const token = await AsyncStorage.getItem('ba_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch {
-      // ignore storage errors
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Attach JWT
+http.interceptors.request.use(async (config) => {
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  } catch {
+    // SecureStore may fail on emulator — silent fallback
+  }
+  return config;
+}, err => Promise.reject(err));
 
-// ── Response interceptor: unwrap response / normalise errors ──────
+// Unwrap / normalize errors
 http.interceptors.response.use(
-  (response) => response.data,
+  (res) => res.data,
   (err) => {
     const message =
       err.response?.data?.error?.message ||
@@ -47,15 +45,13 @@ http.interceptors.response.use(
       err.message ||
       'Something went wrong';
 
-    const apiError = new Error(message);
-    apiError.statusCode = err.response?.status || 0;
-    apiError.details = err.response?.data?.error?.details || null;
-
+    const apiError       = new Error(message);
+    apiError.statusCode  = err.response?.status || 0;
+    apiError.details     = err.response?.data?.error?.details || null;
     return Promise.reject(apiError);
   }
 );
 
-// Helper to unwrap { success, data }
 const unwrap = (promise) => promise.then((res) => res.data);
 
 // ════════════════════════════════════════════════════════════════
@@ -66,9 +62,7 @@ export const authAPI = {
     unwrap(http.post('/auth/login', { email, password })),
 
   register: (firstName, lastName, email, password) =>
-    unwrap(
-      http.post('/auth/register', { firstName, lastName, email, password })
-    ),
+    unwrap(http.post('/auth/register', { firstName, lastName, email, password })),
 
   getMe: () => unwrap(http.get('/auth/me')),
 };
@@ -78,34 +72,26 @@ export const authAPI = {
 // ════════════════════════════════════════════════════════════════
 export const flightsAPI = {
   search: ({ from, to, departureDate, returnDate, adults = 1, cabin = 'ECONOMY', nonStop = false }) =>
-    unwrap(
-      http.get('/flights/search', {
-        params: {
-          from,
-          to,
-          departureDate,
-          ...(returnDate ? { returnDate } : {}),
-          adults,
-          cabin: cabin.toUpperCase(),
-          nonStop,
-        },
-      })
-    ),
+    unwrap(http.get('/flights/search', {
+      params: {
+        from, to, departureDate,
+        ...(returnDate ? { returnDate } : {}),
+        adults, cabin: cabin.toUpperCase(), nonStop,
+      },
+    })),
 
   confirmPrice: (flightOffer) =>
     unwrap(http.post('/flights/confirm-price', { flightOffer })),
 
   getStatus: ({ flightNumber, from, to, date }) =>
-    unwrap(
-      http.get('/flights/status', {
-        params: {
-          ...(flightNumber ? { flightNumber } : {}),
-          ...(from ? { from } : {}),
-          ...(to ? { to } : {}),
-          ...(date ? { date } : {}),
-        },
-      })
-    ),
+    unwrap(http.get('/flights/status', {
+      params: {
+        ...(flightNumber ? { flightNumber } : {}),
+        ...(from ? { from } : {}),
+        ...(to   ? { to   } : {}),
+        ...(date ? { date } : {}),
+      },
+    })),
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -113,11 +99,7 @@ export const flightsAPI = {
 // ════════════════════════════════════════════════════════════════
 export const airportsAPI = {
   search: (q, type) =>
-    unwrap(
-      http.get('/airports', {
-        params: { q, ...(type ? { type } : {}) },
-      })
-    ),
+    unwrap(http.get('/airports', { params: { q, ...(type ? { type } : {}) } })),
 
   getAll: () => unwrap(http.get('/airports/all')),
 };
@@ -143,7 +125,8 @@ export const bookingsAPI = {
   updateBags: (reference, checked, cabin) =>
     unwrap(http.patch(`/bookings/${reference}/bags`, { checked, cabin })),
 
-  cancel: (reference) => unwrap(http.delete(`/bookings/${reference}`)),
+  cancel: (reference) =>
+    unwrap(http.delete(`/bookings/${reference}`)),
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -158,9 +141,9 @@ export const checkinAPI = {
 // DESTINATIONS & OFFERS
 // ════════════════════════════════════════════════════════════════
 export const destinationsAPI = {
-  list: (params = {}) => unwrap(http.get('/destinations', { params })),
-  getOne: (code) => unwrap(http.get(`/destinations/${code}`)),
-  getOffers: (params = {}) => unwrap(http.get('/offers', { params })),
+  list:     (params = {}) => unwrap(http.get('/destinations', { params })),
+  getOne:   (code)        => unwrap(http.get(`/destinations/${code}`)),
+  getOffers:(params = {}) => unwrap(http.get('/offers', { params })),
 };
 
 // ════════════════════════════════════════════════════════════════

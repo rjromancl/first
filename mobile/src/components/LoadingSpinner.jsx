@@ -1,19 +1,20 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '../theme';
+import Colors from '../theme/colors';
+import { Spacing } from '../theme/spacing';
 
 export default function LoadingSpinner({ message = 'Loading…', size = 'large', fullScreen = false }) {
   if (fullScreen) {
     return (
       <View style={styles.fullScreen}>
-        <ActivityIndicator size={size} color={colors.blue} />
+        <ActivityIndicator size={size} color={Colors.blue} />
         {message ? <Text style={styles.message}>{message}</Text> : null}
       </View>
     );
   }
   return (
     <View style={styles.inline}>
-      <ActivityIndicator size={size} color={colors.blue} />
+      <ActivityIndicator size={size} color={Colors.blue} />
       {message ? <Text style={styles.inlineMessage}>{message}</Text> : null}
     </View>
   );
@@ -21,24 +22,10 @@ export default function LoadingSpinner({ message = 'Loading…', size = 'large',
 
 const styles = StyleSheet.create({
   fullScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.offWhite,
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    gap: Spacing.md, backgroundColor: Colors.offWhite,
   },
-  message: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-  },
-  inline: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  inlineMessage: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
+  message:       { fontSize: 14, color: Colors.darkGrey, marginTop: Spacing.sm },
+  inline:        { paddingVertical: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
+  inlineMessage: { fontSize: 13, color: Colors.darkGrey },
 });

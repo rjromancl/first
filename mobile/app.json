@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "B Airways",
+    "name": "British Airways",
     "slug": "british-airways-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,24 +9,44 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#075AAA"
+      "backgroundColor": "#1e2b6b"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.britishairways.mobile"
+      "bundleIdentifier": "com.britishairways.assistant",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "British Airways AI Assistant uses the microphone for voice booking and commands.",
+        "NSSpeechRecognitionUsageDescription": "British Airways AI Assistant uses speech recognition for hands-free booking."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#075AAA"
+        "backgroundColor": "#1e2b6b"
       },
-      "package": "com.britishairways.mobile"
+      "permissions": [
+        "RECORD_AUDIO",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "package": "com.britishairways.assistant"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow British Airways to access your microphone for voice booking."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ba-mobile-app"
+      }
+    }
   }
 }
