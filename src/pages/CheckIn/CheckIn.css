@@ -98,3 +98,25 @@
 .checkin__bp-actions {
   display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
 }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .checkin__content { padding: 20px 16px 48px; }
+  .checkin__form-card, .checkin__review-card, .checkin__success-card { padding: 20px 16px; }
+  .checkin__form-card h2, .checkin__review-card h2, .checkin__success-card h2 { font-size: 19px; }
+  .checkin__actions { flex-direction: column; }
+  .checkin__actions .btn { width: 100%; justify-content: center; }
+  .checkin__bp-actions { flex-direction: column; align-items: stretch; }
+  .checkin__bp-actions .btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .checkin__content { padding: 12px 12px 40px; }
+  .checkin__form-card, .checkin__review-card, .checkin__success-card { padding: 16px 12px; }
+  .checkin__bp-preview { max-width: 100%; }
+  .checkin__bp-info { grid-template-columns: 1fr; gap: 10px; }
+  .checkin__bp-info strong { font-size: 14px; }
+  .checkin__success-icon { width: 56px; height: 56px; }
+  .checkin__row { flex-direction: column; gap: 2px; }
+  .checkin__row span { font-weight: 600; color: var(--ba-text-light); }
+}

@@ -100,3 +100,22 @@
 }
 
 .login__demo-info strong { color: var(--ba-text); }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .login { padding: 24px 16px; align-items: flex-start; }
+  .login__content { width: 100%; max-width: 100%; }
+  .login__card { padding: 28px 20px; }
+  .login__header h1 { font-size: 22px; }
+  .login__field-row { flex-direction: column; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  .login { padding: 16px 12px; }
+  .login__card { padding: 20px 14px; border-radius: var(--radius-md); }
+  .login__header h1 { font-size: 20px; }
+  .login__header p { font-size: 13px; }
+  .login__logo { width: 48px; height: 48px; }
+  .login__submit { width: 100%; }
+  .login__register-cta { flex-direction: column; align-items: flex-start; gap: 6px; }
+}

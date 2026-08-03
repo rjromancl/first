@@ -473,4 +473,19 @@
   .header__logo-tagline {
     display: none;
   }
+  /* Hide topbar entirely on very small screens to prevent overflow */
+  .header__topbar {
+    display: none;
+  }
+  .header__main-inner {
+    height: 56px;
+    gap: 12px;
+  }
+  .header__logo-brand {
+    font-size: 14px;
+  }
+  .header__logo-icon {
+    width: 34px;
+    height: 34px;
+  }
 }

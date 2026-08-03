@@ -712,6 +712,10 @@
   .bookflight__step--active span {
     display: block;
   }
+  .bookflight__results-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
   .bookflight__flight-card {
     flex-direction: column;
   }
@@ -733,12 +737,25 @@
 }
 
 @media (max-width: 480px) {
-  .bookflight__form-row {
-    flex-wrap: wrap;
+  .bookflight__content { padding: 16px 12px 48px; }
+  .bookflight__form { padding: 16px 12px; }
+  .bookflight__form-row { flex-wrap: wrap; }
+  .bookflight__swap { display: none; }
+  .bookflight__pax-form { padding: 16px 12px; }
+  .bookflight__pay-form { padding: 16px 12px; }
+  .bookflight__confirm-card { padding: 20px 14px; }
+  .bookflight__confirm-ref strong { font-size: 20px; letter-spacing: 1px; }
+  .bookflight__results-header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
   }
-  .bookflight__swap {
-    display: none;
-  }
+  .bookflight__results-header h2 { font-size: 17px; }
+  .bookflight__cabin-prices { min-width: unset; width: 100%; flex-direction: row; flex-wrap: wrap; }
+  .bookflight__cabin-price { flex: 1; min-width: 120px; }
+  .bookflight__times { gap: 10px; }
+  .bookflight__time strong { font-size: 17px; }
+  .bookflight__flight-card { padding: 14px 12px; }
 }
 
 /* ── Search error / empty state ──────────────────────────────────── */

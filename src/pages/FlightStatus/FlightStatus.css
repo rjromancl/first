@@ -135,3 +135,16 @@
   .flightstatus__point { min-width: auto; }
   .flightstatus__line-section { width: 100%; order: 3; }
 }
+
+/* ===== Additional Responsive ===== */
+@media (max-width: 480px) {
+  .flightstatus__content { padding: 16px 12px 48px; }
+  .flightstatus__form { padding: 16px 12px; }
+  .flightstatus__route-row { flex-direction: column; gap: 8px; }
+  .flightstatus__card { padding: 16px 12px; }
+  .flightstatus__card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .flightstatus__time { font-size: 18px; }
+  .flightstatus__big-input { font-size: 15px !important; }
+  .flightstatus__details { gap: 14px; }
+  .flightstatus__details strong { font-size: 14px; }
+}
