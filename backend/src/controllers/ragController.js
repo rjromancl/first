@@ -32,6 +32,8 @@ async function getContextHandler(req, res, next) {
       intent: intentData,
       ready: true,
       query: cleanQuery,
+      // Include the doc count for debug/monitoring
+      hasContext: !!context,
     });
   } catch (err) {
     next(err);

@@ -49,6 +49,14 @@ const BA_SYNONYM_MAP = {
   'sydney': ['syd'],
   'singapore': ['sin'],
   'barcelona': ['bcn'],
+  // Booking & manage synonyms
+  'my booking': ['manage booking', 'booking reference', 'pnr', 'find booking'],
+  'manage': ['manage booking', 'change booking', 'modify booking'],
+  'change flight': ['rebook', 'modify booking', 'same day change'],
+  'cancel': ['cancellation', 'refund', 'uk261'],
+  'check in': ['online check-in', 'checkin', 'boarding pass', 'web check-in'],
+  'seat': ['seat selection', 'choose seat', 'exit row', 'window seat', 'aisle seat'],
+  'upgrade': ['cabin upgrade', 'avios upgrade', 'bid upgrade'],
 };
 
 /**
@@ -325,6 +333,53 @@ function buildKnowledgeDocs() {
       text: 'BA American Express Companion Voucher: Earned by spending threshold on BA Amex cards. Entitles primary cardholder to book a second companion seat on any BA reward flight for zero additional Avios (taxes & fees payable), or 50% discount on Avios for solo traveler.',
       metadata: { category: 'offer', title: 'Companion Voucher' },
     },
+
+    // ── Booking Management ────────────────────────────────────────────
+    {
+      id: 'booking-manage-my-booking',
+      text: 'Manage My Booking — British Airways App: To view, change, or manage your booking, go to the Manage Booking page and enter your 6-character booking reference (PNR). From there you can: view flight details, select or change seats, add checked baggage, request special meals, add Extra Legroom seats, request upgrades, and cancel your booking. No surname required — only your booking reference.',
+      metadata: { category: 'booking', topic: 'manage-booking' },
+    },
+    {
+      id: 'booking-change-flight',
+      text: 'Changing Your Flight: You can change your flight date, time, or route online up to 1 hour before departure (subject to fare rules and availability). Go to Manage Booking and enter your reference. Flexible fares allow changes for free. Standard Economy changes may incur a fee plus any fare difference. Same Day Change (SDC) allows rebooking on another flight on the same day for a flat fee, available to Executive Club members.',
+      metadata: { category: 'booking', topic: 'change-flight' },
+    },
+    {
+      id: 'booking-cancel-refund',
+      text: 'Cancelling Your Booking & Refunds: You can cancel your booking online via Manage Booking up to 2 hours before departure. Fully Flexible fares receive a full refund within 7 days. Standard and Sale fares are non-refundable but the taxes and airport charges portion (typically £50-£200) is always refundable. If BA cancels your flight, you are entitled to a full cash refund under UK261 regardless of fare type.',
+      metadata: { category: 'booking', topic: 'cancel-refund' },
+    },
+    {
+      id: 'booking-seat-selection',
+      text: 'Seat Selection Policy: Economy (World Traveller) — seat selection available from £10-£45 depending on route and seat type, or free 24h before departure (standard seats only). Extra Legroom / Exit Row seats from £25. Premium Economy — free seat selection at booking. Club World / Club Suite — free seat selection at booking, all seats are aisle-access flat beds. First Class — complimentary. Executive Club Bronze — free selection 7 days before. Silver/Gold — free at time of booking including exit rows.',
+      metadata: { category: 'booking', topic: 'seat-selection' },
+    },
+    {
+      id: 'booking-add-baggage',
+      text: 'Adding Baggage Online: Pre-purchase extra baggage online via Manage Booking for up to 30% less than airport prices. Available up to 4 hours before departure. Standard additional bag costs from £60 for short-haul to £120 for long-haul. Overweight bags (23-32kg) cost £65 per bag at the airport (pre-purchase online to save). Sporting equipment (skis, bikes, golf bags) can be pre-booked online.',
+      metadata: { category: 'booking', topic: 'add-baggage' },
+    },
+    {
+      id: 'booking-checkin-process',
+      text: 'Online Check-In Process: Check-in opens 24 hours before your scheduled departure. Open the Check-In page in the BA app and enter your 6-character booking reference. Select your seats if not already chosen. Download or add your boarding pass to Apple Wallet or Google Wallet. Bag drop closes 60 minutes before long-haul and 45 minutes before short-haul departures. Gates close 20 minutes before departure — arrive early.',
+      metadata: { category: 'booking', topic: 'checkin-process' },
+    },
+    {
+      id: 'booking-upgrade',
+      text: 'Upgrading Your Booking: Avios Upgrade — use Avios to upgrade from Economy to Premium Economy from 7,500 Avios each way, or to Club World from 12,500-25,000 Avios each way (subject to availability). Bid Upgrade — eligible passengers receive a bid upgrade offer 3-7 days before departure. Club World upgrades via bid typically start from £150-£500 per person depending on route. Check Manage Booking for your upgrade options.',
+      metadata: { category: 'booking', topic: 'upgrade' },
+    },
+    {
+      id: 'booking-name-correction',
+      text: 'Name Corrections on Bookings: Minor name corrections (up to 3 characters) can be made free of charge by contacting BA Customer Service or via Manage My Booking for simple typos. Full name changes are not permitted — the booking must be cancelled (if refundable) and rebooked. Ensure your name exactly matches your passport/travel document to avoid issues at the airport.',
+      metadata: { category: 'booking', topic: 'name-correction' },
+    },
+    {
+      id: 'booking-group-bookings',
+      text: 'Group Bookings (10+ passengers): Groups of 10 or more passengers can receive special fares and flexible payment terms by contacting BA Groups (groups@ba.com). Deposit required upfront with balance due 12 weeks before departure. Group passengers may be split across different seat rows. A group coordinator is assigned to manage the booking.',
+      metadata: { category: 'booking', topic: 'group-bookings' },
+    },
   ];
 }
 
@@ -372,7 +427,13 @@ function classifyQueryIntent(queryText) {
 
   // Classify intent
   let intent = 'GENERAL';
-  if (/\b(book|booking|reserve|ticket|fly to|want to book)\b/i.test(q)) {
+  if (/\b(my booking|manage booking|find booking|view booking|booking reference|pnr|change flight|cancel booking|add bag|seat selection|choose seat|upgrade|name correction|rebook)\b/i.test(q)) {
+    intent = 'BOOKING';
+  } else if (/\b(check.?in|checkin|boarding pass|bag drop|check in online|check-in opens)\b/i.test(q)) {
+    intent = 'CHECKIN';
+  } else if (/\b(flight status|is my flight|on time|delayed|live status|tracking|track my flight|flight tracker)\b/i.test(q)) {
+    intent = 'FLIGHT_STATUS';
+  } else if (/\b(book|booking|reserve|ticket|fly to|want to book|search flights)\b/i.test(q)) {
     intent = 'BOOKING';
   } else if (/\b(uk261|eu261|compensation|delay|delayed|cancel|cancelled|refund|claim|rights)\b/i.test(q)) {
     intent = 'UK261';
@@ -507,7 +568,10 @@ function calculateBM25Score(doc, queryTokens, intentData) {
       (intent === 'AIRPORT' && cat === 'airport') ||
       (intent === 'ROUTE' && cat === 'route') ||
       (intent === 'OFFER' && cat === 'offer') ||
-      (intent === 'SERVICE' && cat === 'service')
+      (intent === 'SERVICE' && cat === 'service') ||
+      (intent === 'BOOKING' && cat === 'booking') ||
+      (intent === 'CHECKIN' && (cat === 'booking' || cat === 'service')) ||
+      (intent === 'FLIGHT_STATUS' && cat === 'route')
     ) {
       score += 5.0;
     }
@@ -764,10 +828,11 @@ ${context}
 
 ═══════════════════════════════════════════════════════
 CRITICAL INSTRUCTIONS FOR RESPONDING:
-1. Speak in plain, clear, natural everyday conversational English. Never use technical jargon, raw JSON, or robotic phrases.
-2. Use the official British Airways context above as your primary ground truth for answering questions about flights, baggage, Executive Club, lounges, and UK261 compensation.
-3. Share numbers, limits, and policy details clearly in simple, friendly terms.
-4. Keep your tone professional, warm, natural, and helpful as a premier British Airways representative.
+1. You are embedded inside the British Airways app. Users can navigate directly to /manage (Manage Booking), /check-in (Check-In), /flight-status (Flight Status), /book (Search Flights), /executive-club (Avios). NEVER say "I don't have access to your booking" — always direct to the right page.
+2. Speak in plain, clear, natural everyday conversational English. Never use technical jargon, raw JSON, or robotic phrases.
+3. Use the official British Airways context above as your primary ground truth for answering questions about flights, baggage, Executive Club, lounges, and UK261 compensation.
+4. Share numbers, limits, and policy details clearly in simple, friendly terms.
+5. Keep your tone professional, warm, natural, and helpful as a premier British Airways representative.
 ═══════════════════════════════════════════════════════`;
 }
 

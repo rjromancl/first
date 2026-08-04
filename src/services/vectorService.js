@@ -90,29 +90,61 @@ const MULTILINGUAL_KNOWLEDGE_BASE = [
 - Hand Baggage: 1 cabin bag (up to 56 x 45 x 25cm) + 1 personal handbag/laptop bag (up to 40 x 30 x 15cm), max 23kg each.
 - Checked Baggage: Economy (1 bag x 23kg), Premium Economy (2 bags x 23kg), Business / Club World (2 bags x 32kg), First Class (3 bags x 32kg).
 - Extra Bags & Heavy Baggage: Bags over 23kg (up to 32kg) incur a heavy bag fee at check-in. Executive Club Gold/Silver members receive 1 extra checked bag on all flights.
+- Pre-purchase extra baggage online via Manage Booking for up to 30% less than airport prices.
 - Tamil Summary: கைப்பை 23kg இலவசம். பிசினஸ் வகுப்பில் 2 பைகள் (32kg வீதம்) அனுமதிக்கப்படும்.`
   },
   {
     id: 'avios_executive_club',
     keywords: [
       'avios', 'executive club', 'tier', 'points', 'miles', 'gold', 'silver', 'bronze', 'blue', 'lounge access',
-      'ஏவியோஸ்', 'புள்ளிகள்', 'கிளப்', 'வகுப்பு', 'poindhu', 'points'
+      'ஏவியோஸ்', 'புள்ளிகள்', 'கிளப்', 'வகுப்பு', 'poindhu', 'points', 'companion voucher', 'reward flight'
     ],
     text: `B Airways Executive Club & Avios Reward Program:
 - Tiers: Blue (Entry), Bronze (300 Tier Points - priority check-in & free seat choice 7 days before), Silver (600 Tier Points - lounge access & extra 32kg bag), Gold (1500 Tier Points - First Lounge & Concorde Room access).
 - Avios Earning: Earn Avios on every flight based on ticket cash spent and tier bonus (Blue 6 Avios/£, Bronze 7/£, Silver 8/£, Gold 9/£).
-- Avios Redemption: Upgrade Economy to Business from 12,500 Avios. Full reward flights start from 4,750 Avios.`
+- Avios Redemption: Upgrade Economy to Business from 12,500 Avios. Full reward flights start from 4,750 Avios.
+- Avios do not expire as long as there is 1 transaction every 36 months.`
+  },
+  {
+    id: 'manage_booking',
+    keywords: [
+      'my booking', 'manage booking', 'manage', 'view booking', 'find booking', 'booking reference',
+      'pnr', 'reference', 'change flight', 'cancel', 'seat selection', 'add bag', 'upgrade',
+      'என் பதிவு', 'booking kannu', 'booking pakka', 'meri booking', 'buking'
+    ],
+    text: `B Airways Manage My Booking:
+- View and manage your booking using your 6-character booking reference (PNR) in the Manage Booking page.
+- From Manage Booking you can: view flight details, select/change seats, add checked baggage (save up to 30% vs airport), request special meals, upgrade using Avios, and cancel your booking.
+- No surname required — just your booking reference.
+- Flight changes: Flexible fares allow free date/time changes. Standard fares may incur a change fee plus fare difference.
+- Cancellations: Fully Flexible fares receive full refund. Standard fares refund taxes and charges only (£50-£200).`
   },
   {
     id: 'checkin_online',
     keywords: [
-      'check-in', 'checkin', 'boarding pass', 'pnr', 'reference', 'gate', 'terminal', 'seat selection',
-      'செக்-இன்', 'பாஸ்', 'இருக்கை', 'நுழைவு', 'check in pannu'
+      'check-in', 'checkin', 'check in', 'boarding pass', 'pnr', 'reference', 'gate', 'terminal', 'seat selection',
+      'bag drop', 'web check-in', 'online check-in', 'boarding',
+      'செக்-இன்', 'பாஸ்', 'இருக்கை', 'நுழைவு', 'check in pannu', 'board pannu'
     ],
     text: `B Airways Online Check-In & Boarding Guidelines:
-- Online Check-in: Opens 24 hours prior to scheduled flight departure. Available via web or BA Mobile App.
-- Boarding Passes: Digital boarding passes saved to Apple Wallet or Google Wallet accepted at all airports.
-- Airport Bag Drop: Bag drop closes 60 minutes before long-haul flights and 45 minutes before short-haul flights. Gate closes 20 minutes before departure.`
+- Online Check-in opens 24 hours before scheduled departure. Use the Check-In page with your 6-character booking reference.
+- Boarding Passes: Digital passes accepted via Apple Wallet or Google Wallet at all airports.
+- Bag Drop closes 60 minutes before long-haul, 45 minutes before short-haul. Gates close 20 minutes before departure.
+- Seat selection during check-in is free for standard seats. Extra Legroom seats from £25.`
+  },
+  {
+    id: 'uk261_rights',
+    keywords: [
+      'uk261', 'eu261', 'delay', 'delayed', 'cancel', 'cancelled', 'compensation', 'refund', 'rights',
+      'claim', 'duty of care', 'hotel', 'overnight', 'disruption',
+      'தாமதம்', 'ரத்து', 'இழப்பீடு', 'cancel aaguthu', 'flight late'
+    ],
+    text: `UK261 Flight Delay & Cancellation Rights:
+- Delay 3+ hours on arrival (BA's fault): £220 (under 1,500km), £350 (1,500-3,500km), £520 (over 3,500km, delayed 4h+).
+- Cancellation with under 14 days notice: Same compensation amounts apply.
+- Duty of Care for 2h+ delays: Free food/drink vouchers, 2 phone calls/emails. Overnight delays: free hotel + transfers.
+- If BA cancels: Full cash refund within 7 days OR free rebooking on next available flight.
+- Extraordinary circumstances (weather, ATC strikes) exempt from compensation but Duty of Care still applies.`
   },
   {
     id: 'inflight_lounges',
@@ -120,22 +152,38 @@ const MULTILINGUAL_KNOWLEDGE_BASE = [
       'lounge', 'food', 'wifi', 'dining', 'cabin', 'seat', 'business', 'first', 'galleries', 'concorde',
       'உணவு', 'சாப்பாடு', 'ஓய்வறை', 'இணையம்', 'wifi', 'saappadu'
     ],
-    text: `B Airways In-Flight Comfort & Airport Lounges:
-- Lounges: Galleries Club & First Lounges available at London Heathrow (LHR Terminal 5 & T3) and London Gatwick (LGW) for Business/First passengers and Silver/Gold members.
-- Wi-Fi & Entertainment: High-speed Wi-Fi available fleetwide. Free messaging for Executive Club members. 1000+ hours of movies, TV shows, and games on seatback screens.
-- In-flight Dining: Complimentary multi-course meals, bar service, and special meals (Vegetarian, Halal, Hindu, Kosher) pre-bookable 24h prior.`
+    text: `B Airways Airport Lounges:
+- Galleries Club: For Club World/Business passengers + Silver/Gold members + 1 guest. LHR T5, T3, LGW, JFK T8. Hot buffet, champagne, Wi-Fi, showers.
+- Galleries First: For Gold members + 1 guest in any cabin. LHR T5 South, LGW South. À la carte dining, Champagne Bar.
+- Concorde Room: First Class passengers + Concorde Room Card holders. LHR T5, JFK T8. Private dining, Forty Winks sleep suites.
+- Wi-Fi: Free messaging for Executive Club members. High-speed Wi-Fi on all aircraft.`
+  },
+  {
+    id: 'seat_selection',
+    keywords: [
+      'seat', 'seat selection', 'choose seat', 'exit row', 'extra legroom', 'window', 'aisle',
+      'upgrade seat', 'seat fee', 'seat cost', 'இருக்கை', 'seat choose pannu'
+    ],
+    text: `B Airways Seat Selection:
+- Economy (World Traveller): Standard seats from £10-£45, free 24h before departure. Extra Legroom/Exit Row from £25.
+- Premium Economy: Free seat selection at time of booking.
+- Club World / Club Suite: All seats are direct-aisle flat beds, free selection at booking.
+- First Class: Complimentary, suite-style seating.
+- Executive Club: Bronze — free 7 days before. Silver/Gold — free at booking including exit rows.`
   },
   {
     id: 'destinations_routes',
     keywords: [
       'destinations', 'flight', 'new york', 'dubai', 'tokyo', 'sydney', 'mumbai', 'chennai', 'barcelona', 'paris',
-      'இடங்கள்', 'லண்டன்', 'சென்னை', 'மும்பை', 'துபாய்', 'பாரிஸ்'
+      'இடங்கள்', 'லண்டன்', 'சென்னை', 'மும்பை', 'துபாய்', 'பாரிஸ்', 'where can i fly', 'routes'
     ],
-    text: `B Airways Destinations & Hub Operations:
-- Hubs: London Heathrow (LHR - Terminal 5 & T3) and London Gatwick (LGW).
-- Popular Direct Routes: London Heathrow to New York (JFK), Dubai (DXB), Tokyo (NRT), Sydney (SYD), Mumbai (BOM), Chennai (MAA), Delhi (DEL), Singapore (SIN), Paris (CDG), Barcelona (BCN).`
-  }
+    text: `B Airways Destinations & Routes:
+- Hubs: London Heathrow (LHR T5 & T3) and London Gatwick (LGW).
+- Long-haul: New York JFK (7h 30m), Dubai DXB (6h 45m), Tokyo NRT (11h 50m), Sydney SYD (21h 30m via Singapore), Mumbai BOM (9h 15m), Singapore SIN (12h 55m).
+- Short-haul from LHR: Barcelona BCN (2h 15m), Paris CDG (1h 15m), Amsterdam AMS, Rome FCO, Madrid MAD.`
+  },
 ];
+
 
 export function getLocalKnowledgeFallback(query) {
   if (!query || typeof query !== 'string') return [];
