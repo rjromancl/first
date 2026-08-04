@@ -345,25 +345,6 @@ export default function VoiceAgent() {
     setTelemetryLogs(prev => [...prev.slice(-5), { time, icon, text }]);
   }, []);
 
-  // ── TTS — speaks immediately, does NOT block mic in hands-free ──
-  const speakMessage = useCallback(async (text) => {
-    if (!ttsEnabledRef.current || !window.speechSynthesis) return;
-    const clean = text.replace(/[\*\_\#\`]/g, '').replace(/\s+/g, ' ').trim();
-    if (mountedRef.current) setIsSpeaking(true);
-    addTelemetryLog('📢', `Speech output: ${selectedLangRef.current}`);
-    try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current }); } catch (_) {}
-    if (mountedRef.current) setIsSpeaking(false);
-  }, [addTelemetryLog]);
-
-  // ── Interrupt TTS and start listening immediately ─────────────
-  const interruptAndListen = useCallback(() => {
-    stopSpeaking();
-    setIsSpeaking(false);
-    setInterimText('');
-    // Small delay so cancellation completes
-    setTimeout(() => { if (mountedRef.current) startListening(); }, 80);
-  }, []); // startListening added below after hook
-
   // ── Stable voice callbacks — declared BEFORE hook ─────────────
   const processInputRef = useRef(null);
   const handleVoiceResult = useCallback((transcript) => {
@@ -391,9 +372,43 @@ export default function VoiceAgent() {
     continuous: collectingPax,
   });
 
+  // ── TTS — speaks immediately, auto-restarts mic in hands-free ──
+  const speakMessage = useCallback(async (text) => {
+    if (!ttsEnabledRef.current || !window.speechSynthesis) return;
+    const clean = text.replace(/[\*\_\#\`]/g, '').replace(/\s+/g, ' ').trim();
+    if (mountedRef.current) setIsSpeaking(true);
+    addTelemetryLog('📢', `Speech output: ${selectedLangRef.current}`);
+    try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current }); } catch (_) {}
+    if (mountedRef.current) setIsSpeaking(false);
+
+    // Continuous hands-free dialogue: auto-restart listening after speech ends
+    if (mountedRef.current && handsFreeRef.current) {
+      setTimeout(() => { if (mountedRef.current) startListening(); }, 150);
+    }
+  }, [addTelemetryLog, startListening]);
+
+  // ── Interrupt TTS and start listening immediately ─────────────
+  const interruptAndListen = useCallback(() => {
+    stopSpeaking();
+    setIsSpeaking(false);
+    setInterimText('');
+    // Small delay so cancellation completes
+    setTimeout(() => { if (mountedRef.current) startListening(); }, 80);
+  }, [startListening]);
+
   const isListeningRef = useRef(isListening);
   useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
-  useEffect(() => { if (liveTranscript) setInterimText(liveTranscript); }, [liveTranscript]);
+  useEffect(() => {
+    if (liveTranscript) {
+      setInterimText(liveTranscript);
+      // Automatic speech interruption if user speaks while AI is speaking
+      if (isSpeaking) {
+        stopSpeaking();
+        setIsSpeaking(false);
+        addTelemetryLog('⚡', `Speech Interrupted by user voice input: "${liveTranscript}"`);
+      }
+    }
+  }, [liveTranscript, isSpeaking, addTelemetryLog]);
 
   // Patch interruptAndListen to use startListening from hook
   const interruptRef = useRef(null);
@@ -414,6 +429,7 @@ export default function VoiceAgent() {
       isSpeaking   ? 'speaking'  : 'idle'
     );
   }, [isListening, isProcessing, isSpeaking]);
+
 
   // ── Ask next passenger field ──────────────────────────────────
   const askNextField = useCallback(async (fieldKey, question) => {
@@ -456,6 +472,17 @@ export default function VoiceAgent() {
       // Update booking card with any extracted entities
       if (entities && Object.values(entities).some(v => v)) {
         setCapturedEntities(prev => ({ ...prev, ...entities }));
+      }
+
+      // ── EXIT_CONVERSATION ────────────────────────────────────
+      if (intent === 'EXIT_CONVERSATION' || response.action?.type === 'EXIT_CONVERSATION') {
+        stopSpeaking();
+        stopListening();
+        setHandsFree(false);
+        if (mountedRef.current) setIsProcessing(false);
+        addAgentMsg(response.text, response.quickReplies);
+        await speak(response.text, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current });
+        return;
       }
 
       // ── COLLECT_PASSENGER ──────────────────────────────────────

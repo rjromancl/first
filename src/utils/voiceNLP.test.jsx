@@ -36,6 +36,7 @@ vi.mock('../services/geminiService', () => ({
 
 import { sendToGemini } from '../services/geminiService';
 import { parseVoiceInput, speak, stopSpeaking, getAvailableVoices } from './voiceNLP';
+import { preprocessVoiceTranscript, detectWakeWord, detectExitIntent, resolveRelativeDate } from './smartNLPPreprocessor';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -1425,6 +1426,46 @@ describe('voiceNLP — parseVoiceInput: integration scenarios', () => {
     }));
     const result = await parseVoiceInput('  London to Dubai  ');
     expect(result.intent).toBe('BOOK_FLIGHT');
-    expect(sendToGemini).toHaveBeenCalledWith('  London to Dubai  ', []);
+    expect(sendToGemini).toHaveBeenCalledWith('London to Dubai', []);
+  });
+
+  describe('smartNLPPreprocessor — NLP preprocessing layer', () => {
+    it('detects wake words in transcripts', () => {
+      expect(detectWakeWord('Hey BA book a flight to Dubai')).toEqual({ hasWakeWord: true, cleanText: 'book a flight to Dubai' });
+      expect(detectWakeWord('Hello Assistant check-in')).toEqual({ hasWakeWord: true, cleanText: 'check-in' });
+      expect(detectWakeWord('book London to New York')).toEqual({ hasWakeWord: false, cleanText: 'book London to New York' });
+    });
+
+    it('detects exit intent commands', () => {
+      expect(detectExitIntent('stop')).toBe(true);
+      expect(detectExitIntent('bye')).toBe(true);
+      expect(detectExitIntent('goodbye')).toBe(true);
+      expect(detectExitIntent('exit')).toBe(true);
+      expect(detectExitIntent('book a flight')).toBe(false);
+    });
+
+    it('resolves relative & Tamil dates', () => {
+      const today = new Date().toISOString().split('T')[0];
+      expect(resolveRelativeDate('today')).toBe(today);
+      expect(resolveRelativeDate('inniku')).toBe(today);
+
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      expect(resolveRelativeDate('tomorrow')).toBe(tomorrow);
+      expect(resolveRelativeDate('naalaiku')).toBe(tomorrow);
+    });
+
+    it('normalizes filler words, STT mishearings, and Tanglish phrases', () => {
+      const processed = preprocessVoiceTranscript('um uh Hey BA book flight to do bye naalaiku rendu ticket');
+      expect(processed.hasWakeWord).toBe(true);
+      expect(processed.cleanText).toContain('Dubai');
+      expect(processed.cleanText).toContain('tomorrow');
+      expect(processed.cleanText).toContain('2 ticket');
+    });
+
+    it('returns EXIT_CONVERSATION intent when exit command is spoken', async () => {
+      const result = await parseVoiceInput('stop');
+      expect(result.intent).toBe('EXIT_CONVERSATION');
+      expect(result.response.text).toContain('Goodbye');
+    });
   });
 });

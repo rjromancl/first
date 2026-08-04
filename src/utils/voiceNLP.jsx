@@ -11,6 +11,7 @@
  */
 
 import { sendToGemini } from '../services/geminiService';
+import { preprocessVoiceTranscript } from './smartNLPPreprocessor';
 
 function parseVoiceInputFallback(text) {
   const l = (text || '').toLowerCase();
@@ -80,6 +81,23 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
     };
   }
 
+  const { cleanText, hasWakeWord, isExit, confidence } = preprocessVoiceTranscript(text);
+
+  if (isExit) {
+    return {
+      intent: 'EXIT_CONVERSATION',
+      entities: {},
+      passengerField: null,
+      response: {
+        text: "Goodbye! Have a wonderful journey with British Airways.",
+        quickReplies: ['Book a flight'],
+        action: { type: 'EXIT_CONVERSATION' },
+      },
+    };
+  }
+
+  const queryText = cleanText || text.trim();
+
   let result;
   try {
     result = await sendToGemini(text, geminiHistory);
@@ -101,6 +119,7 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
     intent:         result.intent,
     entities:       result.entities       || {},
     passengerField: result.passengerField || null,
+    confidence:     result.confidence     || confidence || 0.9,
     response: {
       text:         result.text,
       quickReplies: result.quickReplies   || [],

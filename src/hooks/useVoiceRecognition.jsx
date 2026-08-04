@@ -28,11 +28,12 @@ export function useVoiceRecognition({
 
   const [supported, setSupported] = useState(!!SpeechRecognitionRef.current);
 
-  const onResultRef    = useRef(onResult);
-  const onErrorRef     = useRef(onError);
-  const continuousRef  = useRef(continuous);
-  const abortedRef     = useRef(false);
-  const recognizerRef  = useRef(null);
+  const onResultRef                = useRef(onResult);
+  const onErrorRef                 = useRef(onError);
+  const continuousRef              = useRef(continuous);
+  const abortedRef                 = useRef(false);
+  const recognizerRef              = useRef(null);
+  const lastProcessedTranscriptRef = useRef('');
 
   useEffect(() => { onResultRef.current   = onResult;   }, [onResult]);
   useEffect(() => { onErrorRef.current    = onError;    }, [onError]);
@@ -62,17 +63,21 @@ export function useVoiceRecognition({
           if (!abortedRef.current && recognizerRef.current === r) {
             try { r.start(); } catch (_) {}
           }
-        }, 100); // faster restart — 100ms not 300ms
+        }, 100); // faster restart
       }
     };
 
     r.onresult = (event) => {
       const result  = event.results[event.resultIndex];
-      const text    = result[0].transcript;
+      const text    = result[0]?.transcript || '';
       const isFinal = result.isFinal;
       setTranscript(text);
       if (isFinal) {
-        if (onResultRef.current) onResultRef.current(text);
+        const clean = text.trim();
+        if (clean && clean !== lastProcessedTranscriptRef.current) {
+          lastProcessedTranscriptRef.current = clean;
+          if (onResultRef.current) onResultRef.current(clean);
+        }
         setTranscript('');
       }
     };
@@ -94,6 +99,7 @@ export function useVoiceRecognition({
   const startListening = useCallback(() => {
     if (!recognizerRef.current) return;
     abortedRef.current = false;
+    lastProcessedTranscriptRef.current = '';
     try { recognizerRef.current.start(); } catch (e) {
       if (e.name !== 'InvalidStateError') console.warn('[useVoiceRecognition] start:', e.message);
     }
@@ -114,3 +120,4 @@ export function useVoiceRecognition({
 
   return { isListening, transcript, supported, startListening, stopListening, abortListening };
 }
+
