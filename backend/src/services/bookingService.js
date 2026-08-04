@@ -137,16 +137,12 @@ async function createBooking({ flightOffer, travelers, contacts, userEmail }) {
   return booking;
 }
 
-/** Retrieve a booking by reference + surname validation. */
-function getBooking(reference, surname) {
-  if (!reference || !surname) {
-    throw new Error('getBooking: reference and surname are required');
+/** Retrieve a booking by reference only. */
+function getBooking(reference) {
+  if (!reference) {
+    throw new Error('getBooking: reference is required');
   }
-  const booking = BookingStore.findByRef(reference);
-  if (!booking) return null;
-  const stored = booking.passenger?.lastName || '';
-  if (stored.toLowerCase() !== surname.toLowerCase()) return null;
-  return booking;
+  return BookingStore.findByRef(reference) || null;
 }
 
 /** Get all bookings for an authenticated user. */

@@ -22,16 +22,13 @@ async function create(req, res, next) {
   }
 }
 
-// GET /api/bookings/:reference?surname=Wilson
+// GET /api/bookings/:reference
 async function retrieve(req, res, next) {
   try {
     const { reference } = req.params;
-    const { surname } = req.query;
 
-    if (!surname) return error(res, 'surname query parameter is required', 400);
-
-    const booking = getBooking(reference, surname);
-    if (!booking) return error(res, 'Booking not found. Please check your reference and surname.', 404);
+    const booking = getBooking(reference);
+    if (!booking) return error(res, 'Booking not found. Please check your reference.', 404);
 
     return success(res, booking);
   } catch (err) {

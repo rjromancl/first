@@ -153,11 +153,9 @@ export const bookingsAPI = {
       })
     ),
 
-  retrieve: (reference, surname) =>
+  retrieve: (reference) =>
     unwrap(
-      http.get(`/bookings/${reference}`, {
-        params: { surname },
-      })
+      http.get(`/bookings/${reference}`)
     ),
 
   listMine: () => unwrap(http.get("/bookings/mine")),

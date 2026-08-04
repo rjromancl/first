@@ -20,12 +20,11 @@ router.post(
 // ─ GET /api/bookings/mine — authenticated user's bookings ──────────
 router.get('/mine', requireAuth, ctrl.listMine);
 
-// ─ GET /api/bookings/:reference?surname=Wilson ────────────────────
+// ─ GET /api/bookings/:reference ──────────────────────────────────
 router.get(
   '/:reference',
   [
     param('reference').isLength({ min: 6, max: 6 }).withMessage('Reference must be 6 characters'),
-    query('surname').notEmpty().withMessage('surname is required'),
   ],
   validate,
   ctrl.retrieve

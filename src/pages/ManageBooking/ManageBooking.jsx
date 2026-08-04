@@ -32,7 +32,6 @@ export default function ManageBooking() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [ref, setRef]             = useState('');
-  const [surname, setSurname]     = useState('');
   const [booking, setBooking]     = useState(null);
   const [searching, setSearching] = useState(false);
   const [error, setError]         = useState('');
@@ -49,11 +48,11 @@ export default function ManageBooking() {
     setSearching(true);
     setError('');
     try {
-      const found = await bookingsAPI.retrieve(ref.trim().toUpperCase(), surname.trim());
+      const found = await bookingsAPI.retrieve(ref.trim().toUpperCase());
       setBooking(found);
       setBags(found.bags || { checked: 0, cabin: 1 });
     } catch (err) {
-      setError(err.message || 'Booking not found. Please check your reference and surname.');
+      setError(err.message || 'Booking not found. Please check your reference.');
     } finally {
       setSearching(false);
     }
@@ -106,7 +105,7 @@ export default function ManageBooking() {
               <div className="manage__retrieve-header">
                 <FaSearch size={22} style={{ color: 'var(--ba-blue)' }} />
                 <h2>Retrieve Your Booking</h2>
-                <p>Enter your booking reference and surname to access your booking.</p>
+                <p>Enter your booking reference to access your booking.</p>
               </div>
 
               <form onSubmit={handleSearch} className="manage__retrieve-form">
@@ -121,10 +120,6 @@ export default function ManageBooking() {
                   />
                   <small className="manage__field-hint">6-character reference from your confirmation email</small>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Lead Passenger Surname</label>
-                  <input className="form-control" placeholder="e.g. Wilson" value={surname} onChange={e => setSurname(e.target.value)} required />
-                </div>
                 {error && <div className="manage__error"><FaTimes size={14} /> {error}</div>}
                 <button type="submit" className="btn btn-primary" disabled={searching}>
                   {searching
@@ -135,8 +130,8 @@ export default function ManageBooking() {
 
               <div className="manage__demo-hint">
                 <strong>Demo bookings to try:</strong>
-                <button onClick={() => { setRef('XYMBA1'); setSurname('Wilson'); }}>XYMBA1 / Wilson (Business LHR→JFK)</button>
-                <button onClick={() => { setRef('PLCNR7'); setSurname('Johnson'); }}>PLCNR7 / Johnson (Economy LHR→CDG)</button>
+                <button onClick={() => setRef('XYMBA1')}>XYMBA1 (Business LHR→JFK)</button>
+                <button onClick={() => setRef('PLCNR7')}>PLCNR7 (Economy LHR→CDG)</button>
               </div>
             </div>
           </div>
@@ -157,7 +152,7 @@ export default function ManageBooking() {
                 <button className="btn btn-secondary btn-sm" onClick={() => window.print()}><FaDownload size={12} /> Download</button>
                 <button className="btn btn-secondary btn-sm" onClick={() => window.print()}><FaPrint size={12} /> Print</button>
                 <button className="btn btn-secondary btn-sm"><FaEnvelope size={12} /> Email</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => { setBooking(null); setRef(''); setSurname(''); }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => { setBooking(null); setRef(''); }}>
                   <FaTimes size={12} /> Close
                 </button>
               </div>
