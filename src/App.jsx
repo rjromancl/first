@@ -15,6 +15,7 @@ import FlightStatus from './pages/FlightStatus/FlightStatus';
 import Destinations from './pages/Destinations/Destinations';
 import ExecutiveClub from './pages/ExecutiveClub/ExecutiveClub';
 import Login from './pages/Login/Login';
+import HelpSupport from './pages/HelpSupport/HelpSupport';
 
 import './App.css';
 
@@ -89,6 +90,7 @@ function AppLayout() {
             <Route path="/flight-status" element={<FlightStatus />} />
             <Route path="/destinations" element={<Destinations />} />
             <Route path="/executive-club" element={<ExecutiveClub />} />
+            <Route path="/help" element={<HelpSupport />} />
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

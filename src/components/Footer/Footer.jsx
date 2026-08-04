@@ -43,12 +43,12 @@ const footerLinks = [
   {
     heading: 'Help & Support',
     links: [
-      { label: 'Help Centre', path: '/' },
-      { label: 'Contact Us', path: '/' },
-      { label: 'Accessibility', path: '/' },
-      { label: 'Travel Information', path: '/' },
-      { label: 'Refunds', path: '/' },
-      { label: 'Covid-19 Info', path: '/' },
+      { label: 'Help & AI Assistant', path: '/help' },
+      { label: 'Baggage Information', path: '/help' },
+      { label: 'Your Rights (UK261)',  path: '/help' },
+      { label: 'Manage My Booking',   path: '/manage' },
+      { label: 'Contact Us',          path: '/help' },
+      { label: 'Accessibility',       path: '/help' },
     ],
   },
 ];

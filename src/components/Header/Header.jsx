@@ -46,6 +46,10 @@ const navItems = [
     label: 'Executive Club',
     path: '/executive-club',
   },
+  {
+    label: 'Help',
+    path: '/help',
+  },
 ];
 
 export default function Header() {
