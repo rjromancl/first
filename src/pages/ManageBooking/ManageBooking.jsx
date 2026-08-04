@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlane, FaChair, FaBriefcase, FaArrowUp,
-  FaTimes, FaCheck, FaDownload, FaPrint, FaEnvelope, FaStar,
+  FaTimes, FaCheck, FaDownload, FaPrint, FaEnvelope, FaStar, FaChevronRight,
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { bookingsAPI } from '../../services/api';
@@ -28,6 +29,7 @@ const SEAT_MAP = [
 ];
 
 export default function ManageBooking() {
+  const navigate = useNavigate();
   const { addNotification } = useApp();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -266,7 +268,16 @@ export default function ManageBooking() {
                     </div>
                   )}
                   {seatSaved && (
-                    <div className="manage__success"><FaCheck size={14} /> Seat {selectedSeat} confirmed!</div>
+                    <div className="manage__success" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <span><FaCheck size={14} /> Seat {selectedSeat} confirmed!</span>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        onClick={() => navigate('/book', { state: { jumpToStep: 4, from: booking.outbound?.from, to: booking.outbound?.to, selectedSeat } })}
+                      >
+                        Proceed to Payment Gateway <FaChevronRight size={12} />
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

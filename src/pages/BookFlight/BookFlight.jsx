@@ -4,7 +4,7 @@ import {
   FaPlane, FaSearch, FaExchangeAlt, FaMapMarkerAlt,
   FaCalendarAlt, FaUsers, FaChevronRight, FaCheck,
   FaWifi, FaUtensils, FaTv, FaBriefcase, FaTimes,
-  FaShieldAlt, FaStar,
+  FaShieldAlt, FaStar, FaChair,
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { flightsAPI, airportsAPI, bookingsAPI } from '../../services/api';
@@ -45,6 +45,7 @@ export default function BookFlight() {
   const [flights, setFlights] = useState([]);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [selectedCabinKey, setSelectedCabinKey] = useState('economy');
+  const [selectedSeat, setSelectedSeat] = useState(location.state?.selectedSeat || '14A');
   const [loading, setLoading] = useState(false);
   const [fromSuggestions, setFromSuggestions] = useState([]);
   const [toSuggestions, setToSuggestions] = useState([]);
@@ -511,9 +512,36 @@ export default function BookFlight() {
                 </div>
               </div>
 
-              <div className="bookflight__pax-actions">
+              {/* Seat Selection */}
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--ba-border)' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: 'var(--ba-blue)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaChair /> Select Your Preferred Seat
+                </h3>
+                <p style={{ fontSize: '0.88rem', color: 'var(--ba-text-secondary)', marginBottom: '14px' }}>
+                  Standard seat selection is included. Choose your preferred seat below:
+                </p>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {['10A (Window)', '10B (Aisle)', '12A (Window)', '14A (Window)', '14B (Middle)', '15C (Aisle)', '20F (Window)'].map(s => {
+                    const seatCode = s.split(' ')[0];
+                    const isSelected = selectedSeat === seatCode;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '8px 14px', fontSize: '0.88rem', borderRadius: '6px' }}
+                        onClick={() => setSelectedSeat(seatCode)}
+                      >
+                        {isSelected ? '✓ ' : ''}{s}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bookflight__pax-actions" style={{ marginTop: '24px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>Back</button>
-                <button type="submit" className="btn btn-primary">Continue to Payment <FaChevronRight size={12} /></button>
+                <button type="submit" className="btn btn-primary">Proceed to Payment Gateway <FaChevronRight size={12} /></button>
               </div>
             </form>
           </div>
@@ -533,6 +561,10 @@ export default function BookFlight() {
                 <div className="bookflight__summary-item">
                   <span>Cabin</span>
                   <span>{cabinOptions.find(c=>c.key===selectedCabinKey)?.label}</span>
+                </div>
+                <div className="bookflight__summary-item">
+                  <span>Selected Seat</span>
+                  <strong>{selectedSeat} (Confirmed)</strong>
                 </div>
                 <div className="bookflight__summary-item">
                   <span>Passengers</span>

@@ -525,7 +525,7 @@ export default function VoiceAgent() {
           cabin:      entities.cabin        || 'economy',
           tripType:   entities.tripType     || 'return',
           autoSearch: true,
-          jumpToStep: 3,
+          jumpToStep: 4,
         };
         setSearchParams({ tripType: entities.tripType || 'return', from: entities.from || '', to: entities.to || '', departDate: entities.departureDate || '', returnDate: entities.returnDate || '', adults: entities.adults || 1, cabin: entities.cabin || 'economy' });
         setCapturedPax(response.action.passenger || {});
