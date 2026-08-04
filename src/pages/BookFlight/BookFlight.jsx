@@ -57,35 +57,20 @@ export default function BookFlight() {
   });
 
   // ── Pre-fill from voice agent ──────────────────────────────────
-  // When VoiceAgent collects passenger details it navigates here with
-  // location.state = { prefillPassenger: {...}, from, to, departDate, ... }
+  // When VoiceAgent does single-shot booking it navigates here with
+  // location.state = { prefillPassenger: {...}, from, to, departDate, jumpToStep: 4, autoSearch: true }
   useEffect(() => {
     const s = location.state;
     if (!s) return;
-    if (s.prefillPassenger) {
-      setPassenger(prev => ({ ...prev, ...s.prefillPassenger }));
-      const pf = s.prefillPassenger;
-      // Check firstName + lastName (email removed from form)
-      if (pf.firstName && pf.lastName) {
-        if (s.from && s.to && s.departDate) {
-          setFrom(s.from);
-          setTo(s.to);
-          setDepartDate(s.departDate);
-          if (s.returnDate) setReturnDate(s.returnDate);
-          if (s.adults)     setAdults(Number(s.adults));
-          if (s.cabin)      setCabin(s.cabin);
-          if (s.tripType)   setTripType(s.tripType);
-          if (s.autoSearch) {
-            setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 400);
-          } else {
-            setStep(3);
-          }
-        } else {
-          setStep(3);
-        }
-      }
-    }
-    if (!s.prefillPassenger) {
+    if (s.prefillPassenger || s.autoSearch || s.from) {
+      const pf = s.prefillPassenger || {};
+      setPassenger(prev => ({
+        firstName:   pf.firstName   || prev.firstName   || user?.firstName || 'John',
+        lastName:    pf.lastName    || prev.lastName    || user?.lastName  || 'Smith',
+        phone:       pf.phone       || prev.phone       || '07912345678',
+        nationality: pf.nationality || prev.nationality || 'GB',
+      }));
+
       if (s.from)       setFrom(s.from);
       if (s.to)         setTo(s.to);
       if (s.departDate) setDepartDate(s.departDate);
@@ -93,6 +78,13 @@ export default function BookFlight() {
       if (s.adults)     setAdults(Number(s.adults));
       if (s.cabin)      setCabin(s.cabin);
       if (s.tripType)   setTripType(s.tripType);
+      if (s.jumpToStep) jumpToStepRef.current = s.jumpToStep;
+
+      if (s.autoSearch) {
+        setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 300);
+      } else if (s.jumpToStep) {
+        setStep(s.jumpToStep);
+      }
     }
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
