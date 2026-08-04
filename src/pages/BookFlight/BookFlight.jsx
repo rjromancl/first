@@ -57,7 +57,7 @@ export default function BookFlight() {
   });
 
   // ── Pre-fill from voice agent ──────────────────────────────────
-  // When VoiceAgent does single-shot booking it navigates here with
+  // When VoiceAgent does booking it navigates here with
   // location.state = { prefillPassenger: {...}, from, to, departDate, jumpToStep: 4, autoSearch: true }
   useEffect(() => {
     const s = location.state;
@@ -65,10 +65,10 @@ export default function BookFlight() {
     if (s.prefillPassenger || s.autoSearch || s.from) {
       const pf = s.prefillPassenger || {};
       setPassenger(prev => ({
-        firstName:   pf.firstName   || prev.firstName   || user?.firstName || 'John',
-        lastName:    pf.lastName    || prev.lastName    || user?.lastName  || 'Smith',
-        phone:       pf.phone       || prev.phone       || '07912345678',
-        nationality: pf.nationality || prev.nationality || 'GB',
+        firstName:   pf.firstName   || prev.firstName   || '',
+        lastName:    pf.lastName    || prev.lastName    || '',
+        phone:       pf.phone       || prev.phone       || '',
+        nationality: pf.nationality || prev.nationality || '',
       }));
 
       if (s.from)       setFrom(s.from);

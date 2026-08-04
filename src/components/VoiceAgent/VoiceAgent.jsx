@@ -563,30 +563,25 @@ export default function VoiceAgent() {
         return;
       }
 
-      // ── PREFILL_BOOKING / SINGLE-SHOT BOOKING ───────────────────
+      // ── PREFILL_BOOKING / VOICE BOOKING ────────────────────────
       if (response.action?.type === 'PREFILL_BOOKING') {
         setCollectingPax(false); setCurrentField(null); setCurrentQ(''); setPaxData({});
-        const paxObj = response.action.passenger || {};
-        const defaultPax = {
-          firstName:   paxObj.firstName   || 'John',
-          lastName:    paxObj.lastName    || 'Smith',
-          phone:       paxObj.phone       || '07912345678',
-          nationality: paxObj.nationality || 'GB',
-        };
+        const voicePax = response.action.passenger || capturedPax || {};
+        const hasSpokenPax = voicePax.firstName && voicePax.lastName;
         const navState = {
-          prefillPassenger: defaultPax,
+          prefillPassenger: voicePax,
           from:       entities.from         || 'LHR',
           to:         entities.to           || 'JFK',
-          departDate: entities.departureDate || '2026-12-28',
+          departDate: entities.departureDate || '',
           returnDate: entities.returnDate   || '',
           adults:     entities.adults       || 1,
           cabin:      entities.cabin        || 'economy',
           tripType:   entities.tripType     || 'return',
           autoSearch: true,
-          jumpToStep: 4,
+          jumpToStep: hasSpokenPax ? 4 : 3,
         };
         setSearchParams({ tripType: entities.tripType || 'return', from: entities.from || 'LHR', to: entities.to || 'JFK', departDate: entities.departureDate || '', returnDate: entities.returnDate || '', adults: entities.adults || 1, cabin: entities.cabin || 'economy' });
-        setCapturedPax(defaultPax);
+        setCapturedPax(voicePax);
         if (mountedRef.current) setIsProcessing(false);
         addAgentMsg(response.text, response.quickReplies);
         await speakMessage(response.text);

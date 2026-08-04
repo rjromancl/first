@@ -538,17 +538,32 @@ function fallbackResponse(t, errorReason = null, history = []) {
   }
 
   if (/nationality|country/i.test(lastModelMsg)) {
+    // Extract passenger details spoken in previous conversation turns
+    let firstName = '', lastName = '', phone = '';
+    if (Array.isArray(history)) {
+      for (let i = 0; i < history.length - 1; i++) {
+        const turn = history[i];
+        const next = history[i + 1];
+        if (turn?.role === 'model' && next?.role === 'user') {
+          const q = (turn.text || '').toLowerCase();
+          const val = (next.text || '').replace(/my (first |last )?name is/i, '').replace(/i am/i, '').replace(/my phone number is/i, '').trim();
+          if (/first name/i.test(q)) firstName = val;
+          if (/last name/i.test(q)) lastName = val;
+          if (/phone/i.test(q)) phone = val;
+        }
+      }
+    }
     return {
       intent: 'PASSENGER_FIELD',
       text: `Thank you! All passenger details recorded. Navigating to complete your booking.`,
       quickReplies: [],
       action: {
         type: 'FULL_BOOKING',
-        passenger: { firstName: 'Passenger', lastName: '', phone: '', nationality: cleanVal }
+        passenger: { firstName, lastName, phone, nationality: cleanVal }
       },
       entities: {},
       passengerField: {
-        collected: { nationality: cleanVal },
+        collected: { firstName, lastName, phone, nationality: cleanVal },
         nextField: null,
         nextQuestion: null,
         allCollected: true,
