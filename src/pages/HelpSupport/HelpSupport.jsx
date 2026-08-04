@@ -15,8 +15,9 @@
  *  - Fully responsive (mobile + desktop)
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaRobot, FaPaperPlane, FaTimes, FaThumbsUp, FaThumbsDown,
-         FaRedo, FaSearch, FaChevronRight, FaExternalLinkAlt } from 'react-icons/fa';
+         FaRedo, FaSearch, FaChevronRight, FaExternalLinkAlt, FaArrowRight } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { askHelpAgent, STARTER_QUESTIONS, CATEGORY_ICONS } from '../../services/helpService';
 import './HelpSupport.css';
@@ -97,7 +98,7 @@ const FILTER_TABS = [
 ];
 
 // ── Individual chat message ────────────────────────────────────────────────
-function ChatMessage({ msg, onSuggestedQuestion }) {
+function ChatMessage({ msg, onSuggestedQuestion, onNavigate }) {
   const [feedback, setFeedback] = useState(null); // 'up' | 'down' | null
   const isAgent = msg.role === 'agent';
 
@@ -113,6 +114,17 @@ function ChatMessage({ msg, onSuggestedQuestion }) {
         <div className={`help__bubble help__bubble--${msg.role}`}>
           <RichText text={msg.text} />
         </div>
+
+        {/* Action button — navigate to app page */}
+        {isAgent && msg.action?.type === 'navigate' && (
+          <button
+            className="help__action-btn"
+            onClick={() => onNavigate(msg.action.path)}
+          >
+            <FaArrowRight size={12} />
+            {msg.action.label}
+          </button>
+        )}
 
         {/* Source citations */}
         {isAgent && msg.sources?.length > 0 && (
@@ -174,6 +186,7 @@ function ChatMessage({ msg, onSuggestedQuestion }) {
 // ── Main HelpSupport component ─────────────────────────────────────────────
 export default function HelpSupport() {
   const { addNotification } = useApp();
+  const navigate = useNavigate();
 
   const [messages,   setMessages]   = useState([]);
   const [input,      setInput]      = useState('');
@@ -198,6 +211,7 @@ export default function HelpSupport() {
       id:                 Date.now() + Math.random(),
       role,
       text:               typeof data === 'string' ? data : data.text,
+      action:             typeof data === 'string' ? null : (data.action || null),
       sources:            data.sources            || [],
       suggestedQuestions: data.suggestedQuestions || [],
       intent:             data.intent             || 'general',
@@ -318,6 +332,7 @@ export default function HelpSupport() {
                 key={msg.id}
                 msg={msg}
                 onSuggestedQuestion={sendQuestion}
+                onNavigate={(path) => navigate(path)}
               />
             ))}
 

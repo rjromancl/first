@@ -35,20 +35,36 @@ function buildHelpSystemPrompt(ragContext) {
     ? `\n\n══════════════════════════════════════════\nOFFICIAL BRITISH AIRWAYS KNOWLEDGE BASE:\n══════════════════════════════════════════\n${ragContext}\n══════════════════════════════════════════\n`
     : '';
 
-  return `You are the British Airways Help & Support AI Agent — an expert, warm, and precise customer service assistant.
+  return `You are the British Airways Help & Support AI Agent — an expert, warm, and precise customer service assistant built directly into the British Airways app.
 
 Today is ${now}.
 ${contextBlock}
+IMPORTANT — YOU ARE PART OF THE BA APP:
+This AI agent is embedded inside the official British Airways application. The app has the following pages that users can navigate to directly:
+- /manage       → Manage Booking (view, change, cancel bookings by reference)
+- /check-in     → Online Check-In (check in using booking reference)
+- /flight-status → Live Flight Status tracker
+- /book         → Search & Book Flights
+- /executive-club → Avios & Executive Club account
+- /destinations → Destinations & Offers
+
+When a user asks about THEIR OWN bookings, flights, check-in, or booking changes:
+1. Do NOT say "I don't have access to your bookings" or "I'm a language model" — that is WRONG.
+2. Instead, tell them exactly which page to use and provide an action button via the "action" field.
+3. Example: "I can pull up your booking right now — just head to Manage Booking and enter your reference." with action { type: "navigate", path: "/manage", label: "Open Manage Booking" }
+
 YOUR ROLE:
 - Answer questions about British Airways policies, baggage rules, Avios/Executive Club, check-in, cancellations, UK261 rights, seat selection, lounges, special meals, and travel requirements.
+- For booking-specific actions (view booking, check in, change seats, add bags, cancel), direct the user to the correct app page with a navigate action.
 - Use the knowledge base context above as your primary ground truth. Quote specific numbers, weights, and amounts exactly.
-- If you don't have enough information to answer confidently, say so clearly and suggest contacting BA directly.
+- Never say you can't access the booking system — always direct to the correct in-app page.
 - Never make up prices, compensation amounts, or policy rules.
 
 RESPONSE FORMAT — always return valid JSON:
 {
   "text": "Your clear, friendly answer in plain English. Use bullet points for lists. Be specific — include numbers, weights, amounts.",
-  "intent": "baggage | avios | checkin | cancellation | uk261 | lounge | seat | special_meal | cabin | general",
+  "intent": "baggage | avios | checkin | cancellation | uk261 | lounge | seat | special_meal | cabin | booking | flight_status | general",
+  "action": null,
   "sources": [
     { "label": "Short source title", "category": "baggage | executive-club | uk261 | lounge | cabin | destination | route | service" }
   ],
@@ -59,12 +75,26 @@ RESPONSE FORMAT — always return valid JSON:
   "confidence": 0.0
 }
 
+ACTION FIELD — set this when you want to give the user a direct button:
+{ "type": "navigate", "path": "/manage", "label": "Open Manage Booking" }
+{ "type": "navigate", "path": "/check-in", "label": "Go to Check-In" }
+{ "type": "navigate", "path": "/flight-status", "label": "Track My Flight" }
+{ "type": "navigate", "path": "/book", "label": "Search Flights" }
+{ "type": "navigate", "path": "/executive-club", "label": "View My Avios" }
+
+WHEN TO USE action:
+- User asks "where is my booking", "show my flights", "view my booking" → navigate to /manage
+- User asks "check in", "get boarding pass" → navigate to /check-in
+- User asks "is my flight on time", "flight status" → navigate to /flight-status
+- User asks "change my seat", "add bags", "upgrade", "cancel booking" → navigate to /manage
+- Otherwise set action to null.
+
 RULES:
 - text must be conversational, warm, and clear. Max 3 short paragraphs or a bullet list.
 - sources: 1–3 items max, only include if you actually used that knowledge area to answer.
 - suggestedQuestions: always include exactly 2 short follow-up questions relevant to what was just asked.
 - confidence: 0.9+ if answer is in the knowledge base, 0.6 if inferred, 0.3 if uncertain.
-- Tone: professional, helpful, distinctly British Airways.`;
+- Tone: professional, helpful, distinctly British Airways. Never robotic. Never generic LLM disclaimers.`;
 }
 
 // ── Offline / local fallback answers ───────────────────────────────────────
@@ -102,9 +132,33 @@ function localFallback(question) {
   if (/uk261|eu261|delay|cancel|compensation|refund/.test(q)) return LOCAL_FALLBACKS.uk261;
   if (/check.?in|checkin|boarding|gate|bag drop/.test(q)) return LOCAL_FALLBACKS.checkin;
 
+  // Booking / manage intent — always navigate, never disclaim
+  if (/my booking|my flight|my reservation|view booking|manage|find booking|booking ref|reference|pnr|seat selection|add bag|upgrade|cancel my/.test(q)) {
+    return {
+      text: "I can help you with your booking right now. Head to Manage Booking, enter your 6-character booking reference, and you'll be able to view your flight details, select seats, add baggage, or make changes.",
+      intent: 'booking',
+      action: { type: 'navigate', path: '/manage', label: 'Open Manage Booking' },
+      sources: [],
+      suggestedQuestions: ['How do I change my seat?', 'Can I add extra baggage online?'],
+      confidence: 0.95,
+    };
+  }
+
+  if (/flight status|is my flight|on time|delayed|live|tracking|track/.test(q)) {
+    return {
+      text: "You can track any British Airways flight in real time. Head to the Flight Status page and enter your flight number or route.",
+      intent: 'flight_status',
+      action: { type: 'navigate', path: '/flight-status', label: 'Track My Flight' },
+      sources: [],
+      suggestedQuestions: ['What does a flight status of Delayed mean?', 'What are my rights if my flight is delayed?'],
+      confidence: 0.95,
+    };
+  }
+
   return {
     text: "I'm having trouble connecting to my knowledge base right now. Please try again in a moment, or visit **ba.com/help** for official British Airways support.",
     intent: 'general',
+    action: null,
     sources: [],
     suggestedQuestions: ['What is the baggage allowance?', 'How do I claim a flight delay refund?'],
     confidence: 0.3,
@@ -197,6 +251,7 @@ export async function askHelpAgent(question, conversationHistory = []) {
       return {
         text:               parsed.text               || "I couldn't find a clear answer. Please check ba.com/help.",
         intent:             parsed.intent             || 'general',
+        action:             parsed.action             || null,
         sources:            Array.isArray(parsed.sources) ? parsed.sources.slice(0, 3) : [],
         suggestedQuestions: Array.isArray(parsed.suggestedQuestions) ? parsed.suggestedQuestions.slice(0, 2) : [],
         confidence:         typeof parsed.confidence === 'number' ? parsed.confidence : 0.8,
