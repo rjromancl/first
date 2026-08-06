@@ -132,14 +132,14 @@ export function extractPassengerInfo(text = '') {
 
   if (/\b(family|with family|family oda)\b/i.test(l)) {
     adults = 2; children = 2; profile = 'family';
+  } else if (/\b(honeymoon)\b/i.test(l)) {
+    adults = 2; cabin = 'business'; profile = 'honeymoon';
   } else if (/\b(couple|husband and wife|wife|husband)\b/i.test(l)) {
     adults = 2; profile = 'couple';
   } else if (/\b(business trip|office trip|work trip)\b/i.test(l)) {
     adults = 1; cabin = 'business'; profile = 'business';
   } else if (/\b(solo|solo trip|just me|alone)\b/i.test(l)) {
     adults = 1; profile = 'solo';
-  } else if (/\b(honeymoon)\b/i.test(l)) {
-    adults = 2; cabin = 'business'; profile = 'honeymoon';
   } else if (/\b(friends|with friends)\b/i.test(l)) {
     adults = 2; profile = 'friends';
   } else if (/\b(parents|with parents)\b/i.test(l)) {

@@ -100,7 +100,7 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
 
   let result;
   try {
-    result = await sendToGemini(text, geminiHistory);
+    result = await sendToGemini(queryText, geminiHistory);
   } catch (err) {
     console.warn('[voiceNLP] sendToGemini failed:', err?.message || err);
     return {

@@ -1176,10 +1176,10 @@ describe('voiceNLP — parseVoiceInput: response shape and normalisation', () =>
     expect(sendToGemini).toHaveBeenCalledWith('test', []);
   });
 
-  it('passes input text as-is to sendToGemini (trimming happens inside sendToGemini)', async () => {
+  it('passes input text to sendToGemini after preprocessing', async () => {
     sendToGemini.mockResolvedValue(mockAIResponse());
     await parseVoiceInput('  test  ');
-    expect(sendToGemini).toHaveBeenCalledWith('  test  ', []);
+    expect(sendToGemini).toHaveBeenCalledWith('test', []);
   });
 });
 

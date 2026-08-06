@@ -115,6 +115,37 @@ function ChatMessage({ msg, onSuggestedQuestion, onNavigate }) {
           <RichText text={msg.text} />
         </div>
 
+        {/* Tool result summary badge */}
+        {isAgent && msg.toolSummary && (
+          <div className="help__tool-badge">
+            <span className="help__tool-badge-icon">⚡</span>
+            <span className="help__tool-badge-text">{msg.toolSummary}</span>
+          </div>
+        )}
+
+        {/* Live tool data — flight list */}
+        {isAgent && msg.toolResult?.flights?.length > 0 && (
+          <div className="help__tool-results">
+            {msg.toolResult.flights.map((f, i) => (
+              <div key={i} className="help__tool-flight">
+                <span className="help__tool-flight-num">{f.flightNumber}</span>
+                <span className="help__tool-flight-route">{f.departure?.slice(11,16) || '—'} → {f.arrival?.slice(11,16) || '—'}</span>
+                <span className="help__tool-flight-price">{f.price}</span>
+                <span className={`help__tool-flight-stops ${f.stops === 0 ? 'help__tool-flight-direct' : ''}`}>{f.stops === 0 ? 'Direct' : `${f.stops} stop`}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Live tool data — booking details */}
+        {isAgent && msg.toolResult?.found && msg.toolResult?.reference && (
+          <div className="help__tool-booking">
+            <div className="help__tool-booking-ref">{msg.toolResult.reference} · {msg.toolResult.status?.toUpperCase()}</div>
+            <div className="help__tool-booking-route">{msg.toolResult.outbound?.from} → {msg.toolResult.outbound?.to} · {msg.toolResult.outbound?.cabin}</div>
+            {msg.toolResult.outbound?.seat && <div className="help__tool-booking-seat">Seat: {msg.toolResult.outbound.seat}</div>}
+          </div>
+        )}
+
         {/* Action button — navigate to app page */}
         {isAgent && msg.action?.type === 'navigate' && (
           <button
@@ -212,6 +243,8 @@ export default function HelpSupport() {
       role,
       text:               typeof data === 'string' ? data : data.text,
       action:             typeof data === 'string' ? null : (data.action || null),
+      toolSummary:        typeof data === 'string' ? null : (data.toolSummary || null),
+      toolResult:         typeof data === 'string' ? null : (data.toolResult || null),
       sources:            data.sources            || [],
       suggestedQuestions: data.suggestedQuestions || [],
       intent:             data.intent             || 'general',
