@@ -337,29 +337,35 @@ function classifyQueryIntent(queryText) {
 
   // Intent (order matters — most specific first)
   let intent = 'GENERAL';
-  if      (/\b(uk261|eu261|compensation|delay rights|cancel.*rights|duty of care|downgrade.*refund|stranded.*ba|flight.*rights)\b/i.test(q))                                                             intent = 'UK261';
-  else if (/\b(baggage|luggage|carry.?on|hand baggage|checked bag|excess bag|suitcase|weight limit|how many kg|allowance.*bag|bag.*allowance|bag.*weight|extra bag|add.*bag|extra.*luggage)\b/i.test(q)) intent = 'BAGGAGE';
-  else if (/\b(my booking|manage booking|find booking|view booking|booking ref|pnr|rebook|modify|cancel booking|seat selection|choose seat|name correction)\b/i.test(q))                                  intent = 'BOOKING';
-  else if (/\b(check.?in|checkin|boarding pass|bag drop|check in online)\b/i.test(q))                                                                                                                     intent = 'CHECKIN';
-  else if (/\b(flight status|is my flight|on time|live status|track.*flight|flight tracker|has.*landed|gate.*number)\b/i.test(q))                                                                        intent = 'FLIGHT_STATUS';
-  else if (/\b(lounge|galleries|concorde room|first wing|shower.*airport|airport.*dining|can i use.*lounge)\b/i.test(q))                                                                                 intent = 'LOUNGE';
-  else if (/\b(avios|tier points?|executive club|reward flight|companion voucher|earn.*point|how many.*avios|redeem.*avios|spend.*avios)\b/i.test(q))                                                  intent = 'EXECUTIVE_CLUB';
-  else if (/\b(pet.*fly|fly.*pet|pet.*cabin|take.*pet|dog.*flight|cat.*flight|animal.*fly|animal.*cabin)\b/i.test(q))                                                                                   intent = 'PETS';
-  else if (/\b(cabin|seat.*class|flat bed|legroom|club suite|world traveller|premium economy|first class|club world|club europe|what is.*class)\b/i.test(q))                                            intent = 'CABIN';
-  else if (/\b(destination|where does ba fly|where can i fly|which countries|ba fly to|holiday destination|recommend.*destination|popular destination|places to visit)\b/i.test(q))                    intent = 'DESTINATION';
-  else if (/\b(pet|dog|cat|animal in cabin|assistance dog|guide dog|take.*pet|fly.*pet)\b/i.test(q))                                                                                                    intent = 'PETS';
-  else if (/\b(book|reserve|ticket|fly to|want to fly|search flights|find a flight|how much.*fly)\b/i.test(q))                                                                                         intent = 'BOOK_FLIGHT';
-  else if (/\b(terminal|t5|t3|heathrow|gatwick|airport.*guide|which terminal|gate number)\b/i.test(q))                                                                                                  intent = 'AIRPORT';
-  else if (/\b(route|flight time|duration|direct|non.?stop|which.*flight|how long.*fly)\b/i.test(q))                                                                                                   intent = 'ROUTE';
-  else if (/\b(offer|sale|discount|promo|deal|cheap.*flight|best price)\b/i.test(q))                                                                                                                    intent = 'OFFER';
-  else if (/\b(special meal|halal|kosher|vegan|gluten|diabetic|hindu meal|child meal|baby meal|meal.*type|dietary)\b/i.test(q))                                                                        intent = 'SPECIAL_MEAL';
-  else if (/\b(wheelchair|assistance|disabled|accessibility|blind|deaf|mobility|umnr|unaccompanied)\b/i.test(q))                                                                                       intent = 'SPECIAL_SERVICE';
-  else if (/\b(infant|baby|bassinet|cot|child.*travel|family.*travel|stroller|buggy|car seat)\b/i.test(q))                                                                                             intent = 'FAMILY';
-  else if (/\b(visa|passport|entry requirements?|esta|eta|api|advance passenger|travel doc)\b/i.test(q))                                                                                               intent = 'TRAVEL_DOCS';
-  else if (/\b(insurance|cover|medical cover|ehic|ghic)\b/i.test(q))                                                                                                                                   intent = 'INSURANCE';
-  else if (/\b(wifi|wi-fi|internet.*flight|onboard.*internet|entertainment|inflight)\b/i.test(q))                                                                                                      intent = 'INFLIGHT_SERVICES';
-  else if (/\b(delayed|cancel|cancelled|cancellation|refund)\b/i.test(q))                                                                                                                              intent = 'UK261';
-  else if (/\b(change.*flight|change.*date|modify.*flight|reschedule|upgrade.*booking)\b/i.test(q))                                                                                                    intent = 'BOOKING';
+  if      (/\b(uk261|eu261|compensation|delay rights|cancel.*rights|duty of care|downgrade.*refund|stranded.*ba|flight.*rights)\b/i.test(q))                                                                                   intent = 'UK261';
+  else if (/\b(baggage|luggage|carry.?on|hand baggage|checked bag|excess bag|suitcase|weight limit|how many kg|allowance.*bag|bag.*allowance|bag.*weight|extra bag|add.*bag|extra.*luggage)\b/i.test(q))                       intent = 'BAGGAGE';
+  // TRAVEL_DOCS before BOOK_FLIGHT — "fly to US" must not win over "ESTA"
+  else if (/\b(visa|passport|entry requirements?|esta|eta|api|advance passenger|travel doc)\b/i.test(q))                                                                                                                        intent = 'TRAVEL_DOCS';
+  // INSURANCE before OFFER — "travel insurance" must not match "offer"
+  else if (/\b(travel insurance|medical cover|ehic|ghic|insurance)\b/i.test(q))                                                                                                                                                intent = 'INSURANCE';
+  // PETS before CABIN — "dog in the cabin" must not match CABIN
+  else if (/\b(pet.*fly|fly.*pet|pet.*cabin|take.*pet|dog.*flight|cat.*flight|animal.*fly|animal.*cabin|take.*dog|take.*cat|dog.*cabin|cat.*cabin|pets.*on.*flight|ba.*allow.*pet|pet.*travel|allow.*pet|pets)\b/i.test(q))      intent = 'PETS';
+  // FAMILY before BOOK_FLIGHT and SPECIAL_MEAL — "book a bassinet", "special meal for children"
+  else if (/\b(infant|baby|bassinet|cot|child.*travel|family.*travel|stroller|buggy|car seat|lap.*infant|meal.*child\w*|child\w*.*meal|meal.*for.*child\w*|special.*meal.*child\w*)\b/i.test(q))                                   intent = 'FAMILY';
+  // BOOKING: add "choose seat" and "seat selection" explicitly before CABIN
+  else if (/\b(my booking|manage booking|find booking|view booking|booking ref|pnr|rebook|modify|cancel booking|seat selection|choose.*seat|how.*choose.*seat|name correction|change.*flight|change.*date|modify.*flight|reschedule|upgrade.*booking)\b/i.test(q)) intent = 'BOOKING';
+  else if (/\b(check.?in|checkin|boarding pass|bag drop|check in online)\b/i.test(q))                                                                                                                                          intent = 'CHECKIN';
+  // FLIGHT_STATUS: add "gate.*departing", "what gate", "has.*landed", "on time"
+  else if (/\b(flight status|is my flight|on time|live status|track.*flight|flight tracker|has.*landed|gate.*number|what gate|gate.*departing|departing.*gate)\b/i.test(q))                                                   intent = 'FLIGHT_STATUS';
+  else if (/\b(lounge|galleries|concorde room|first wing|shower.*airport|airport.*dining|can i use.*lounge)\b/i.test(q))                                                                                                       intent = 'LOUNGE';
+  else if (/\b(avios|tier points?|executive club|reward flight|companion voucher|earn.*point|how many.*avios|redeem.*avios|spend.*avios)\b/i.test(q))                                                                         intent = 'EXECUTIVE_CLUB';
+  else if (/\b(cabin|seat.*class|flat bed|legroom|club suite|world traveller|premium economy|first class|club world|club europe|what is.*class)\b/i.test(q))                                                                  intent = 'CABIN';
+  else if (/\b(destination|where does ba fly|where can i fly|which countries|ba fly to|holiday destination|recommend.*destination|popular destination|places to visit)\b/i.test(q))                                           intent = 'DESTINATION';
+  // ROUTE before BOOK_FLIGHT — "how long is the flight", "direct", "non-stop"
+  else if (/\b(route|flight time|duration|direct|non.?stop|how long.*flight|how long.*fly|flight.*duration)\b/i.test(q))                                                                                                        intent = 'ROUTE';
+  else if (/\b(book|reserve|ticket|fly to|want to fly|search flights|find a flight|find.*flights|how much.*fly)\b/i.test(q))                                                                                                      intent = 'BOOK_FLIGHT';
+  else if (/\b(terminal|t5|t3|heathrow|gatwick|airport.*guide|which terminal|gate number)\b/i.test(q))                                                                                                                         intent = 'AIRPORT';
+  // OFFER: add "deals", "discounts", "best price" — after INSURANCE to prevent collision
+  else if (/\b(offer|sale|discount|promo|deal|cheap.*flight|best price|deals)\b/i.test(q))                                                                                                                                     intent = 'OFFER';
+  else if (/\b(special meal|halal|kosher|vegan|gluten|diabetic|hindu meal|baby meal|meal.*type|dietary)\b/i.test(q))                                                                                                           intent = 'SPECIAL_MEAL';
+  else if (/\b(wheelchair|assistance|disabled|accessibility|blind|deaf|mobility|umnr|unaccompanied)\b/i.test(q))                                                                                                               intent = 'SPECIAL_SERVICE';
+  else if (/\b(wifi|wi-fi|internet.*flight|onboard.*internet|entertainment|inflight)\b/i.test(q))                                                                                                                              intent = 'INFLIGHT_SERVICES';
+  else if (/\b(delayed|cancel|cancelled|cancellation|refund)\b/i.test(q))                                                                                                                                                      intent = 'UK261';
 
   return { intent, entities };
 }
