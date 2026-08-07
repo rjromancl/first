@@ -11,7 +11,7 @@ const bcrypt = require('bcryptjs');
 // ── Users ─────────────────────────────────────────────────────────
 const users = new Map();
 
-// Seed a demo user so the frontend demo works out of the box
+// Seed demo users so the frontend demo works out of the box
 (async () => {
   const hash = await bcrypt.hash('demo1234', 10);
   const id = uuidv4();
@@ -24,6 +24,20 @@ const users = new Map();
     tier: 'Gold',
     avios: 12450,
     execNumber: 'BA' + id.replace(/-/g, '').substring(0, 8).toUpperCase(),
+    createdAt: new Date().toISOString(),
+  });
+
+  const rajaHash = await bcrypt.hash('raja1234', 10);
+  const rajaId = uuidv4();
+  users.set('raja@ba.com', {
+    id: rajaId,
+    email: 'raja@ba.com',
+    passwordHash: rajaHash,
+    firstName: 'Raja',
+    lastName: 'Abilash',
+    tier: 'Silver',
+    avios: 8500,
+    execNumber: 'BA' + rajaId.replace(/-/g, '').substring(0, 8).toUpperCase(),
     createdAt: new Date().toISOString(),
   });
 })();

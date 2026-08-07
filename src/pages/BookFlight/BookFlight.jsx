@@ -894,6 +894,22 @@ export default function BookFlight() {
                       style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
                       onClick={() => {
                         setPaymentDetails({
+                          cardNumber: '1234 5678 9012 3451',
+                          cardName: 'RAJA ABILASH',
+                          expiry: '12/28',
+                          cvv: '123',
+                        });
+                        setPaymentErrors({});
+                      }}
+                    >
+                      💳 Raja Abilash (1234 5678 9012 3451)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
+                      onClick={() => {
+                        setPaymentDetails({
                           cardNumber: '3782 822463 10005',
                           cardName: 'JANE SMITH',
                           expiry: '09/29',

@@ -134,8 +134,26 @@ export default function Login() {
             </div>
           )}
 
-          <div className="login__demo-info">
-            <strong>Demo:</strong> email <code>demo@ba.com</code> / password <code>demo1234</code>
+          <div className="login__demo-info" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div><strong>Demo Accounts (Click to Autofill):</strong></div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
+                onClick={() => { setForm({ ...form, email: 'demo@ba.com', password: 'demo1234' }); setError(''); }}
+              >
+                👤 James Wilson (demo@ba.com)
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
+                onClick={() => { setForm({ ...form, email: 'raja@ba.com', password: 'raja1234' }); setError(''); }}
+              >
+                👤 Raja Abilash (raja@ba.com)
+              </button>
+            </div>
           </div>
         </div>
       </div>
