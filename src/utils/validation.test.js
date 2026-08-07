@@ -1,0 +1,151 @@
+import { describe, it, expect } from 'vitest';
+import {
+  validateFirstName,
+  validateLastName,
+  validatePhone,
+  validateEmail,
+  validateNationality,
+  sanitizeInput,
+  validatePassenger,
+} from './validation';
+
+describe('Passenger Details Input Validation - Edge Cases', () => {
+  describe('First Name & Last Name Edge Cases', () => {
+    it('TC-VAL-001: Should reject empty or null or undefined name inputs', () => {
+      expect(validateFirstName('')).toBe('First name is required.');
+      expect(validateFirstName(null)).toBe('First name is required.');
+      expect(validateFirstName(undefined)).toBe('First name is required.');
+      expect(validateLastName('')).toBe('Last name is required.');
+    });
+
+    it('TC-VAL-002: Should reject whitespace-only keyboard input', () => {
+      expect(validateFirstName('   ')).toBe('First name cannot be blank or spaces only.');
+      expect(validateLastName('\t\n ')).toBe('Last name cannot be blank or spaces only.');
+    });
+
+    it('TC-VAL-003: Should reject single character names (too short)', () => {
+      expect(validateFirstName('J')).toBe('First name must be at least 2 characters.');
+      expect(validateLastName('A')).toBe('Last name must be at least 2 characters.');
+    });
+
+    it('TC-VAL-004: Should reject names exceeding 50 characters', () => {
+      const longName = 'A'.repeat(51);
+      expect(validateFirstName(longName)).toBe('First name cannot exceed 50 characters.');
+      expect(validateLastName(longName)).toBe('Last name cannot exceed 50 characters.');
+    });
+
+    it('TC-VAL-005: Should reject numbers in keyboard input', () => {
+      expect(validateFirstName('John123')).toBe('First name cannot contain numbers.');
+      expect(validateFirstName('J0hn')).toBe('First name cannot contain numbers.');
+      expect(validateLastName('Smith9')).toBe('Last name cannot contain numbers.');
+    });
+
+    it('TC-VAL-006: Should reject XSS, script tags, and HTML injection in keyboard input', () => {
+      expect(validateFirstName('<script>alert(1)</script>')).toBe('First name contains invalid or unsafe characters.');
+      expect(validateLastName('<svg/onload=alert(1)>')).toBe('Last name contains invalid or unsafe characters.');
+    });
+
+    it('TC-VAL-007: Should reject special characters like $, %, @, #, ;, =', () => {
+      expect(validateFirstName('John$mith')).toBe('First name can only contain letters, hyphens, spaces, and apostrophes.');
+      expect(validateLastName('Smith; DROP TABLE')).toBe('Last name can only contain letters, hyphens, spaces, and apostrophes.');
+    });
+
+    it('TC-VAL-008: Should reject consecutive hyphens, apostrophes, or spaces', () => {
+      expect(validateFirstName('John--Smith')).toBe('First name cannot contain consecutive spaces, hyphens, or apostrophes.');
+      expect(validateLastName("O''Connor")).toBe("Last name cannot contain consecutive spaces, hyphens, or apostrophes.");
+      expect(validateFirstName('John   Smith')).toBe('First name cannot contain consecutive spaces, hyphens, or apostrophes.');
+    });
+
+    it('TC-VAL-009: Should accept valid standard and hyphenated/apostrophe names', () => {
+      expect(validateFirstName('John')).toBeNull();
+      expect(validateLastName('Smith')).toBeNull();
+      expect(validateFirstName('Mary-Jane')).toBeNull();
+      expect(validateLastName("O'Connor")).toBeNull();
+      expect(validateLastName('St. John')).toBeNull();
+      expect(validateLastName('De La Cruz')).toBeNull();
+    });
+
+    it('TC-VAL-010: Should accept international Unicode accented letters in names', () => {
+      expect(validateFirstName('José')).toBeNull();
+      expect(validateFirstName('Renée')).toBeNull();
+      expect(validateLastName('Müller')).toBeNull();
+      expect(validateLastName('Çırak')).toBeNull();
+      expect(validateFirstName('François')).toBeNull();
+    });
+  });
+
+  describe('Phone Number Edge Cases', () => {
+    it('TC-VAL-011: Should reject empty or whitespace phone input', () => {
+      expect(validatePhone('')).toBe('Phone number is required.');
+      expect(validatePhone('   ')).toBe('Phone number cannot be blank or spaces only.');
+    });
+
+    it('TC-VAL-012: Should reject alphabetic characters in phone input', () => {
+      expect(validatePhone('+4477009000ab')).toBe('Phone number cannot contain letters.');
+      expect(validatePhone('PHONE12345')).toBe('Phone number cannot contain letters.');
+    });
+
+    it('TC-VAL-013: Should reject phone numbers with < 7 digits', () => {
+      expect(validatePhone('123456')).toBe('Phone number must contain at least 7 digits.');
+      expect(validatePhone('+44 12')).toBe('Phone number must contain at least 7 digits.');
+    });
+
+    it('TC-VAL-014: Should reject phone numbers with > 15 digits', () => {
+      const longPhone = '1234567890123456';
+      expect(validatePhone(longPhone)).toBe('Phone number cannot exceed 15 digits.');
+    });
+
+    it('TC-VAL-015: Should accept valid formatted international phone numbers', () => {
+      expect(validatePhone('+44 7912 345678')).toBeNull();
+      expect(validatePhone('07912345678')).toBeNull();
+      expect(validatePhone('+1 (555) 019-2834')).toBeNull();
+      expect(validatePhone('+33-1-42-68-53-00')).toBeNull();
+    });
+  });
+
+  describe('Email Edge Cases', () => {
+    it('TC-VAL-016: Should reject empty or invalid email formats', () => {
+      expect(validateEmail('')).toBe('Email address is required.');
+      expect(validateEmail('user@')).toBe('Please enter a valid email address (e.g. name@example.com).');
+      expect(validateEmail('@domain.com')).toBe('Please enter a valid email address (e.g. name@example.com).');
+      expect(validateEmail('user@domain')).toBe('Please enter a valid email address (e.g. name@example.com).');
+    });
+
+    it('TC-VAL-017: Should accept valid email formats', () => {
+      expect(validateEmail('john.smith@britishairways.com')).toBeNull();
+      expect(validateEmail('user+sub@domain.co.uk')).toBeNull();
+    });
+  });
+
+  describe('Sanitizer & Full Passenger Validation', () => {
+    it('TC-VAL-018: sanitizeInput should strip HTML tags', () => {
+      expect(sanitizeInput('John<script>alert(1)</script>')).toBe('Johnalert(1)');
+      expect(sanitizeInput('Smith<b>Test</b>')).toBe('SmithTest');
+    });
+
+    it('TC-VAL-019: validatePassenger should return false and errors for invalid input', () => {
+      const result = validatePassenger({
+        firstName: 'John123',
+        lastName: '',
+        phone: '123',
+        nationality: '',
+      });
+      expect(result.isValid).toBe(false);
+      expect(result.errors.firstName).toBe('First name cannot contain numbers.');
+      expect(result.errors.lastName).toBe('Last name is required.');
+      expect(result.errors.phone).toBe('Phone number must contain at least 7 digits.');
+      expect(result.errors.nationality).toBe('Please select or enter a nationality.');
+    });
+
+    it('TC-VAL-020: validatePassenger should return true and no errors for valid passenger', () => {
+      const result = validatePassenger({
+        firstName: 'John',
+        lastName: 'Smith',
+        phone: '+447912345678',
+        nationality: 'GB',
+      });
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
+    });
+  });
+});

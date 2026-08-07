@@ -8,6 +8,14 @@ import {
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { flightsAPI, airportsAPI, bookingsAPI } from '../../services/api';
+import {
+  validatePassenger,
+  validateFirstName,
+  validateLastName,
+  validatePhone,
+  validateNationality,
+  sanitizeInput,
+} from '../../utils/validation';
 import './BookFlight.css';
 
 // debounce helper — avoids hammering the airport API on every keystroke
@@ -55,6 +63,8 @@ export default function BookFlight() {
     phone:     '',
     nationality: 'GB',
   });
+  const [passengerErrors, setPassengerErrors] = useState({});
+  const [touchedFields, setTouchedFields] = useState({});
 
   // ── Pre-fill from voice agent ──────────────────────────────────
   // When VoiceAgent does booking it navigates here with
@@ -78,6 +88,7 @@ export default function BookFlight() {
       if (s.adults)     setAdults(Number(s.adults));
       if (s.cabin)      setCabin(s.cabin);
       if (s.tripType)   setTripType(s.tripType);
+      if (s.selectedFlight) setSelectedFlight(s.selectedFlight);
       if (s.jumpToStep) jumpToStepRef.current = s.jumpToStep;
 
       if (s.autoSearch) {
@@ -212,8 +223,44 @@ export default function BookFlight() {
     window.scrollTo(0, 0);
   };
 
+  const handlePassengerFieldChange = (field, rawValue) => {
+    const val = sanitizeInput(rawValue);
+    const updated = { ...passenger, [field]: val };
+    setPassenger(updated);
+
+    if (touchedFields[field]) {
+      let err = null;
+      if (field === 'firstName') err = validateFirstName(val);
+      else if (field === 'lastName') err = validateLastName(val);
+      else if (field === 'phone') err = validatePhone(val);
+      else if (field === 'nationality') err = validateNationality(val);
+
+      setPassengerErrors(prev => ({ ...prev, [field]: err }));
+    }
+  };
+
+  const handlePassengerFieldBlur = (field) => {
+    setTouchedFields(prev => ({ ...prev, [field]: true }));
+    let err = null;
+    if (field === 'firstName') err = validateFirstName(passenger.firstName);
+    else if (field === 'lastName') err = validateLastName(passenger.lastName);
+    else if (field === 'phone') err = validatePhone(passenger.phone);
+    else if (field === 'nationality') err = validateNationality(passenger.nationality);
+
+    setPassengerErrors(prev => ({ ...prev, [field]: err }));
+  };
+
   const handlePassengerSubmit = (e) => {
     e.preventDefault();
+    setTouchedFields({ firstName: true, lastName: true, phone: true, nationality: true });
+    const validation = validatePassenger(passenger);
+    setPassengerErrors(validation.errors);
+
+    if (!validation.isValid) {
+      addNotification({ type: 'error', message: 'Please correct the highlighted errors in passenger details.' });
+      return;
+    }
+
     setStep(4);
     window.scrollTo(0, 0);
   };
@@ -502,7 +549,7 @@ export default function BookFlight() {
               </div>
             </div>
 
-            <form className="card bookflight__pax-form" onSubmit={handlePassengerSubmit}>
+            <form className="card bookflight__pax-form" noValidate onSubmit={handlePassengerSubmit}>
               <h2>Passenger Details</h2>
               <p className="bookflight__pax-note">
                 Enter your details as the lead passenger.
@@ -510,24 +557,73 @@ export default function BookFlight() {
 
               <div className="bookflight__form-grid">
                 <div className="form-group">
-                  <label className="form-label">First Name</label>
-                  <input className="form-control" required value={passenger.firstName}
-                    onChange={e => setPassenger({...passenger, firstName: e.target.value})} placeholder="First name" />
+                  <label className="form-label" htmlFor="passenger-first-name">First Name</label>
+                  <input
+                    id="passenger-first-name"
+                    className={`form-control ${touchedFields.firstName && passengerErrors.firstName ? 'is-invalid' : ''}`}
+                    required
+                    value={passenger.firstName}
+                    onChange={e => handlePassengerFieldChange('firstName', e.target.value)}
+                    onBlur={() => handlePassengerFieldBlur('firstName')}
+                    placeholder="First name"
+                    aria-invalid={!!(touchedFields.firstName && passengerErrors.firstName)}
+                  />
+                  {touchedFields.firstName && passengerErrors.firstName && (
+                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                      {passengerErrors.firstName}
+                    </span>
+                  )}
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Last Name</label>
-                  <input className="form-control" required value={passenger.lastName}
-                    onChange={e => setPassenger({...passenger, lastName: e.target.value})} placeholder="Last name" />
+                  <label className="form-label" htmlFor="passenger-last-name">Last Name</label>
+                  <input
+                    id="passenger-last-name"
+                    className={`form-control ${touchedFields.lastName && passengerErrors.lastName ? 'is-invalid' : ''}`}
+                    required
+                    value={passenger.lastName}
+                    onChange={e => handlePassengerFieldChange('lastName', e.target.value)}
+                    onBlur={() => handlePassengerFieldBlur('lastName')}
+                    placeholder="Last name"
+                    aria-invalid={!!(touchedFields.lastName && passengerErrors.lastName)}
+                  />
+                  {touchedFields.lastName && passengerErrors.lastName && (
+                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                      {passengerErrors.lastName}
+                    </span>
+                  )}
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Phone Number</label>
-                  <input type="tel" className="form-control" required value={passenger.phone}
-                    onChange={e => setPassenger({...passenger, phone: e.target.value})} placeholder="+44 7xxx xxxxxx" />
+                  <label className="form-label" htmlFor="passenger-phone">Phone Number</label>
+                  <input
+                    id="passenger-phone"
+                    type="tel"
+                    className={`form-control ${touchedFields.phone && passengerErrors.phone ? 'is-invalid' : ''}`}
+                    required
+                    value={passenger.phone}
+                    onChange={e => handlePassengerFieldChange('phone', e.target.value)}
+                    onBlur={() => handlePassengerFieldBlur('phone')}
+                    placeholder="+44 7xxx xxxxxx"
+                    aria-invalid={!!(touchedFields.phone && passengerErrors.phone)}
+                  />
+                  {touchedFields.phone && passengerErrors.phone && (
+                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                      {passengerErrors.phone}
+                    </span>
+                  )}
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label">Nationality</label>
-                  <select className="form-control" value={passenger.nationality}
-                    onChange={e => setPassenger({...passenger, nationality: e.target.value})}>
+                  <label className="form-label" htmlFor="passenger-nationality">Nationality</label>
+                  <select
+                    id="passenger-nationality"
+                    className={`form-control ${touchedFields.nationality && passengerErrors.nationality ? 'is-invalid' : ''}`}
+                    value={passenger.nationality}
+                    onChange={e => handlePassengerFieldChange('nationality', e.target.value)}
+                    onBlur={() => handlePassengerFieldBlur('nationality')}
+                    aria-invalid={!!(touchedFields.nationality && passengerErrors.nationality)}
+                  >
                     <option value="GB">British</option>
                     <option value="US">American</option>
                     <option value="AU">Australian</option>
@@ -539,6 +635,11 @@ export default function BookFlight() {
                     <option value="IE">Irish</option>
                     <option value="OTHER">Other</option>
                   </select>
+                  {touchedFields.nationality && passengerErrors.nationality && (
+                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                      {passengerErrors.nationality}
+                    </span>
+                  )}
                 </div>
               </div>
 
