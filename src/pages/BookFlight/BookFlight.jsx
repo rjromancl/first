@@ -104,6 +104,31 @@ export default function BookFlight() {
 
   const [searchError, setSearchError] = React.useState('');
 
+  // ── City → IATA resolver ───────────────────────────────────────
+  // Allows users to type city names and still pass the 3-char IATA
+  // validation on the backend.
+  const CITY_TO_IATA = {
+    london:'LHR', heathrow:'LHR', gatwick:'LGW',
+    'new york':'JFK', nyc:'JFK', newyork:'JFK',
+    dubai:'DXB', tokyo:'NRT', narita:'NRT', haneda:'HND',
+    sydney:'SYD', singapore:'SIN', changi:'SIN',
+    barcelona:'BCN', paris:'CDG', amsterdam:'AMS',
+    rome:'FCO', istanbul:'IST', madrid:'MAD',
+    mumbai:'BOM', bombay:'BOM', delhi:'DEL',
+    chennai:'MAA', madras:'MAA', frankfurt:'FRA',
+    zurich:'ZRH', dublin:'DUB', 'cape town':'CPT',
+    'los angeles':'LAX', chicago:'ORD', toronto:'YYZ',
+    hongkong:'HKG', 'hong kong':'HKG', bangkok:'BKK',
+    'kuala lumpur':'KUL', 'sao paulo':'GRU',
+  };
+  const resolveIATA = (val) => {
+    const trimmed = val.trim();
+    // Already a 3-char IATA code
+    if (/^[A-Z]{3}$/i.test(trimmed)) return trimmed.toUpperCase();
+    // Look up in city map
+    return CITY_TO_IATA[trimmed.toLowerCase()] || trimmed.toUpperCase();
+  };
+
   // Live airport autocomplete — calls backend → Amadeus referenceData/locations
   const fetchAirports = React.useCallback(async (query, setter) => {
     if (query.length < 2) { setter([]); return; }
@@ -129,11 +154,20 @@ export default function BookFlight() {
     e.preventDefault();
     setLoading(true);
     setSearchError('');
-    setSearchParams({ tripType, from, to, departDate, returnDate, adults, cabin });
+
+    // Resolve city names to IATA codes before sending to backend
+    const fromCode = resolveIATA(from);
+    const toCode   = resolveIATA(to);
+
+    // Update displayed values so the user sees the resolved code
+    setFrom(fromCode);
+    setTo(toCode);
+
+    setSearchParams({ tripType, from: fromCode, to: toCode, departDate, returnDate, adults, cabin });
     try {
       const result = await flightsAPI.search({
-        from: from.toUpperCase(),
-        to: to.toUpperCase(),
+        from: fromCode,
+        to: toCode,
         departureDate: departDate,
         returnDate: tripType === 'return' ? returnDate : undefined,
         adults,
@@ -272,13 +306,15 @@ export default function BookFlight() {
                       placeholder="City or airport code"
                       value={from}
                       onChange={e => { setFrom(e.target.value); debouncedFetchFrom(e.target.value); }}
+                      onBlur={() => setTimeout(() => setFromSuggestions([]), 150)}
+                      autoComplete="off"
                       required
                     />
                     {fromSuggestions.length > 0 && (
                       <div className="bookflight__suggestions">
                         {fromSuggestions.map(a => (
                           <button type="button" key={a.code} className="bookflight__suggestion"
-                            onClick={() => { setFrom(a.code); setFromSuggestions([]); }}>
+                            onMouseDown={e => { e.preventDefault(); setFrom(a.code); setFromSuggestions([]); }}>
                             <strong>{a.code}</strong> — {a.city}, {a.country}
                           </button>
                         ))}
@@ -298,13 +334,15 @@ export default function BookFlight() {
                       placeholder="City or airport code"
                       value={to}
                       onChange={e => { setTo(e.target.value); debouncedFetchTo(e.target.value); }}
+                      onBlur={() => setTimeout(() => setToSuggestions([]), 150)}
+                      autoComplete="off"
                       required
                     />
                     {toSuggestions.length > 0 && (
                       <div className="bookflight__suggestions">
                         {toSuggestions.map(a => (
                           <button type="button" key={a.code} className="bookflight__suggestion"
-                            onClick={() => { setTo(a.code); setToSuggestions([]); }}>
+                            onMouseDown={e => { e.preventDefault(); setTo(a.code); setToSuggestions([]); }}>
                             <strong>{a.code}</strong> — {a.city}, {a.country}
                           </button>
                         ))}
