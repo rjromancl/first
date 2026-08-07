@@ -182,3 +182,191 @@ export function validatePassenger(passenger = {}) {
     errors,
   };
 }
+
+/**
+ * Luhn checksum algorithm implementation.
+ * @param {string} numberStr 
+ * @returns {boolean}
+ */
+export function isValidLuhn(numberStr) {
+  const digits = (numberStr || '').replace(/\D/g, '');
+  if (!digits) return false;
+  let sum = 0;
+  let isEven = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let digit = parseInt(digits[i], 10);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  return sum % 10 === 0;
+}
+
+/**
+ * Auto-formats card number string with space breaks on keyboard input.
+ * @param {string} val 
+ * @returns {string} Formatted card number
+ */
+export function formatCardNumber(val) {
+  if (!val) return '';
+  const digits = val.replace(/\D/g, '');
+  const isAmex = /^3[47]/.test(digits);
+  if (isAmex) {
+    return digits
+      .replace(/^(\d{4})(\d)/, '$1 $2')
+      .replace(/^(\d{4})\s(\d{6})(\d)/, '$1 $2 $3')
+      .slice(0, 17);
+  }
+  return digits
+    .replace(/(\d{4})(?=\d)/g, '$1 ')
+    .slice(0, 19);
+}
+
+/**
+ * Validates credit card number digit length and checksum.
+ * @param {string} cardNumber 
+ * @returns {string|null} Error message or null if valid
+ */
+export function validateCardNumber(cardNumber) {
+  if (!cardNumber || typeof cardNumber !== 'string') {
+    return 'Card number is required.';
+  }
+  const digits = cardNumber.replace(/\D/g, '');
+  if (digits.length === 0) {
+    return 'Card number is required.';
+  }
+  if (/[^\d\s\-]/.test(cardNumber.trim())) {
+    return 'Card number can only contain digits.';
+  }
+  const isAmex = /^3[47]/.test(digits);
+  if (isAmex) {
+    if (digits.length !== 15) {
+      return 'American Express card number must be exactly 15 digits.';
+    }
+  } else {
+    if (digits.length !== 16) {
+      return 'Card number must be exactly 16 digits.';
+    }
+  }
+  if (!isValidLuhn(digits)) {
+    return 'Invalid card number checksum.';
+  }
+  return null;
+}
+
+/**
+ * Validates CVV / CVC code.
+ * American Express requires exactly 4 digits.
+ * Visa / Mastercard / Other require exactly 3 digits.
+ * @param {string} cvv 
+ * @param {string} cardNumber 
+ * @returns {string|null} Error message or null if valid
+ */
+export function validateCVV(cvv, cardNumber = '') {
+  if (!cvv || typeof cvv !== 'string') {
+    return 'CVV code is required.';
+  }
+  const trimmed = cvv.trim();
+  if (trimmed.length === 0) {
+    return 'CVV code is required.';
+  }
+  if (/\D/.test(trimmed)) {
+    return 'CVV must contain numbers only.';
+  }
+  const rawCard = (cardNumber || '').replace(/\D/g, '');
+  const isAmex = /^3[47]/.test(rawCard);
+  if (isAmex) {
+    if (trimmed.length !== 4) {
+      return 'American Express CVV must be exactly 4 digits.';
+    }
+  } else {
+    if (trimmed.length !== 3) {
+      return 'CVV must be exactly 3 digits.';
+    }
+  }
+  return null;
+}
+
+/**
+ * Validates card expiry date (MM/YY format).
+ * @param {string} expiry 
+ * @returns {string|null} Error message or null if valid
+ */
+export function validateExpiry(expiry) {
+  if (!expiry || typeof expiry !== 'string') {
+    return 'Expiry date is required.';
+  }
+  const trimmed = expiry.trim();
+  if (trimmed.length === 0) {
+    return 'Expiry date is required.';
+  }
+  const match = trimmed.match(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/);
+  if (!match) {
+    if (/^\d{2}\/?\d{2}$/.test(trimmed)) {
+      return 'Expiry month must be between 01 and 12.';
+    }
+    return 'Please enter expiry in MM/YY format (e.g. 08/28).';
+  }
+  const expMonth = parseInt(match[1], 10);
+  const expYear = 2000 + parseInt(match[2], 10);
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+    return 'Card has expired. Please use a valid card.';
+  }
+  if (expYear > currentYear + 20) {
+    return 'Invalid expiry year.';
+  }
+  return null;
+}
+
+/**
+ * Validates name on card.
+ * @param {string} cardName 
+ * @returns {string|null} Error message or null if valid
+ */
+export function validateCardName(cardName) {
+  if (!cardName || typeof cardName !== 'string' || !cardName.trim()) {
+    return 'Name on card is required.';
+  }
+  const trimmed = cardName.trim();
+  if (trimmed.length < 2) {
+    return 'Name on card must be at least 2 characters.';
+  }
+  if (!NAME_REGEX.test(trimmed)) {
+    return 'Name on card can only contain letters, hyphens, and spaces.';
+  }
+  return null;
+}
+
+/**
+ * Comprehensive payment details validator.
+ * @param {object} paymentDetails { cardNumber, cardName, expiry, cvv }
+ * @returns {{ isValid: boolean, errors: Record<string, string> }}
+ */
+export function validatePaymentDetails(paymentDetails = {}) {
+  const errors = {};
+
+  const cardNumErr = validateCardNumber(paymentDetails.cardNumber);
+  if (cardNumErr) errors.cardNumber = cardNumErr;
+
+  const nameErr = validateCardName(paymentDetails.cardName);
+  if (nameErr) errors.cardName = nameErr;
+
+  const expErr = validateExpiry(paymentDetails.expiry);
+  if (expErr) errors.expiry = expErr;
+
+  const cvvErr = validateCVV(paymentDetails.cvv, paymentDetails.cardNumber);
+  if (cvvErr) errors.cvv = cvvErr;
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}

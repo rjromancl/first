@@ -14,6 +14,12 @@ import {
   validateLastName,
   validatePhone,
   validateNationality,
+  validatePaymentDetails,
+  validateCardNumber,
+  validateCVV,
+  validateExpiry,
+  validateCardName,
+  formatCardNumber,
   sanitizeInput,
 } from '../../utils/validation';
 import './BookFlight.css';
@@ -65,6 +71,8 @@ export default function BookFlight() {
   });
   const [passengerErrors, setPassengerErrors] = useState({});
   const [touchedFields, setTouchedFields] = useState({});
+  const [paymentErrors, setPaymentErrors] = useState({});
+  const [touchedPaymentFields, setTouchedPaymentFields] = useState({});
 
   // ── Pre-fill from voice agent ──────────────────────────────────
   // When VoiceAgent does booking it navigates here with
@@ -265,8 +273,60 @@ export default function BookFlight() {
     window.scrollTo(0, 0);
   };
 
+  const handlePaymentFieldChange = (field, rawValue) => {
+    let val = rawValue;
+    if (field === 'cardNumber') {
+      val = formatCardNumber(rawValue);
+    } else if (field === 'cvv') {
+      val = rawValue.replace(/\D/g, '').slice(0, 4);
+    } else if (field === 'expiry') {
+      const cleaned = rawValue.replace(/[^\d\/]/g, '');
+      if (cleaned.length === 2 && !cleaned.includes('/') && paymentDetails.expiry.length < 2) {
+        val = cleaned + '/';
+      } else {
+        val = cleaned.slice(0, 5);
+      }
+    }
+    const updated = { ...paymentDetails, [field]: val };
+    setPaymentDetails(updated);
+
+    if (touchedPaymentFields[field]) {
+      let err = null;
+      if (field === 'cardNumber') err = validateCardNumber(val);
+      else if (field === 'cardName') err = validateCardName(val);
+      else if (field === 'expiry') err = validateExpiry(val);
+      else if (field === 'cvv') err = validateCVV(val, updated.cardNumber);
+
+      setPaymentErrors(prev => ({ ...prev, [field]: err }));
+
+      if (field === 'cardNumber' && touchedPaymentFields.cvv) {
+        setPaymentErrors(prev => ({ ...prev, cvv: validateCVV(updated.cvv, val) }));
+      }
+    }
+  };
+
+  const handlePaymentFieldBlur = (field) => {
+    setTouchedPaymentFields(prev => ({ ...prev, [field]: true }));
+    let err = null;
+    if (field === 'cardNumber') err = validateCardNumber(paymentDetails.cardNumber);
+    else if (field === 'cardName') err = validateCardName(paymentDetails.cardName);
+    else if (field === 'expiry') err = validateExpiry(paymentDetails.expiry);
+    else if (field === 'cvv') err = validateCVV(paymentDetails.cvv, paymentDetails.cardNumber);
+
+    setPaymentErrors(prev => ({ ...prev, [field]: err }));
+  };
+
   const handlePayment = async (e) => {
     e.preventDefault();
+    setTouchedPaymentFields({ cardNumber: true, cardName: true, expiry: true, cvv: true });
+    const validation = validatePaymentDetails(paymentDetails);
+    setPaymentErrors(validation.errors);
+
+    if (!validation.isValid) {
+      addNotification({ type: 'error', message: 'Please correct the highlighted errors in payment details.' });
+      return;
+    }
+
     setLoading(true);
     try {
       // Build traveler payload from passenger form data
@@ -720,7 +780,7 @@ export default function BookFlight() {
               </div>
 
               {/* Payment Form */}
-              <form className="card bookflight__pay-form" onSubmit={handlePayment}>
+              <form className="card bookflight__pay-form" noValidate onSubmit={handlePayment}>
                 <h2>Payment Details</h2>
                 <div className="bookflight__card-icons">
                   {['VISA', 'MC', 'AMEX'].map(c => (
@@ -730,29 +790,80 @@ export default function BookFlight() {
 
                 <div className="bookflight__form-grid">
                   <div className="form-group" style={{gridColumn:'1/-1'}}>
-                    <label className="form-label">Card Number</label>
-                    <input className="form-control" required placeholder="1234 5678 9012 3456"
+                    <label className="form-label" htmlFor="card-number">Card Number</label>
+                    <input
+                      id="card-number"
+                      className={`form-control ${touchedPaymentFields.cardNumber && paymentErrors.cardNumber ? 'is-invalid' : ''}`}
+                      required
+                      placeholder="1234 5678 9012 3456"
                       maxLength={19}
                       value={paymentDetails.cardNumber}
-                      onChange={e => setPaymentDetails({...paymentDetails, cardNumber: e.target.value})} />
+                      onChange={e => handlePaymentFieldChange('cardNumber', e.target.value)}
+                      onBlur={() => handlePaymentFieldBlur('cardNumber')}
+                      aria-invalid={!!(touchedPaymentFields.cardNumber && paymentErrors.cardNumber)}
+                    />
+                    {touchedPaymentFields.cardNumber && paymentErrors.cardNumber && (
+                      <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                        {paymentErrors.cardNumber}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group" style={{gridColumn:'1/-1'}}>
-                    <label className="form-label">Name on Card</label>
-                    <input className="form-control" required placeholder="J SMITH"
+                    <label className="form-label" htmlFor="card-name">Name on Card</label>
+                    <input
+                      id="card-name"
+                      className={`form-control ${touchedPaymentFields.cardName && paymentErrors.cardName ? 'is-invalid' : ''}`}
+                      required
+                      placeholder="J SMITH"
                       value={paymentDetails.cardName}
-                      onChange={e => setPaymentDetails({...paymentDetails, cardName: e.target.value})} />
+                      onChange={e => handlePaymentFieldChange('cardName', e.target.value)}
+                      onBlur={() => handlePaymentFieldBlur('cardName')}
+                      aria-invalid={!!(touchedPaymentFields.cardName && paymentErrors.cardName)}
+                    />
+                    {touchedPaymentFields.cardName && paymentErrors.cardName && (
+                      <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                        {paymentErrors.cardName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Expiry Date</label>
-                    <input className="form-control" required placeholder="MM/YY" maxLength={5}
+                    <label className="form-label" htmlFor="card-expiry">Expiry Date</label>
+                    <input
+                      id="card-expiry"
+                      className={`form-control ${touchedPaymentFields.expiry && paymentErrors.expiry ? 'is-invalid' : ''}`}
+                      required
+                      placeholder="MM/YY"
+                      maxLength={5}
                       value={paymentDetails.expiry}
-                      onChange={e => setPaymentDetails({...paymentDetails, expiry: e.target.value})} />
+                      onChange={e => handlePaymentFieldChange('expiry', e.target.value)}
+                      onBlur={() => handlePaymentFieldBlur('expiry')}
+                      aria-invalid={!!(touchedPaymentFields.expiry && paymentErrors.expiry)}
+                    />
+                    {touchedPaymentFields.expiry && paymentErrors.expiry && (
+                      <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                        {paymentErrors.expiry}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">CVV</label>
-                    <input className="form-control" required placeholder="123" maxLength={4} type="password"
+                    <label className="form-label" htmlFor="card-cvv">CVV</label>
+                    <input
+                      id="card-cvv"
+                      className={`form-control ${touchedPaymentFields.cvv && paymentErrors.cvv ? 'is-invalid' : ''}`}
+                      required
+                      placeholder={paymentDetails.cardNumber.replace(/\D/g, '').startsWith('34') || paymentDetails.cardNumber.replace(/\D/g, '').startsWith('37') ? '1234' : '123'}
+                      maxLength={4}
+                      type="password"
                       value={paymentDetails.cvv}
-                      onChange={e => setPaymentDetails({...paymentDetails, cvv: e.target.value})} />
+                      onChange={e => handlePaymentFieldChange('cvv', e.target.value)}
+                      onBlur={() => handlePaymentFieldBlur('cvv')}
+                      aria-invalid={!!(touchedPaymentFields.cvv && paymentErrors.cvv)}
+                    />
+                    {touchedPaymentFields.cvv && paymentErrors.cvv && (
+                      <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
+                        {paymentErrors.cvv}
+                      </span>
+                    )}
                   </div>
                 </div>
 

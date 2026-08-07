@@ -7,6 +7,13 @@ import {
   validateNationality,
   sanitizeInput,
   validatePassenger,
+  validateCardNumber,
+  validateCVV,
+  validateExpiry,
+  validateCardName,
+  validatePaymentDetails,
+  formatCardNumber,
+  isValidLuhn,
 } from './validation';
 
 describe('Passenger Details Input Validation - Edge Cases', () => {
@@ -148,4 +155,71 @@ describe('Passenger Details Input Validation - Edge Cases', () => {
       expect(result.errors).toEqual({});
     });
   });
+
+  describe('Credit Card & CVV Edge Cases', () => {
+    it('TC-VAL-021: Should validate Luhn checksum correctly', () => {
+      expect(isValidLuhn('4532015112830366')).toBe(true); // Valid Visa test number
+      expect(isValidLuhn('4532015112830367')).toBe(false); // Invalid checksum
+    });
+
+    it('TC-VAL-022: Should reject non-digits or incorrect digit length in card number', () => {
+      expect(validateCardNumber('')).toBe('Card number is required.');
+      expect(validateCardNumber('1234')).toBe('Card number must be exactly 16 digits.');
+      expect(validateCardNumber('4532015112830366abc')).toBe('Card number can only contain digits.');
+    });
+
+    it('TC-VAL-023: Should enforce 15 digits for American Express and 16 for Visa/Mastercard', () => {
+      // Amex starts with 3782...
+      expect(validateCardNumber('3782 822463 1000')).toBe('American Express card number must be exactly 15 digits.');
+      expect(validateCardNumber('3782 822463 10005')).toBeNull(); // Valid 15-digit Amex test card
+
+      // Visa/Mastercard 16 digits
+      expect(validateCardNumber('4532 0151 1283 036')).toBe('Card number must be exactly 16 digits.');
+      expect(validateCardNumber('4532 0151 1283 0366')).toBeNull();
+    });
+
+    it('TC-VAL-024: Should enforce 4-digit CVV for Amex and 3-digit CVV for Visa/Mastercard', () => {
+      const amexCard = '3782 822463 10005';
+      const visaCard = '4532 0151 1283 0366';
+
+      // 4-digit CVV on Visa should be rejected
+      expect(validateCVV('1234', visaCard)).toBe('CVV must be exactly 3 digits.');
+      expect(validateCVV('123', visaCard)).toBeNull();
+
+      // 3-digit CVV on Amex should be rejected
+      expect(validateCVV('123', amexCard)).toBe('American Express CVV must be exactly 4 digits.');
+      expect(validateCVV('1234', amexCard)).toBeNull();
+
+      // Non-numeric CVV
+      expect(validateCVV('12a', visaCard)).toBe('CVV must contain numbers only.');
+    });
+
+    it('TC-VAL-025: Should validate expiry date MM/YY format and expired cards', () => {
+      expect(validateExpiry('')).toBe('Expiry date is required.');
+      expect(validateExpiry('13/28')).toBe('Expiry month must be between 01 and 12.');
+      expect(validateExpiry('01/20')).toBe('Card has expired. Please use a valid card.');
+      expect(validateExpiry('12/35')).toBeNull();
+    });
+
+    it('TC-VAL-026: validatePaymentDetails should validate complete payment object', () => {
+      const invalidPayment = {
+        cardNumber: '1234',
+        cardName: '',
+        expiry: '01/20',
+        cvv: '1234', // 4 digits on unknown card
+      };
+      const result = validatePaymentDetails(invalidPayment);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.cardNumber).toBe('Card number must be exactly 16 digits.');
+      expect(result.errors.cardName).toBe('Name on card is required.');
+      expect(result.errors.expiry).toBe('Card has expired. Please use a valid card.');
+      expect(result.errors.cvv).toBe('CVV must be exactly 3 digits.');
+    });
+
+    it('TC-VAL-027: formatCardNumber should format Visa and Amex card numbers with spaces', () => {
+      expect(formatCardNumber('4532015112830366')).toBe('4532 0151 1283 0366');
+      expect(formatCardNumber('378282246310005')).toBe('3782 822463 10005');
+    });
+  });
 });
+
