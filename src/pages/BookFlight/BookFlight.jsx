@@ -867,6 +867,46 @@ export default function BookFlight() {
                   </div>
                 </div>
 
+                <div style={{ marginTop: '16px', background: '#f0f4f8', padding: '12px', borderRadius: '8px', border: '1px solid #d0dbe5' }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--ba-blue)', display: 'block', marginBottom: '6px' }}>
+                    Demo Cards (Click to Autofill):
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
+                      onClick={() => {
+                        setPaymentDetails({
+                          cardNumber: '4532 0151 1283 0366',
+                          cardName: 'JOHN SMITH',
+                          expiry: '12/28',
+                          cvv: '123',
+                        });
+                        setPaymentErrors({});
+                      }}
+                    >
+                      💳 Visa (16-digit / 3-digit CVV)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '4px' }}
+                      onClick={() => {
+                        setPaymentDetails({
+                          cardNumber: '3782 822463 10005',
+                          cardName: 'JANE SMITH',
+                          expiry: '09/29',
+                          cvv: '1234',
+                        });
+                        setPaymentErrors({});
+                      }}
+                    >
+                      💳 Amex (15-digit / 4-digit CVV)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="bookflight__secure-note">
                   <FaShieldAlt size={14} style={{color:'var(--ba-blue)'}} />
                   <span>Your payment is secured with 256-bit SSL encryption.</span>
