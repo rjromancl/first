@@ -363,10 +363,15 @@ FINAL RULES:
 10. When returning FULL_BOOKING or PREFILL_BOOKING, always mention route and dates in text.`;
 }
 
-const SYSTEM_PROMPT = buildSystemPrompt();
+// BUG-PERF-002: Do NOT build the system prompt at module load — the date/time
+// values would become stale for users who keep the tab open across midnight or
+// across days. buildSystemPrompt() is cheap (~1ms) and is now called inside
+// sendToGemini() on every request so the prompt always reflects the real
+// current date and time.
+// (Removed: const SYSTEM_PROMPT = buildSystemPrompt())
 
-function buildMessages(history, userMessage, systemPrompt = SYSTEM_PROMPT) {
-  const messages = [{ role: 'system', content: systemPrompt }];
+function buildMessages(history, userMessage, systemPrompt) {
+  const messages = [{ role: 'system', content: systemPrompt || buildSystemPrompt() }];
 
   // Cap history so long-running conversations don't grow the payload (and
   // cost/latency) without bound. Keeps only the most recent N turns.
@@ -812,10 +817,8 @@ export async function sendToGemini(userMessage, history = []) {
   // notice it's been superseded and quietly stop mattering.
   const requestId = ++currentRequestId;
 
-  // RAG: retrieve relevant context from the vector DB and augment the
-  // system prompt before sending to the LLM. If the vector DB is not
-  // available, getAugmentedPrompt returns the original prompt unchanged.
-  const augmentedPrompt = await getAugmentedPrompt(trimmedMessage, SYSTEM_PROMPT);
+  // BUG-PERF-002: build a fresh prompt on every call so date/time is always current
+  const augmentedPrompt = await getAugmentedPrompt(trimmedMessage, buildSystemPrompt());
 
   const payload = {
     model: MODEL,

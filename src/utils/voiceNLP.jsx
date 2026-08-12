@@ -115,6 +115,12 @@ export async function parseVoiceInput(text, conversationContext = {}, geminiHist
     };
   }
 
+  // BUG-FUNC-003: sendToGemini returns null when a newer request superseded this one.
+  // Treat it as a no-op so the UI stays on the latest response.
+  if (!result) {
+    return null;
+  }
+
   return {
     intent:         result.intent,
     entities:       result.entities       || {},

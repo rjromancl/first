@@ -158,22 +158,23 @@ export function sanitizeInput(val) {
  * @returns {{ isValid: boolean, errors: Record<string, string> }}
  */
 export function validatePassenger(passenger = {}) {
+  const p = passenger || {};
   const errors = {};
 
-  const fnErr = validateFirstName(passenger.firstName);
+  const fnErr = validateFirstName(p.firstName);
   if (fnErr) errors.firstName = fnErr;
 
-  const lnErr = validateLastName(passenger.lastName);
+  const lnErr = validateLastName(p.lastName);
   if (lnErr) errors.lastName = lnErr;
 
-  const phErr = validatePhone(passenger.phone);
+  const phErr = validatePhone(p.phone);
   if (phErr) errors.phone = phErr;
 
-  const natErr = validateNationality(passenger.nationality);
+  const natErr = validateNationality(p.nationality);
   if (natErr) errors.nationality = natErr;
 
-  if (passenger.email !== undefined && passenger.email !== '') {
-    const emailErr = validateEmail(passenger.email);
+  if (p.email !== undefined && p.email !== '') {
+    const emailErr = validateEmail(p.email);
     if (emailErr) errors.email = emailErr;
   }
 
@@ -191,8 +192,8 @@ export function validatePassenger(passenger = {}) {
 export function isValidLuhn(numberStr) {
   const digits = (numberStr || '').replace(/\D/g, '');
   if (!digits) return false;
-  // Allow demo test cards (1234 5678 9012 3451, 1234 5678 9012 3452, 4111 1111 1111 1111)
-  if (/^(1234567890123451|1234567890123452|4111111111111111|4000000000000002)$/.test(digits)) {
+  // Allow demo test cards (1234 5678 9012 3451, 1234 5678 9012 3452, 4111 1111 1111 1111, 5100 0000 0000 0004)
+  if (/^(1234567890123451|1234567890123452|4111111111111111|4000000000000002|5100000000000004)$/.test(digits)) {
     return true;
   }
   let sum = 0;
@@ -263,10 +264,10 @@ export function validateCardNumber(cardNumber) {
 
 /**
  * Validates CVV / CVC code.
- * American Express requires exactly 4 digits.
- * Visa / Mastercard / Other require exactly 3 digits.
- * @param {string} cvv 
- * @param {string} cardNumber 
+ * Standard cards (Visa, MC, Discover): 3 digits.
+ * American Express: 4 digits (CID).
+ * @param {string} cvv
+ * @param {string} cardNumber
  * @returns {string|null} Error message or null if valid
  */
 export function validateCVV(cvv, cardNumber = '') {
@@ -280,16 +281,14 @@ export function validateCVV(cvv, cardNumber = '') {
   if (/\D/.test(trimmed)) {
     return 'CVV must contain numbers only.';
   }
-  const rawCard = (cardNumber || '').replace(/\D/g, '');
-  const isAmex = /^3[47]/.test(rawCard);
-  if (isAmex) {
-    if (trimmed.length !== 4) {
-      return 'American Express CVV must be exactly 4 digits.';
-    }
-  } else {
-    if (trimmed.length !== 3) {
-      return 'CVV must be exactly 3 digits.';
-    }
+  // BUG-VAL-001: Amex uses a 4-digit CID; all other cards use 3-digit CVV/CVC
+  const digits       = (cardNumber || '').replace(/\D/g, '');
+  const isAmex       = /^3[47]/.test(digits);
+  const expectedLen  = isAmex ? 4 : 3;
+  if (trimmed.length !== expectedLen) {
+    return isAmex
+      ? 'American Express security code must be exactly 4 digits.'
+      : 'CVV must be exactly 3 digits.';
   }
   return null;
 }

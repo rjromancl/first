@@ -3,7 +3,15 @@ const jwt = require('jsonwebtoken');
 const { UserStore } = require('../models/inMemoryStore');
 const logger = require('../config/logger');
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'change_me_in_production';
+// BUG-SEC-004: Never fall back to a hardcoded secret. If JWT_SECRET is not
+// set the server must refuse to start rather than silently use a guessable key.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error(
+    'FATAL: JWT_SECRET environment variable is not set. ' +
+    'Set a strong random value (e.g. openssl rand -hex 64) before starting the server.'
+  );
+}
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '7d';
 
 function generateToken(user) {

@@ -34,6 +34,8 @@ export function useVoiceRecognition({
   const abortedRef                 = useRef(false);
   const recognizerRef              = useRef(null);
   const lastProcessedTranscriptRef = useRef('');
+  // BUG-PERF-001: track the auto-restart timer so we can cancel it on unmount
+  const restartTimerRef            = useRef(null);
 
   useEffect(() => { onResultRef.current   = onResult;   }, [onResult]);
   useEffect(() => { onErrorRef.current    = onError;    }, [onError]);
@@ -59,11 +61,13 @@ export function useVoiceRecognition({
       setIsListening(false);
       // In continuous mode, auto-restart unless user explicitly stopped
       if (continuousRef.current && !abortedRef.current) {
-        setTimeout(() => {
+        // BUG-PERF-001: store timer ID so cleanup can cancel it
+        restartTimerRef.current = setTimeout(() => {
+          restartTimerRef.current = null;
           if (!abortedRef.current && recognizerRef.current === r) {
             try { r.start(); } catch (_) {}
           }
-        }, 100); // faster restart
+        }, 100);
       }
     };
 
@@ -92,6 +96,11 @@ export function useVoiceRecognition({
     recognizerRef.current = r;
     return () => {
       abortedRef.current = true;
+      // BUG-PERF-001: cancel any pending restart timer before aborting
+      if (restartTimerRef.current) {
+        clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = null;
+      }
       try { r.abort(); } catch (_) {}
     };
   }, [lang]); // only recreate when lang changes

@@ -21,8 +21,10 @@ router.post(
 router.get('/mine', requireAuth, ctrl.listMine);
 
 // ─ GET /api/bookings/:reference ──────────────────────────────────
+// BUG-SEC-003: add requireAuth + ownership enforced in controller
 router.get(
   '/:reference',
+  requireAuth,
   [
     param('reference').isLength({ min: 6, max: 6 }).withMessage('Reference must be 6 characters'),
   ],
@@ -31,7 +33,8 @@ router.get(
 );
 
 // ─ PATCH /api/bookings/:reference — update booking details ────────
-router.patch('/:reference', optionalAuth, ctrl.update);
+// BUG-SEC-006: ownership enforced in controller; use requireAuth not optionalAuth
+router.patch('/:reference', requireAuth, ctrl.update);
 
 // ─ PATCH /api/bookings/:reference/seat — seat selection ──────────
 router.patch(

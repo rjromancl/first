@@ -454,8 +454,16 @@ export default function VoiceAgent() {
     const updatedHistory = [...geminiHistoryRef.current, { role: 'user', text: trimmed }];
 
     try {
-      const { intent, entities, response, passengerField } =
+      const parsed =
         await parseVoiceInput(trimmed, {}, updatedHistory);
+
+      // BUG-FUNC-003: null means a newer request superseded this one — discard silently
+      if (!parsed) {
+        if (mountedRef.current) setIsProcessing(false);
+        return;
+      }
+
+      const { intent, entities, response, passengerField } = parsed;
       if (!mountedRef.current) return;
 
       addTelemetryLog('🧠', `LLM Reasoning: Resolved intent as "${intent || 'QUERY'}"`);

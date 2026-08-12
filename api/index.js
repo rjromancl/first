@@ -45,7 +45,24 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
 }));
 app.use(compression());
-app.use(cors({ origin: true, credentials: true }));
+// BUG-SEC-005: restrict CORS to known origins instead of wildcard (origin: true).
+// Allowed origins: same Vercel deployment + localhost for dev.
+// Additional origins can be added via the ALLOWED_ORIGINS env var (comma-separated).
+const CORS_ALLOWED = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (curl, Postman, mobile apps, same-origin Vercel)
+    if (!origin) return cb(null, true);
+    // In production allow any *.vercel.app subdomain for preview deployments
+    if (process.env.NODE_ENV === 'production' && /^https:\/\/.*\.vercel\.app$/.test(origin))
+      return cb(null, true);
+    if (CORS_ALLOWED.includes(origin)) return cb(null, true);
+    cb(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 

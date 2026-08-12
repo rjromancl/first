@@ -206,6 +206,20 @@ export default function BookFlight() {
     setFrom(fromCode);
     setTo(toCode);
 
+    // BUG-FUNC-001: block same origin and destination
+    if (fromCode && toCode && fromCode === toCode) {
+      setSearchError('Origin and destination cannot be the same airport.');
+      setLoading(false);
+      return;
+    }
+
+    // BUG-FUNC-002: block return date before departure date
+    if (tripType === 'return' && returnDate && departDate && returnDate <= departDate) {
+      setSearchError('Return date must be after the departure date.');
+      setLoading(false);
+      return;
+    }
+
     setSearchParams({ tripType, from: fromCode, to: toCode, departDate, returnDate, adults, cabin });
     try {
       const result = await flightsAPI.search({

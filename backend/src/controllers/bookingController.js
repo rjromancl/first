@@ -30,6 +30,12 @@ async function retrieve(req, res, next) {
     const booking = getBooking(reference);
     if (!booking) return error(res, 'Booking not found. Please check your reference.', 404);
 
+    // BUG-SEC-003: ownership check — booking must belong to the requesting user
+    if (booking.userEmail && req.user?.email &&
+        booking.userEmail.toLowerCase() !== req.user.email.toLowerCase()) {
+      return error(res, 'You are not authorised to view this booking.', 403);
+    }
+
     return success(res, booking);
   } catch (err) {
     next(err);
@@ -56,6 +62,14 @@ async function update(req, res, next) {
     delete updates.reference;
     delete updates.id;
     delete updates.userEmail;
+
+    // BUG-SEC-006: verify the booking belongs to the requesting user
+    const existing = getBooking(reference);
+    if (!existing) return error(res, 'Booking not found', 404);
+    if (existing.userEmail && req.user?.email &&
+        existing.userEmail.toLowerCase() !== req.user.email.toLowerCase()) {
+      return error(res, 'You are not authorised to modify this booking.', 403);
+    }
 
     const booking = updateBooking(reference, updates);
     if (!booking) return error(res, 'Booking not found', 404);
