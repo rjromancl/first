@@ -1,0 +1,226 @@
+/* ── Profile Page ─────────────────────────────────────────────── */
+.profile { min-height: 80vh; background: var(--ba-bg, #f4f6f9); }
+
+/* Hero banner */
+.profile__hero {
+  background: linear-gradient(135deg, var(--ba-dark-blue, #0a192f) 0%, #1a3a5c 100%);
+  padding: 40px 0 36px;
+  color: #fff;
+}
+.profile__hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+/* Avatar */
+.profile__avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 3px solid #c9a227;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; font-weight: 800; color: #fff;
+  position: relative; flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.profile__avatar-tier {
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  padding: 1px 7px; border-radius: 20px; color: #fff;
+  white-space: nowrap; letter-spacing: 0.5px;
+}
+
+.profile__hero-info h1 {
+  font-size: 1.8rem; font-weight: 800; margin: 0 0 4px;
+}
+.profile__exec-number {
+  font-size: 0.82rem; opacity: 0.7; margin: 0 0 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.profile__avios-badge {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.9rem;
+}
+.profile__avios-badge strong { color: #f0c040; font-size: 1rem; }
+.profile__tier-chip {
+  padding: 2px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 700; color: #fff; letter-spacing: 0.5px;
+}
+
+/* Body layout */
+.profile__body { padding: 32px 0 60px; }
+
+/* Tab bar */
+.profile__tabs {
+  display: flex; gap: 4px;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 2px solid var(--ba-border, #e2e8f0);
+  padding: 0 4px;
+  overflow-x: auto;
+}
+.profile__tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 14px 22px;
+  border: none; background: none;
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--ba-text-secondary, #6b7280);
+  cursor: pointer; white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.profile__tab:hover { color: var(--ba-blue, #2563eb); }
+.profile__tab--active {
+  color: var(--ba-blue, #2563eb);
+  border-bottom-color: var(--ba-blue, #2563eb);
+}
+
+/* Panel */
+.profile__panel {
+  background: #fff;
+  border-radius: 0 0 12px 12px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* Form */
+.profile__form { max-width: 680px; }
+.profile__section-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--ba-dark-blue, #0a192f);
+  margin-bottom: 6px;
+}
+.profile__section-desc {
+  font-size: 0.85rem;
+  color: var(--ba-text-secondary, #6b7280);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.profile__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.profile__grid--narrow { grid-template-columns: 1fr; max-width: 380px; }
+.profile__field label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.82rem; font-weight: 600;
+  color: var(--ba-text, #374151);
+  margin-bottom: 6px;
+}
+.profile__field--full { grid-column: 1 / -1; }
+.profile__field-hint {
+  font-size: 0.76rem;
+  color: var(--ba-text-secondary, #9ca3af);
+  margin-top: 4px;
+  display: block;
+}
+.profile__optional {
+  font-weight: 400; font-size: 0.78rem;
+  color: var(--ba-text-secondary, #9ca3af);
+}
+
+/* Warning */
+.profile__warning {
+  background: #fffbeb; border: 1px solid #f59e0b;
+  border-radius: 8px; padding: 12px 16px;
+  font-size: 0.85rem; color: #92400e;
+  margin-bottom: 20px;
+}
+
+/* Error */
+.profile__error {
+  background: #fef2f2; border: 1px solid #fca5a5;
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 0.85rem; color: #b91c1c;
+  margin-bottom: 16px;
+}
+
+/* Actions row */
+.profile__actions {
+  display: flex; align-items: center; gap: 16px;
+  padding-top: 8px;
+}
+.profile__saved-msg {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.84rem; font-weight: 600;
+  color: #16a34a; animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Preference groups */
+.profile__pref-group { margin-bottom: 28px; }
+.profile__pref-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.88rem; font-weight: 700;
+  color: var(--ba-text, #374151);
+  margin-bottom: 12px;
+}
+
+/* Seat buttons */
+.profile__seat-options { display: flex; gap: 10px; flex-wrap: wrap; }
+.profile__seat-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border-radius: 10px;
+  border: 2px solid var(--ba-border, #e2e8f0);
+  background: #f9fafb; cursor: pointer;
+  font-size: 0.88rem; font-weight: 600;
+  color: var(--ba-text, #374151);
+  transition: all 0.15s;
+}
+.profile__seat-btn:hover { border-color: var(--ba-blue, #2563eb); }
+.profile__seat-btn--active {
+  border-color: var(--ba-blue, #2563eb);
+  background: #eff6ff; color: var(--ba-blue, #2563eb);
+}
+.profile__seat-icon { font-size: 1.1rem; }
+.profile__seat-check { margin-left: 4px; }
+
+/* Cabin buttons */
+.profile__cabin-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.profile__cabin-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 8px;
+  border: 2px solid var(--ba-border, #e2e8f0);
+  background: #f9fafb; cursor: pointer;
+  font-size: 0.84rem; font-weight: 600;
+  color: var(--ba-text, #374151);
+  transition: all 0.15s;
+}
+.profile__cabin-btn:hover { border-color: var(--ba-red, #eb2227); }
+.profile__cabin-btn--active {
+  border-color: var(--ba-red, #eb2227);
+  background: #fff5f5; color: var(--ba-red, #eb2227);
+}
+.profile__cabin-check { margin-left: 4px; }
+.profile__select { max-width: 320px; }
+
+/* Password strength */
+.profile__strength {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin: 8px 0 20px;
+}
+.profile__strength-rule {
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--ba-text-secondary, #9ca3af);
+  padding: 3px 8px; border-radius: 20px;
+  background: #f3f4f6;
+}
+.profile__strength-rule--ok { color: #16a34a; background: #dcfce7; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .profile__hero-inner { gap: 16px; }
+  .profile__hero-info h1 { font-size: 1.3rem; }
+  .profile__panel { padding: 20px 16px; }
+  .profile__grid { grid-template-columns: 1fr; }
+  .profile__tabs { border-radius: 10px 10px 0 0; }
+  .profile__tab { padding: 12px 14px; font-size: 0.82rem; }
+  .profile__cabin-options, .profile__seat-options { gap: 6px; }
+}

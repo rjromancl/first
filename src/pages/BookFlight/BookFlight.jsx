@@ -50,27 +50,51 @@ export default function BookFlight() {
 
   const [step, setStep] = useState(1);
   const [tripType, setTripType] = useState(searchParams.tripType || 'return');
-  const [from, setFrom] = useState(urlParams.get('from') || searchParams.from || '');
+  const [from, setFrom] = useState(urlParams.get('from') || searchParams.from || user?.homeCityIATA || '');
   const [to, setTo] = useState(urlParams.get('to') || searchParams.to || '');
   const [departDate, setDepartDate] = useState(searchParams.departDate || '');
   const [returnDate, setReturnDate] = useState(searchParams.returnDate || '');
   const [adults, setAdults] = useState(Number(searchParams.adults) || 1);
-  const [cabin, setCabin] = useState(urlParams.get('cabin') || searchParams.cabin || 'economy');
+  const [cabin, setCabin] = useState(urlParams.get('cabin') || searchParams.cabin || user?.preferredCabin || 'economy');
   const [flights, setFlights] = useState([]);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [selectedCabinKey, setSelectedCabinKey] = useState('economy');
-  const [selectedSeat, setSelectedSeat] = useState(location.state?.selectedSeat || '14A');
+  const [selectedSeat, setSelectedSeat] = useState(
+    location.state?.selectedSeat ||
+    // map profile preference to a concrete seat code
+    (user?.preferredSeat === 'window' ? '10A' : user?.preferredSeat === 'aisle' ? '10B' : '14B') ||
+    '14A'
+  );
   const [loading, setLoading] = useState(false);
   const [fromSuggestions, setFromSuggestions] = useState([]);
   const [toSuggestions, setToSuggestions] = useState([]);
-  const [passenger, setPassenger] = useState({
-    firstName: user?.firstName || '',
-    lastName:  user?.lastName  || '',
-    phone:     '',
-    nationality: 'GB',
+  // ── Travelers array — index 0 is lead (pre-filled from profile), extra are custom ──
+  const makeBlankPassenger = () => ({
+    firstName: '', lastName: '', phone: '', nationality: 'GB', isProfile: false,
   });
-  const [passengerErrors, setPassengerErrors] = useState({});
-  const [touchedFields, setTouchedFields] = useState({});
+  const makeProfilePassenger = () => ({
+    firstName:   user?.firstName   || '',
+    lastName:    user?.lastName    || '',
+    phone:       user?.phone       || '',
+    nationality: user?.nationality || 'GB',
+    isProfile: true,   // flag so UI shows "Pre-filled from profile"
+  });
+
+  const [travelers, setTravelers] = useState([makeProfilePassenger()]);
+  const [travelerErrors, setTravelerErrors] = useState([{}]);
+  const [travelerTouched, setTravelerTouched] = useState([{}]);
+  // Keep single `passenger` alias pointing to traveler[0] for backwards compat
+  // with the voice-agent pre-fill useEffect below.
+  const passenger    = travelers[0];
+  const setPassenger = (updater) =>
+    setTravelers(prev => {
+      const next = [...prev];
+      next[0] = typeof updater === 'function' ? updater(next[0]) : { ...next[0], ...updater };
+      return next;
+    });
+  // Legacy per-field error/touched state — still used by payment form
+  const [passengerErrors, setPassengerErrors]   = useState({});
+  const [touchedFields,   setTouchedFields]     = useState({});
   const [paymentErrors, setPaymentErrors] = useState({});
   const [touchedPaymentFields, setTouchedPaymentFields] = useState({});
 
@@ -260,15 +284,24 @@ export default function BookFlight() {
 
   const handlePassengerSubmit = (e) => {
     e.preventDefault();
-    setTouchedFields({ firstName: true, lastName: true, phone: true, nationality: true });
-    const validation = validatePassenger(passenger);
-    setPassengerErrors(validation.errors);
 
-    if (!validation.isValid) {
+    // Validate every traveler row
+    const errors = travelers.map(t => {
+      const v = validatePassenger(t);
+      return v.errors;
+    });
+    setTravelerErrors(errors);
+    setTravelerTouched(travelers.map(() => ({
+      firstName: true, lastName: true, phone: true, nationality: true,
+    })));
+
+    const allValid = errors.every(e =>
+      !e.firstName && !e.lastName && !e.phone && !e.nationality
+    );
+    if (!allValid) {
       addNotification({ type: 'error', message: 'Please correct the highlighted errors in passenger details.' });
       return;
     }
-
     setStep(4);
     window.scrollTo(0, 0);
   };
@@ -278,7 +311,7 @@ export default function BookFlight() {
     if (field === 'cardNumber') {
       val = formatCardNumber(rawValue);
     } else if (field === 'cvv') {
-      val = rawValue.replace(/\D/g, '').slice(0, 4);
+      val = rawValue.replace(/\D/g, '').slice(0, 3);
     } else if (field === 'expiry') {
       const cleaned = rawValue.replace(/[^\d\/]/g, '');
       if (cleaned.length === 2 && !cleaned.includes('/') && paymentDetails.expiry.length < 2) {
@@ -329,19 +362,28 @@ export default function BookFlight() {
 
     setLoading(true);
     try {
-      // Build traveler payload from passenger form data
-      const travelers = [{
-        firstName:   passenger.firstName,
-        lastName:    passenger.lastName,
-        phone:       passenger.phone,
-        nationality: passenger.nationality,
-      }];
-      // Replicate for multiple adults (same lead passenger for demo)
-      for (let i = 1; i < adults; i++) travelers.push({ ...travelers[0] });
+      // Build traveler payload from the full travelers array
+      const travelersPayload = travelers.map(t => ({
+        firstName:   t.firstName,
+        lastName:    t.lastName,
+        phone:       t.phone,
+        nationality: t.nationality,
+      }));
 
-      const booking = await bookingsAPI.create(selectedFlight, travelers, [
-        { phones: [{ deviceType: 'MOBILE', countryCallingCode: '44', number: passenger.phone.replace(/\D/g, '') || '7700900000' }] },
+      // If more seats than traveler rows, pad with last traveler's data
+      while (travelersPayload.length < adults) {
+        travelersPayload.push({ ...travelersPayload[travelersPayload.length - 1] });
+      }
+      const lead = travelersPayload[0];
+
+      const booking = await bookingsAPI.create(selectedFlight, travelersPayload, [
+        { phones: [{ deviceType: 'MOBILE', countryCallingCode: '44', number: (lead.phone || '').replace(/\D/g, '') || '7700900000' }] },
       ]);
+
+      // Persist the seat the user chose (was previously only shown in UI)
+      if (selectedSeat) {
+        try { await bookingsAPI.selectSeat(booking.reference, selectedSeat); } catch (_) {}
+      }
 
       setBookingRef(booking.reference);
       addBooking(booking);
@@ -588,6 +630,20 @@ export default function BookFlight() {
                     >
                       Select <FaChevronRight size={12} />
                     </button>
+                    {/* Quick Book: logged-in users with full profile skip Step 3 */}
+                    {user?.phone && user?.nationality && (
+                      <button
+                        className="btn btn-secondary bookflight__quickbook-btn"
+                        title="Skip passenger form — pre-filled from your profile"
+                        onClick={() => {
+                          setSelectedFlight(flight);
+                          setStep(4);
+                          window.scrollTo(0, 0);
+                        }}
+                      >
+                        ⚡ Quick Book
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -598,6 +654,7 @@ export default function BookFlight() {
         {/* STEP 3: Passenger Details */}
         {step === 3 && (
           <div className="bookflight__passenger">
+            {/* Flight summary strip */}
             <div className="bookflight__selected-summary card">
               <h3>Selected Flight</h3>
               <div className="bookflight__summary-row">
@@ -610,129 +667,194 @@ export default function BookFlight() {
             </div>
 
             <form className="card bookflight__pax-form" noValidate onSubmit={handlePassengerSubmit}>
-              <h2>Passenger Details</h2>
+              <div className="bookflight__pax-header">
+                <h2>Passenger Details</h2>
+                <span className="bookflight__pax-count">
+                  {travelers.length} / {adults} passenger{adults > 1 ? 's' : ''}
+                </span>
+              </div>
               <p className="bookflight__pax-note">
-                Enter your details as the lead passenger.
+                Passenger 1 is pre-filled from your profile. Edit or confirm, then add extra passengers below.
               </p>
 
-              <div className="bookflight__form-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="passenger-first-name">First Name</label>
-                  <input
-                    id="passenger-first-name"
-                    className={`form-control ${touchedFields.firstName && passengerErrors.firstName ? 'is-invalid' : ''}`}
-                    required
-                    value={passenger.firstName}
-                    onChange={e => handlePassengerFieldChange('firstName', e.target.value)}
-                    onBlur={() => handlePassengerFieldBlur('firstName')}
-                    placeholder="First name"
-                    aria-invalid={!!(touchedFields.firstName && passengerErrors.firstName)}
-                  />
-                  {touchedFields.firstName && passengerErrors.firstName && (
-                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
-                      {passengerErrors.firstName}
-                    </span>
-                  )}
-                </div>
+              {/* ── Traveler cards ─────────────────────────────────────── */}
+              {travelers.map((t, idx) => {
+                const errs    = travelerErrors[idx]    || {};
+                const touched = travelerTouched[idx]   || {};
+                const isLead  = idx === 0;
+                const isProfiled = t.isProfile && isLead;
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="passenger-last-name">Last Name</label>
-                  <input
-                    id="passenger-last-name"
-                    className={`form-control ${touchedFields.lastName && passengerErrors.lastName ? 'is-invalid' : ''}`}
-                    required
-                    value={passenger.lastName}
-                    onChange={e => handlePassengerFieldChange('lastName', e.target.value)}
-                    onBlur={() => handlePassengerFieldBlur('lastName')}
-                    placeholder="Last name"
-                    aria-invalid={!!(touchedFields.lastName && passengerErrors.lastName)}
-                  />
-                  {touchedFields.lastName && passengerErrors.lastName && (
-                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
-                      {passengerErrors.lastName}
-                    </span>
-                  )}
-                </div>
+                const setField = (field, val) => {
+                  setTravelers(prev => {
+                    const next = [...prev];
+                    next[idx] = { ...next[idx], [field]: sanitizeInput(val), isProfile: false };
+                    return next;
+                  });
+                  // live validate if touched
+                  if (touched[field]) {
+                    const fn = { firstName: validateFirstName, lastName: validateLastName, phone: validatePhone, nationality: validateNationality }[field];
+                    if (fn) setTravelerErrors(pe => { const n=[...pe]; n[idx]={...n[idx],[field]:fn(sanitizeInput(val))}; return n; });
+                  }
+                };
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="passenger-phone">Phone Number</label>
-                  <input
-                    id="passenger-phone"
-                    type="tel"
-                    className={`form-control ${touchedFields.phone && passengerErrors.phone ? 'is-invalid' : ''}`}
-                    required
-                    value={passenger.phone}
-                    onChange={e => handlePassengerFieldChange('phone', e.target.value)}
-                    onBlur={() => handlePassengerFieldBlur('phone')}
-                    placeholder="+44 7xxx xxxxxx"
-                    aria-invalid={!!(touchedFields.phone && passengerErrors.phone)}
-                  />
-                  {touchedFields.phone && passengerErrors.phone && (
-                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
-                      {passengerErrors.phone}
-                    </span>
-                  )}
-                </div>
+                const blurField = (field) => {
+                  setTravelerTouched(prev => { const n=[...prev]; n[idx]={...n[idx],[field]:true}; return n; });
+                  const fn = { firstName: validateFirstName, lastName: validateLastName, phone: validatePhone, nationality: validateNationality }[field];
+                  if (fn) setTravelerErrors(pe => { const n=[...pe]; n[idx]={...n[idx],[field]:fn(t[field]||'')}; return n; });
+                };
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="passenger-nationality">Nationality</label>
-                  <select
-                    id="passenger-nationality"
-                    className={`form-control ${touchedFields.nationality && passengerErrors.nationality ? 'is-invalid' : ''}`}
-                    value={passenger.nationality}
-                    onChange={e => handlePassengerFieldChange('nationality', e.target.value)}
-                    onBlur={() => handlePassengerFieldBlur('nationality')}
-                    aria-invalid={!!(touchedFields.nationality && passengerErrors.nationality)}
-                  >
-                    <option value="GB">British</option>
-                    <option value="US">American</option>
-                    <option value="AU">Australian</option>
-                    <option value="CA">Canadian</option>
-                    <option value="DE">German</option>
-                    <option value="FR">French</option>
-                    <option value="IN">Indian</option>
-                    <option value="PK">Pakistani</option>
-                    <option value="IE">Irish</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                  {touchedFields.nationality && passengerErrors.nationality && (
-                    <span className="field-error-msg" style={{ color: '#d32f2f', fontSize: '0.82rem', marginTop: '4px', display: 'block' }}>
-                      {passengerErrors.nationality}
-                    </span>
-                  )}
-                </div>
-              </div>
+                return (
+                  <div key={idx} className={`bookflight__pax-card ${isProfiled ? 'bookflight__pax-card--profile' : ''}`}>
+                    <div className="bookflight__pax-card-header">
+                      <div className="bookflight__pax-card-title">
+                        <span className="bookflight__pax-index">
+                          {isLead ? '👤' : `✈️`} Passenger {idx + 1}
+                          {isLead && <span className="bookflight__pax-lead-badge">Lead</span>}
+                        </span>
+                        {isProfiled && (
+                          <span className="bookflight__pax-profile-tag">
+                            ⚡ Pre-filled from your profile
+                          </span>
+                        )}
+                      </div>
+                      {!isLead && (
+                        <button
+                          type="button"
+                          className="bookflight__pax-remove"
+                          onClick={() => {
+                            setTravelers(p => p.filter((_, i) => i !== idx));
+                            setTravelerErrors(p => p.filter((_, i) => i !== idx));
+                            setTravelerTouched(p => p.filter((_, i) => i !== idx));
+                          }}
+                        >
+                          ✕ Remove
+                        </button>
+                      )}
+                    </div>
 
-              {/* Seat Selection */}
-              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--ba-border)' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: 'var(--ba-blue)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaChair /> Select Your Preferred Seat
-                </h3>
-                <p style={{ fontSize: '0.88rem', color: 'var(--ba-text-secondary)', marginBottom: '14px' }}>
-                  Standard seat selection is included. Choose your preferred seat below:
+                    <div className="bookflight__form-grid">
+                      {/* First Name */}
+                      <div className="form-group">
+                        <label className="form-label">First Name</label>
+                        <input
+                          className={`form-control ${touched.firstName && errs.firstName ? 'is-invalid' : ''}`}
+                          value={t.firstName}
+                          onChange={e => setField('firstName', e.target.value)}
+                          onBlur={() => blurField('firstName')}
+                          placeholder="First name"
+                          required
+                        />
+                        {touched.firstName && errs.firstName && (
+                          <span className="field-error-msg" style={{color:'#d32f2f',fontSize:'0.82rem',marginTop:'4px',display:'block'}}>{errs.firstName}</span>
+                        )}
+                      </div>
+
+                      {/* Last Name */}
+                      <div className="form-group">
+                        <label className="form-label">Last Name</label>
+                        <input
+                          className={`form-control ${touched.lastName && errs.lastName ? 'is-invalid' : ''}`}
+                          value={t.lastName}
+                          onChange={e => setField('lastName', e.target.value)}
+                          onBlur={() => blurField('lastName')}
+                          placeholder="Last name"
+                          required
+                        />
+                        {touched.lastName && errs.lastName && (
+                          <span className="field-error-msg" style={{color:'#d32f2f',fontSize:'0.82rem',marginTop:'4px',display:'block'}}>{errs.lastName}</span>
+                        )}
+                      </div>
+
+                      {/* Phone */}
+                      <div className="form-group">
+                        <label className="form-label">Phone Number</label>
+                        <input
+                          type="tel"
+                          className={`form-control ${touched.phone && errs.phone ? 'is-invalid' : ''}`}
+                          value={t.phone}
+                          onChange={e => setField('phone', e.target.value)}
+                          onBlur={() => blurField('phone')}
+                          placeholder="+44 7xxx xxxxxx"
+                          required
+                        />
+                        {touched.phone && errs.phone && (
+                          <span className="field-error-msg" style={{color:'#d32f2f',fontSize:'0.82rem',marginTop:'4px',display:'block'}}>{errs.phone}</span>
+                        )}
+                      </div>
+
+                      {/* Nationality */}
+                      <div className="form-group">
+                        <label className="form-label">Nationality</label>
+                        <select
+                          className={`form-control ${touched.nationality && errs.nationality ? 'is-invalid' : ''}`}
+                          value={t.nationality}
+                          onChange={e => setField('nationality', e.target.value)}
+                          onBlur={() => blurField('nationality')}
+                        >
+                          {[
+                            ['GB','British'],['US','American'],['AU','Australian'],['CA','Canadian'],
+                            ['DE','German'],['FR','French'],['IN','Indian'],['AE','Emirati'],
+                            ['SG','Singaporean'],['JP','Japanese'],['PK','Pakistani'],['IE','Irish'],
+                            ['ZA','South African'],['OTHER','Other'],
+                          ].map(([val, lbl]) => (
+                            <option key={val} value={val}>{lbl}</option>
+                          ))}
+                        </select>
+                        {touched.nationality && errs.nationality && (
+                          <span className="field-error-msg" style={{color:'#d32f2f',fontSize:'0.82rem',marginTop:'4px',display:'block'}}>{errs.nationality}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* ── Add Passenger button ───────────────────────────────── */}
+              {travelers.length < adults && (
+                <button
+                  type="button"
+                  className="bookflight__pax-add"
+                  onClick={() => {
+                    setTravelers(p => [...p, makeBlankPassenger()]);
+                    setTravelerErrors(p => [...p, {}]);
+                    setTravelerTouched(p => [...p, {}]);
+                  }}
+                >
+                  + Add Passenger {travelers.length + 1} of {adults}
+                </button>
+              )}
+              {travelers.length >= adults && adults > 1 && (
+                <p className="bookflight__pax-all-added">
+                  ✓ All {adults} passengers added
                 </p>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              )}
+
+              {/* ── Seat Selection ─────────────────────────────────────── */}
+              <div className="bookflight__seat-section">
+                <h3><FaChair /> Select Preferred Seat</h3>
+                <p>Standard seat selection is included. Your profile preference is pre-selected.</p>
+                <div className="bookflight__seat-btns">
                   {['10A (Window)', '10B (Aisle)', '12A (Window)', '14A (Window)', '14B (Middle)', '15C (Aisle)', '20F (Window)'].map(s => {
-                    const seatCode = s.split(' ')[0];
-                    const isSelected = selectedSeat === seatCode;
+                    const code = s.split(' ')[0];
                     return (
                       <button
                         key={s}
                         type="button"
-                        className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ padding: '8px 14px', fontSize: '0.88rem', borderRadius: '6px' }}
-                        onClick={() => setSelectedSeat(seatCode)}
+                        className={`btn ${selectedSeat === code ? 'btn-primary' : 'btn-secondary'} bookflight__seat-btn`}
+                        onClick={() => setSelectedSeat(code)}
                       >
-                        {isSelected ? '✓ ' : ''}{s}
+                        {selectedSeat === code ? '✓ ' : ''}{s}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="bookflight__pax-actions" style={{ marginTop: '24px' }}>
+              <div className="bookflight__pax-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>Back</button>
-                <button type="submit" className="btn btn-primary">Proceed to Payment Gateway <FaChevronRight size={12} /></button>
+                <button type="submit" className="btn btn-primary">
+                  Proceed to Payment <FaChevronRight size={12} />
+                </button>
               </div>
             </form>
           </div>
@@ -851,8 +973,8 @@ export default function BookFlight() {
                       id="card-cvv"
                       className={`form-control ${touchedPaymentFields.cvv && paymentErrors.cvv ? 'is-invalid' : ''}`}
                       required
-                      placeholder={paymentDetails.cardNumber.replace(/\D/g, '').startsWith('34') || paymentDetails.cardNumber.replace(/\D/g, '').startsWith('37') ? '1234' : '123'}
-                      maxLength={4}
+                      placeholder="123"
+                      maxLength={3}
                       type="password"
                       value={paymentDetails.cvv}
                       onChange={e => handlePaymentFieldChange('cvv', e.target.value)}
@@ -913,12 +1035,12 @@ export default function BookFlight() {
                           cardNumber: '3782 822463 10005',
                           cardName: 'JANE SMITH',
                           expiry: '09/29',
-                          cvv: '1234',
+                          cvv: '123',
                         });
                         setPaymentErrors({});
                       }}
                     >
-                      💳 Amex (15-digit / 4-digit CVV)
+                      💳 Amex (15-digit / 3-digit CVV)
                     </button>
                   </div>
                 </div>

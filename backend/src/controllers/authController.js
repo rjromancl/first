@@ -1,4 +1,4 @@
-const { register, login, getProfile } = require('../services/authService');
+const { register, login, getProfile, updateProfile, changePassword } = require('../services/authService');
 const { success, error } = require('../utils/responseHelper');
 
 // POST /api/auth/register
@@ -36,4 +36,31 @@ function getMe(req, res, next) {
   }
 }
 
-module.exports = { registerUser, loginUser, getMe };
+// PATCH /api/auth/profile
+async function updateMyProfile(req, res, next) {
+  try {
+    const updated = updateProfile(req.user.id, req.body);
+    return success(res, updated);
+  } catch (err) {
+    if (err.statusCode) return error(res, err.message, err.statusCode);
+    next(err);
+  }
+}
+
+// PATCH /api/auth/password
+async function changeMyPassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword)
+      return error(res, 'currentPassword and newPassword are required', 400);
+    if (newPassword.length < 8)
+      return error(res, 'New password must be at least 8 characters', 400);
+    const result = await changePassword(req.user.id, { currentPassword, newPassword });
+    return success(res, result);
+  } catch (err) {
+    if (err.statusCode) return error(res, err.message, err.statusCode);
+    next(err);
+  }
+}
+
+module.exports = { registerUser, loginUser, getMe, updateMyProfile, changeMyPassword };

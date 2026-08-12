@@ -196,6 +196,18 @@ export const checkinAPI = {
 };
 
 // ════════════════════════════════════════════════════════════════
+// PROFILE
+// ════════════════════════════════════════════════════════════════
+export const profileAPI = {
+  /** Update travel profile fields for the logged-in user. */
+  update: (fields) => unwrap(http.patch('/auth/profile', fields)),
+
+  /** Change password for the logged-in user. */
+  changePassword: (currentPassword, newPassword) =>
+    unwrap(http.patch('/auth/password', { currentPassword, newPassword })),
+};
+
+// ════════════════════════════════════════════════════════════════
 // DESTINATIONS & OFFERS
 // ════════════════════════════════════════════════════════════════
 export const destinationsAPI = {

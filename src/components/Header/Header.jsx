@@ -259,7 +259,7 @@ export default function Header() {
                       <Link to="/manage" onClick={() => setUserMenuOpen(false)}>
                         <FaPlane size={13} /> My Bookings
                       </Link>
-                      <Link to="/login" onClick={() => setUserMenuOpen(false)}>
+                      <Link to="/profile" onClick={() => setUserMenuOpen(false)}>
                         <FaUser size={13} /> My Profile
                       </Link>
                       <button onClick={handleLogout} className="header__logout">

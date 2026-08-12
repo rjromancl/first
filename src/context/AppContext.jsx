@@ -22,8 +22,8 @@ function appReducer(state, action) {
   switch (action.type) {
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
-    case 'LOGIN':
-      return { ...state, user: action.payload, isAuthenticated: true };
+    case 'UPDATE_USER':
+      return { ...state, user: { ...state.user, ...action.payload } };
     case 'LOGOUT':
       return { ...state, user: null, isAuthenticated: false, bookings: [] };
     case 'SET_SEARCH_PARAMS':
@@ -99,6 +99,7 @@ export function AppProvider({ children }) {
 
   // ── Actions ───────────────────────────────────────────────────
   const setLanguage = lang => dispatch({ type: 'SET_LANGUAGE', payload: lang });
+  const updateUser  = data => dispatch({ type: 'UPDATE_USER',  payload: data });
   const login = (userData, token) => {
     if (token) localStorage.setItem('ba_token', token);
     dispatch({ type: 'LOGIN', payload: userData });
@@ -122,7 +123,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       ...state,
-      setLanguage, login, logout,
+      setLanguage, login, logout, updateUser,
       setSearchParams, setSelectedFlight,
       addBooking, updateBooking, setBookings,
       addNotification, dismissNotification,

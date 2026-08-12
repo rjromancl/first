@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth');
-const { registerUser, loginUser, getMe } = require('../controllers/authController');
+const { registerUser, loginUser, getMe, updateMyProfile, changeMyPassword } = require('../controllers/authController');
 
 // POST /api/auth/register
 router.post(
@@ -30,5 +30,11 @@ router.post(
 
 // GET /api/auth/me
 router.get('/me', requireAuth, getMe);
+
+// PATCH /api/auth/profile  — update travel profile fields
+router.patch('/profile', requireAuth, updateMyProfile);
+
+// PATCH /api/auth/password — change password
+router.patch('/password', requireAuth, changeMyPassword);
 
 module.exports = router;

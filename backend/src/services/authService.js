@@ -54,4 +54,20 @@ function getProfile(userId) {
   return UserStore.safeUser(user);
 }
 
-module.exports = { register, login, verifyToken, getProfile };
+function updateProfile(userId, fields) {
+  const user = UserStore.findById(userId);
+  if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+  const updated = UserStore.updateProfile(user.email, fields);
+  return UserStore.safeUser(updated);
+}
+
+async function changePassword(userId, { currentPassword, newPassword }) {
+  const user = UserStore.findById(userId);
+  if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 });
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) throw Object.assign(new Error('Current password is incorrect'), { statusCode: 401 });
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  return { changed: true };
+}
+
+module.exports = { register, login, verifyToken, getProfile, updateProfile, changePassword };

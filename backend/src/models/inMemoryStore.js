@@ -24,6 +24,16 @@ const users = new Map();
     tier: 'Gold',
     avios: 12450,
     execNumber: 'BA' + id.replace(/-/g, '').substring(0, 8).toUpperCase(),
+    phone: '+44 7700 900000',
+    dateOfBirth: '1985-03-12',
+    nationality: 'GB',
+    passportNumber: '123456789',
+    passportExpiry: '2030-01-01',
+    knownTravelerNumber: '',
+    preferredSeat: 'window',
+    preferredCabin: 'business',
+    homeCityIATA: 'LHR',
+    dietaryPreference: 'none',
     createdAt: new Date().toISOString(),
   });
 
@@ -38,6 +48,16 @@ const users = new Map();
     tier: 'Silver',
     avios: 8500,
     execNumber: 'BA' + rajaId.replace(/-/g, '').substring(0, 8).toUpperCase(),
+    phone: '+44 7911 123456',
+    dateOfBirth: '1992-07-24',
+    nationality: 'IN',
+    passportNumber: 'P9876543',
+    passportExpiry: '2028-06-30',
+    knownTravelerNumber: '',
+    preferredSeat: 'aisle',
+    preferredCabin: 'economy',
+    homeCityIATA: 'LHR',
+    dietaryPreference: 'none',
     createdAt: new Date().toISOString(),
   });
 })();
@@ -58,8 +78,35 @@ const UserStore = {
       tier: 'Blue',
       avios: 500,
       execNumber: 'BA' + id.replace(/-/g, '').substring(0, 8).toUpperCase(),
+      // ── Travel profile fields ─────────────────────────────────
+      phone:              '',
+      dateOfBirth:        '',
+      nationality:        'GB',
+      passportNumber:     '',
+      passportExpiry:     '',
+      knownTravelerNumber:'',
+      preferredSeat:      'window',   // window | aisle | middle
+      preferredCabin:     'economy',  // economy | premium_economy | business | first
+      homeCityIATA:       'LHR',
+      dietaryPreference:  'none',     // none | vegetarian | vegan | halal | kosher | gluten-free
+      // ─────────────────────────────────────────────────────────
       createdAt: new Date().toISOString(),
     };
+    users.set(email.toLowerCase(), user);
+    return user;
+  },
+
+  /** Update mutable profile fields for an existing user. */
+  updateProfile: (email, fields) => {
+    const user = users.get(email.toLowerCase());
+    if (!user) return null;
+    const ALLOWED = [
+      'firstName','lastName','phone','dateOfBirth','nationality',
+      'passportNumber','passportExpiry','knownTravelerNumber',
+      'preferredSeat','preferredCabin','homeCityIATA','dietaryPreference',
+    ];
+    ALLOWED.forEach(k => { if (fields[k] !== undefined) user[k] = fields[k]; });
+    user.updatedAt = new Date().toISOString();
     users.set(email.toLowerCase(), user);
     return user;
   },
