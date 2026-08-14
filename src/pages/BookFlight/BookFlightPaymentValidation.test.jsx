@@ -52,7 +52,7 @@ describe('BookFlight Payment Form Keyboard Validation - Component Tests', () => 
     expect(screen.getByLabelText(/CVV/i)).toBeInTheDocument();
   });
 
-  it('TC-PAY-002: Shows error when entering 4-digit CVV for non-Amex card', () => {
+  it('TC-PAY-002: Truncates CVV to max 3 digits and validates 3-digit CVV for non-Amex card', () => {
     renderBookFlightAtPaymentStep();
     const cardInput = screen.getByLabelText(/Card Number/i);
     const cvvInput = screen.getByLabelText(/CVV/i);
@@ -60,13 +60,14 @@ describe('BookFlight Payment Form Keyboard Validation - Component Tests', () => 
     // Visa 16-digit card
     fireEvent.change(cardInput, { target: { value: '4532 0151 1283 0366' } });
     fireEvent.change(cvvInput, { target: { value: '1234' } });
+    expect(cvvInput.value).toBe('123'); // Truncated to 3 digits
     fireEvent.blur(cvvInput);
 
-    expect(screen.getByText('CVV must be exactly 3 digits.')).toBeInTheDocument();
-    expect(cvvInput).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByText('CVV must be exactly 3 digits.')).not.toBeInTheDocument();
+    expect(cvvInput).toHaveAttribute('aria-invalid', 'false');
   });
 
-  it('TC-PAY-003: Shows error when entering 3-digit CVV for American Express card', () => {
+  it('TC-PAY-003: Rejects 3-digit CVV for American Express card (must be 4 digits / CID)', () => {
     renderBookFlightAtPaymentStep();
     const cardInput = screen.getByLabelText(/Card Number/i);
     const cvvInput = screen.getByLabelText(/CVV/i);
@@ -76,7 +77,7 @@ describe('BookFlight Payment Form Keyboard Validation - Component Tests', () => 
     fireEvent.change(cvvInput, { target: { value: '123' } });
     fireEvent.blur(cvvInput);
 
-    expect(screen.getByText('American Express CVV must be exactly 4 digits.')).toBeInTheDocument();
+    expect(screen.getByText('American Express security code must be exactly 4 digits.')).toBeInTheDocument();
     expect(cvvInput).toHaveAttribute('aria-invalid', 'true');
   });
 

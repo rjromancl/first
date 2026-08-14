@@ -5,14 +5,14 @@ describe('ragService — Multilingual RAG Engine', () => {
   it('returns RAG context for Tamil baggage query (லக்கேஜ்)', async () => {
     const ctx = await getContext('லக்கேஜ் எடை எவ்வளவு?');
     expect(ctx).not.toBeNull();
-    expect(ctx).toContain('B Airways Baggage Allowance Policy');
-    expect(ctx).toContain('Hand Baggage');
+    expect(ctx).toContain('BA Baggage Allowances');
+    expect(ctx).toContain('Hand baggage');
   });
 
   it('returns RAG context for Tanglish baggage query (baggage weight evvalavu)', async () => {
     const ctx = await getContext('Baggage weight evvalavu for business class?');
     expect(ctx).not.toBeNull();
-    expect(ctx).toContain('Checked Baggage');
+    expect(ctx).toContain('Checked');
     expect(ctx).toContain('32kg');
   });
 

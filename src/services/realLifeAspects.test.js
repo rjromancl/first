@@ -33,7 +33,7 @@ describe('Real-Life Aspect 2 — Real-World Baggage & Policy RAG (Tamil & Tangli
     expect(context).not.toBeNull();
     expect(context).toContain('23kg');
     expect(context).toContain('32kg');
-    expect(context).toContain('Hand Baggage');
+    expect(context).toContain('Hand baggage');
   });
 
   it('fetches exact baggage allowance for Tanglish query "baggage weight evvalavu"', async () => {
