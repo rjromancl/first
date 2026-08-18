@@ -686,3 +686,47 @@
   .home__search-row--airports { flex-wrap: wrap; }
   .home__swap-btn { display: none; }
 }
+
+/* ── Airport suggestion dropdown (home search card) ────────────── */
+.home__suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: #fff;
+  border: 1.5px solid var(--ba-blue, #2563eb);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.home__suggestion {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--ba-text, #1a1a2e);
+  border-bottom: 1px solid var(--ba-border, #f0f2f5);
+  transition: background 0.1s;
+}
+
+.home__suggestion:last-child { border-bottom: none; }
+
+.home__suggestion:hover,
+.home__suggestion:focus {
+  background: #eff6ff;
+  outline: none;
+}
+
+.home__suggestion strong {
+  color: var(--ba-blue, #2563eb);
+  margin-right: 4px;
+  font-size: 0.9rem;
+}

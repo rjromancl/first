@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FaPlane, FaSearch, FaArrowRight, FaStar, FaShieldAlt,
@@ -6,6 +6,7 @@ import {
   FaMapMarkerAlt, FaCalendarAlt, FaUsers, FaExchangeAlt,
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
+import { airportsAPI } from '../../services/api';
 import { destinations, offers } from '../../data/destinations';
 import './Home.css';
 
@@ -15,6 +16,34 @@ const cabins = [
   { value: 'business', label: 'Business Class' },
   { value: 'first', label: 'First Class' },
 ];
+
+// ── Debounce helper ────────────────────────────────────────────────────────
+function useDebounce(fn, delay) {
+  const timer = useRef(null);
+  return useCallback((...args) => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]);
+}
+
+// ── City → IATA (same map as BookFlight) ──────────────────────────────────
+const CITY_TO_IATA = {
+  london:'LHR', heathrow:'LHR', gatwick:'LGW',
+  'new york':'JFK', nyc:'JFK', newyork:'JFK',
+  dubai:'DXB', tokyo:'NRT', sydney:'SYD',
+  singapore:'SIN', barcelona:'BCN', paris:'CDG',
+  amsterdam:'AMS', rome:'FCO', istanbul:'IST',
+  madrid:'MAD', mumbai:'BOM', bombay:'BOM',
+  delhi:'DEL', chennai:'MAA', frankfurt:'FRA',
+  zurich:'ZRH', dublin:'DUB', 'cape town':'CPT',
+  'los angeles':'LAX', chicago:'ORD', toronto:'YYZ',
+  'hong kong':'HKG', bangkok:'BKK', 'kuala lumpur':'KUL',
+};
+function resolveIATA(val) {
+  const t = val.trim();
+  if (/^[A-Z]{3}$/i.test(t)) return t.toUpperCase();
+  return CITY_TO_IATA[t.toLowerCase()] || t.toUpperCase();
+}
 
 const popularRoutes = [
   { from: 'London', to: 'New York', fromCode: 'LHR', toCode: 'JFK', price: 349 },
@@ -44,14 +73,38 @@ export default function Home() {
   const [passengers, setPassengers] = useState(1);
   const [cabin, setCabin] = useState('economy');
 
+  // ── Airport autocomplete state ─────────────────────────────────
+  const [fromSuggestions, setFromSuggestions] = useState([]);
+  const [toSuggestions,   setToSuggestions]   = useState([]);
+
+  const fetchAirports = useCallback(async (query, setter) => {
+    if (query.length < 2) { setter([]); return; }
+    try {
+      const results = await airportsAPI.search(query);
+      setter(results || []);
+    } catch {
+      setter([]);
+    }
+  }, []);
+
+  const debouncedFetchFrom = useDebounce((q) => fetchAirports(q, setFromSuggestions), 300);
+  const debouncedFetchTo   = useDebounce((q) => fetchAirports(q, setToSuggestions),   300);
+  // ──────────────────────────────────────────────────────────────
+
   const handleSwap = () => {
     setFrom(to);
     setTo(from);
+    setFromSuggestions([]);
+    setToSuggestions([]);
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setSearchParams({ tripType, from, to, departDate, returnDate, passengers, cabin });
+    const fromCode = resolveIATA(from);
+    const toCode   = resolveIATA(to);
+    setFrom(fromCode);
+    setTo(toCode);
+    setSearchParams({ tripType, from: fromCode, to: toCode, departDate, returnDate, passengers, cabin });
     navigate('/book');
   };
 
@@ -104,7 +157,7 @@ export default function Home() {
 
             <form className="home__search-form" onSubmit={handleSearch}>
               <div className="home__search-row home__search-row--airports">
-                <div className="home__search-field">
+                <div className="home__search-field" style={{ position: 'relative' }}>
                   <label className="form-label">
                     <FaMapMarkerAlt size={11} /> From
                   </label>
@@ -113,9 +166,25 @@ export default function Home() {
                     className="form-control home__search-input"
                     placeholder="City or airport"
                     value={from}
-                    onChange={(e) => setFrom(e.target.value)}
+                    onChange={(e) => { setFrom(e.target.value); debouncedFetchFrom(e.target.value); }}
+                    onBlur={() => setTimeout(() => setFromSuggestions([]), 150)}
+                    autoComplete="off"
                     required
                   />
+                  {fromSuggestions.length > 0 && (
+                    <div className="home__suggestions">
+                      {fromSuggestions.map(a => (
+                        <button
+                          type="button"
+                          key={a.code}
+                          className="home__suggestion"
+                          onMouseDown={e => { e.preventDefault(); setFrom(a.code); setFromSuggestions([]); }}
+                        >
+                          <strong>{a.code}</strong> — {a.city}, {a.country}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -128,7 +197,7 @@ export default function Home() {
                   <FaExchangeAlt size={14} />
                 </button>
 
-                <div className="home__search-field">
+                <div className="home__search-field" style={{ position: 'relative' }}>
                   <label className="form-label">
                     <FaMapMarkerAlt size={11} /> To
                   </label>
@@ -137,9 +206,25 @@ export default function Home() {
                     className="form-control home__search-input"
                     placeholder="City or airport"
                     value={to}
-                    onChange={(e) => setTo(e.target.value)}
+                    onChange={(e) => { setTo(e.target.value); debouncedFetchTo(e.target.value); }}
+                    onBlur={() => setTimeout(() => setToSuggestions([]), 150)}
+                    autoComplete="off"
                     required
                   />
+                  {toSuggestions.length > 0 && (
+                    <div className="home__suggestions">
+                      {toSuggestions.map(a => (
+                        <button
+                          type="button"
+                          key={a.code}
+                          className="home__suggestion"
+                          onMouseDown={e => { e.preventDefault(); setTo(a.code); setToSuggestions([]); }}
+                        >
+                          <strong>{a.code}</strong> — {a.city}, {a.country}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
