@@ -107,7 +107,7 @@
   background: var(--ba-white);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  overflow: visible; /* must be visible so suggestion dropdowns can render outside the card */
 }
 
 .home__search-tabs {
@@ -115,6 +115,7 @@
   background: var(--ba-light-blue);
   padding: 8px 8px 0;
   gap: 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0; /* restore top corners now overflow:hidden is gone */
 }
 
 .home__search-tab {
@@ -140,6 +141,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg); /* restore bottom corners */
 }
 
 .home__search-row {
@@ -693,7 +695,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: 9999; /* must exceed hero z-index: 1 and card shadow */
   background: #fff;
   border: 1.5px solid var(--ba-blue, #2563eb);
   border-top: none;
