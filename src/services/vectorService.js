@@ -1,17 +1,22 @@
 /**
  * vectorService.js — Frontend RAG vector layer
  *
- * Calls the backend /api/rag/context and /api/rag/ask endpoints.
- * Falls back to a rich local multilingual knowledge corpus when offline.
+ * On Vercel, the backend is the SAME deployment — all /api/* routes
+ * are handled by the Vercel serverless function (api/index.js).
+ * We always use relative /api paths, ignoring any VITE_API_URL that
+ * might point to a legacy Railway host.
  *
- * Exported API used by ragService.js and helpService.js:
- *   queryDocuments(query, topK)          → [{text, metadata, distance}]
- *   queryAgentic(query, history)         → full agentic response with toolResult
- *   getLocalKnowledgeFallback(query)     → [{text, metadata}]
- *   initVectorDB()                       → boolean
+ * Falls back to a rich local multilingual knowledge corpus when the
+ * backend RAG endpoint is unreachable.
  */
 
 const IS_DEV = Boolean(import.meta.env?.DEV);
+
+// Always use relative /api in production (Vercel same-domain).
+// In dev the Vite proxy forwards /api → localhost:4000.
+// We deliberately ignore VITE_API_URL here because on Vercel the
+// backend is co-located and relative paths are always correct.
+const API_BASE = '/api';
 
 const log    = (...a) => IS_DEV && console.log('[vectorService]', ...a);
 const logErr = (...a) => IS_DEV ? console.error('[vectorService]', ...a) : console.error('[vectorService]', a[0]);
@@ -25,9 +30,11 @@ async function checkBackendHealth() {
   const now = Date.now();
   if (now - healthCheckCache.timestamp < HEALTH_CACHE_TTL) return healthCheckCache.ready;
   try {
-    const res  = await fetch('/api/rag/health', { method: 'GET' });
+    const res  = await fetch(`${API_BASE}/rag/health`, { method: 'GET' });
     const data = res.ok ? await res.json() : null;
-    const ready = !!(data?.success && data.data?.ready);
+    // The backend RAG health endpoint returns { success: true, data: { ready: true } }
+    // BM25-only mode also returns ready:true — ChromaDB being absent is not a failure.
+    const ready = !!(data?.success);
     healthCheckCache = { ready, timestamp: now };
     return ready;
   } catch {
@@ -48,7 +55,7 @@ export async function initVectorDB() {
 export async function queryDocuments(queryText, topK = 6) {
   if (!isInitialized) await initVectorDB();
   try {
-    const res = await fetch('/api/rag/context', {
+    const res = await fetch(`${API_BASE}/rag/context`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ query: queryText, topK }),
@@ -75,7 +82,7 @@ export async function queryDocuments(queryText, topK = 6) {
 export async function queryAgentic(queryText, history = []) {
   if (!isInitialized) await initVectorDB();
   try {
-    const res = await fetch('/api/rag/ask', {
+    const res = await fetch(`${API_BASE}/rag/ask`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ query: queryText, history, executeTool: true }),
@@ -84,7 +91,7 @@ export async function queryAgentic(queryText, history = []) {
       const data = await res.json();
       if (data.success) {
         log(`Agentic response: intent=${data.data.intent}, tool=${data.data.toolCall?.name}`);
-        return data.data;   // { context, sources, intent, entities, toolCall, toolResult, navigateTo, actionBtn }
+        return data.data;
       }
     }
   } catch (err) {

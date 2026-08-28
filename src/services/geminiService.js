@@ -37,7 +37,8 @@ const MODEL = 'llama-3.3-70b-versatile';
 // --- Tunables -------------------------------------------------------------
 const REQUEST_TIMEOUT_MS = 12_000;   // abort a hung request after this long
 const MAX_RETRIES = 2;               // retries on top of the initial attempt
-const RETRY_BASE_DELAY_MS = 400;     // exponential backoff base
+const RETRY_BASE_DELAY_MS = (import.meta.env?.MODE === 'test' || process.env.NODE_ENV === 'test') ? 1 : 400;     // exponential backoff base
+
 const MAX_HISTORY_TURNS = 20;        // cap how much history we resend
 const IS_DEV = Boolean(import.meta.env?.DEV);
 
