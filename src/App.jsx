@@ -103,7 +103,9 @@ function AppLayout() {
       <Footer />
 
       {/* Global overlays */}
-      <VoiceAgent />
+      <ErrorBoundary>
+        <VoiceAgent />
+      </ErrorBoundary>
       <NotificationToast notifications={notifications} />
     </div>
   );

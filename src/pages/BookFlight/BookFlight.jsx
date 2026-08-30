@@ -91,17 +91,150 @@ const SEAT_MAP = [
 
 const SEAT_LABELS = { A:'Window', B:'Middle', C:'Aisle', D:'Aisle', E:'Middle', F:'Window' };
 
-function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip }) {
-  const [selected, setSelected] = useState(null);
+// ── Parse a spoken seat command into a concrete seat code ────────────────
+function parseSeatCommand(text) {
+  const lower = (text || '').toLowerCase().trim();
+  if (/skip|no thanks|no seat|later|don'?t care|any seat/i.test(lower)) return 'SKIP';
+  if (/window/i.test(lower))  return '10A';
+  if (/aisle/i.test(lower))   return '10C';
+  if (/middle/i.test(lower))  return '10B';
+  if (/front|first|row 1/i.test(lower)) return '1A';
+  if (/extra legroom|legroom/i.test(lower)) return '2A';
+  if (/back|last|rear/i.test(lower))    return '21A';
+  // specific seat code: "14A", "row 14 seat A", "seat 14 A"
+  const m = lower.match(/(?:row\s*)?(\d{1,2})\s*(?:seat\s*)?([a-f])/i);
+  if (m) return `${m[1]}${m[2].toUpperCase()}`;
+  return null;
+}
+
+function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip, preSelected = null }) {
+  const [selected,    setSelected]    = useState(preSelected);
+  const [listening,   setListening]   = useState(false);
+  const [voiceHint,   setVoiceHint]   = useState('');
+  const [voiceStatus, setVoiceStatus] = useState('idle'); // idle | listening | understood | error
+  const recRef = useRef(null);
+
+  // ── Auto-confirm if a seat was pre-selected by voice in VoiceAgent ──────
+  useEffect(() => {
+    if (preSelected && preSelected !== 'SKIP') {
+      setSelected(preSelected);
+      // Short delay so user can see the selection before it confirms
+      const t = setTimeout(() => onConfirm(preSelected), 1200);
+      return () => clearTimeout(t);
+    }
+    if (preSelected === 'SKIP') {
+      const t = setTimeout(() => onSkip(), 800);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Voice recognition inside the popup ──────────────────────────────────
+  const SpeechRecognition = typeof window !== 'undefined'
+    && (window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const startVoice = () => {
+    if (!SpeechRecognition || listening) return;
+    const r = new SpeechRecognition();
+    r.lang = 'en-GB';
+    r.continuous = false;
+    r.interimResults = true;
+    recRef.current = r;
+
+    r.onstart  = () => { setListening(true); setVoiceStatus('listening'); setVoiceHint(''); };
+    r.onend    = () => { setListening(false); if (voiceStatus === 'listening') setVoiceStatus('idle'); };
+    r.onerror  = () => { setListening(false); setVoiceStatus('error'); setVoiceHint('Mic error — try again'); };
+
+    r.onresult = (event) => {
+      const result  = event.results[event.resultIndex];
+      const text    = result[0]?.transcript || '';
+      const isFinal = result.isFinal;
+      setVoiceHint(text);
+      if (isFinal) {
+        const code = parseSeatCommand(text);
+        if (code === 'SKIP') {
+          setVoiceStatus('understood');
+          setVoiceHint('Skipping seat selection…');
+          setTimeout(() => onSkip(), 700);
+        } else if (code) {
+          // Check if seat is in map and not occupied
+          const rowNum = parseInt(code, 10);
+          const col    = code.slice(-1);
+          const rowDef = SEAT_MAP.find(r => r.row === rowNum);
+          const isOcc  = rowDef?.occupied?.includes(col);
+          if (isOcc) {
+            setVoiceStatus('error');
+            setVoiceHint(`Seat ${code} is occupied. Say another seat.`);
+            setTimeout(() => startVoice(), 1500);
+          } else {
+            setSelected(code);
+            setVoiceStatus('understood');
+            setVoiceHint(`Seat ${code} selected! Confirming…`);
+            setTimeout(() => onConfirm(code), 900);
+          }
+        } else {
+          setVoiceStatus('error');
+          setVoiceHint('Didn\'t catch that. Say "window", "aisle", "14A", or "skip".');
+          setTimeout(() => startVoice(), 1800);
+        }
+      }
+    };
+
+    try { r.start(); } catch (_) {}
+  };
+
+  const stopVoice = () => {
+    try { recRef.current?.stop(); } catch (_) {}
+    setListening(false);
+    setVoiceStatus('idle');
+  };
+
+  // Auto-start voice on mount (if no pre-selection)
+  useEffect(() => {
+    if (!preSelected && SpeechRecognition) {
+      // Speak prompt then start listening
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance(
+          'Please choose a seat. You can say window, aisle, middle, a seat number like 14 A, or skip.'
+        );
+        u.rate = 1.05; u.lang = 'en-GB';
+        u.onend = () => startVoice();
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } else {
+        setTimeout(() => startVoice(), 400);
+      }
+    }
+    return () => {
+      try { recRef.current?.abort(); } catch (_) {}
+      window.speechSynthesis?.cancel();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSeat = (code, isOccupied) => {
     if (isOccupied) return;
+    stopVoice();
     setSelected(code);
   };
 
-  const selectedLabel = selected
-    ? `Row ${selected.replace(/[A-F]/,'')}, Seat ${selected.slice(-1)} (${SEAT_LABELS[selected.slice(-1)] || ''})`
+  const selectedLabel = selected && selected !== 'SKIP'
+    ? `Row ${selected.replace(/[A-F]/i, '')}, Seat ${selected.slice(-1)} (${SEAT_LABELS[selected.slice(-1)] || ''})`
     : null;
+
+  // If pre-selected, show a brief auto-confirm screen
+  if (preSelected && preSelected !== 'SKIP') {
+    return (
+      <div className="seatpopup__overlay" role="dialog" aria-modal="true" aria-label="Seat confirmed">
+        <div className="seatpopup seatpopup--autoconfirm">
+          <div className="seatpopup__autoconfirm-icon">💺</div>
+          <h2 className="seatpopup__autoconfirm-title">Seat {preSelected} confirmed!</h2>
+          <p className="seatpopup__autoconfirm-sub">
+            {SEAT_LABELS[preSelected.slice(-1)] || ''} seat — Row {preSelected.replace(/[A-F]/i, '')}
+          </p>
+          <div className="seatpopup__autoconfirm-spinner" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="seatpopup__overlay" role="dialog" aria-modal="true" aria-label="Select your seat">
@@ -112,13 +245,62 @@ function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip }) {
             <div className="seatpopup__icon">💺</div>
             <div>
               <h2 className="seatpopup__title">Select Your Seat</h2>
-              <p className="seatpopup__subtitle">Voice booking — choose before confirming</p>
+              <p className="seatpopup__subtitle">Voice booking — say your preference</p>
             </div>
           </div>
           <div className="seatpopup__voice-badge">
             <span className="seatpopup__voice-dot" />
             Voice
           </div>
+        </div>
+
+        {/* Voice command bar */}
+        <div className={`seatpopup__voice-bar seatpopup__voice-bar--${voiceStatus}`}>
+          <button
+            className={`seatpopup__mic-btn ${listening ? 'seatpopup__mic-btn--active' : ''}`}
+            onClick={listening ? stopVoice : startVoice}
+            aria-label={listening ? 'Stop listening' : 'Start voice seat selection'}
+            title={listening ? 'Stop' : 'Tap to speak'}
+          >
+            <FaMicrophone size={14} />
+          </button>
+          <span className="seatpopup__voice-hint">
+            {voiceStatus === 'listening' && (voiceHint || 'Listening… say "window", "aisle", "14A", or "skip"')}
+            {voiceStatus === 'understood' && (voiceHint || 'Got it!')}
+            {voiceStatus === 'error'     && (voiceHint || 'Try again')}
+            {voiceStatus === 'idle'      && 'Say "window", "aisle", a seat like "14A", or "skip"'}
+          </span>
+          {listening && (
+            <span className="seatpopup__voice-bars">
+              {[1,2,3,4,5].map(i => (
+                <span key={i} className="seatpopup__voice-bar-dot" style={{ animationDelay: `${i * 0.1}s` }} />
+              ))}
+            </span>
+          )}
+        </div>
+
+        {/* Quick voice command chips */}
+        <div className="seatpopup__voice-chips">
+          {[
+            { label: '🪟 Window', cmd: 'window seat' },
+            { label: '🚶 Aisle',  cmd: 'aisle seat'  },
+            { label: '🧍 Middle', cmd: 'middle seat'  },
+            { label: '📐 Extra Legroom', cmd: 'extra legroom' },
+            { label: '⏭ Skip',   cmd: 'skip'         },
+          ].map(({ label, cmd }) => (
+            <button
+              key={cmd}
+              className="seatpopup__voice-chip"
+              onClick={() => {
+                stopVoice();
+                const code = parseSeatCommand(cmd);
+                if (code === 'SKIP') { onSkip(); return; }
+                if (code) { setSelected(code); setTimeout(() => onConfirm(code), 300); }
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Body */}
@@ -205,7 +387,7 @@ function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip }) {
               <div>
                 <strong>{selected}</strong>{' '}
                 <span>— {selectedLabel}</span>
-                {SEAT_MAP.find(r => r.row === Number(selected.replace(/[A-F]/,'')) && r.type === 'legroom') && (
+                {SEAT_MAP.find(r => r.row === Number(selected.replace(/[A-F]/i,'')) && r.type === 'legroom') && (
                   <span style={{ color:'#9a7a1a', fontWeight:700, marginLeft:6 }}>+£25 (Extra Legroom)</span>
                 )}
               </div>
@@ -215,13 +397,13 @@ function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip }) {
 
         {/* Footer */}
         <div className="seatpopup__footer">
-          <button className="seatpopup__skip-btn" onClick={() => onSkip()}>
+          <button className="seatpopup__skip-btn" onClick={() => { stopVoice(); onSkip(); }}>
             Skip for now
           </button>
           <button
             className="btn btn-primary seatpopup__confirm-btn"
             disabled={!selected}
-            onClick={() => onConfirm(selected)}
+            onClick={() => { stopVoice(); onConfirm(selected); }}
           >
             <FaCheck size={13} /> Confirm Seat {selected || ''}
           </button>
@@ -248,13 +430,23 @@ export default function BookFlight() {
           bookingSource, bookingStartedAt, setBookingSource, clearBookingSource } = useApp();
 
   // Detect voice booking from location state or context
-  const isVoiceBooking = location.state?.isVoiceBooking || bookingSource === 'voice';
+  // Use a ref captured at mount AND keep it true if bookingSource becomes 'voice'
+  const isVoiceBookingRef = useRef(
+    !!(location.state?.isVoiceBooking || bookingSource === 'voice')
+  );
+  // Update ref whenever bookingSource changes
+  useEffect(() => {
+    if (bookingSource === 'voice') isVoiceBookingRef.current = true;
+  }, [bookingSource]);
+  const isVoiceBooking = isVoiceBookingRef.current || bookingSource === 'voice';
 
   // Set source on mount if coming from voice nav state
   useEffect(() => {
-    if (location.state?.isVoiceBooking && bookingSource !== 'voice') {
-      setBookingSource('voice');
-    } else if (!location.state?.isVoiceBooking && !bookingSource) {
+    const fromVoice = location.state?.isVoiceBooking || bookingSource === 'voice';
+    if (fromVoice) {
+      isVoiceBookingRef.current = true;
+      if (bookingSource !== 'voice') setBookingSource('voice');
+    } else if (!bookingSource) {
       setBookingSource('normal');
     }
     // Reset on unmount
@@ -318,17 +510,19 @@ export default function BookFlight() {
   const [touchedPaymentFields, setTouchedPaymentFields] = useState({});
 
   // ── Pre-fill from voice agent ──────────────────────────────────
-  // When VoiceAgent does booking it navigates here with
-  // location.state = { prefillPassenger: {...}, from, to, departDate, jumpToStep: 4, autoSearch: true }
+  // Store nav state in a ref synchronously so autoSearch can use them
+  // before React flushes all the setState calls.
+  const voiceNavRef = useRef(location.state || null);
+  const [autoSearchTrigger, setAutoSearchTrigger] = useState(false);
+
   useEffect(() => {
-    const s = location.state;
+    const s = voiceNavRef.current;
     if (!s) return;
     if (s.prefillPassenger || s.autoSearch || s.from) {
       const pf = s.prefillPassenger || {};
       setPassenger(prev => ({
         firstName:   pf.firstName   || prev.firstName   || '',
         lastName:    pf.lastName    || prev.lastName    || '',
-        // Use a placeholder phone if empty so voice booking isn't blocked
         phone:       pf.phone       || prev.phone       || (s.isVoiceBooking ? '+44 7700 900000' : ''),
         nationality: pf.nationality || prev.nationality || (s.isVoiceBooking ? 'GB' : ''),
       }));
@@ -344,7 +538,8 @@ export default function BookFlight() {
       if (s.jumpToStep) jumpToStepRef.current = s.jumpToStep;
 
       if (s.autoSearch) {
-        setTimeout(() => document.getElementById('ba-flight-search-btn')?.click(), 300);
+        // Trigger auto-search on next render after state is committed
+        setAutoSearchTrigger(true);
       } else if (s.jumpToStep) {
         setStep(s.jumpToStep);
       }
@@ -352,6 +547,52 @@ export default function BookFlight() {
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-search effect — fires after state updates are committed
+  useEffect(() => {
+    if (!autoSearchTrigger) return;
+    setAutoSearchTrigger(false);
+    const s = voiceNavRef.current;
+    if (!s) return;
+    // Build search params directly from nav state (bypasses stale state closure)
+    const fromCode = s.from || from;
+    const toCode   = s.to   || to;
+    const depDate  = s.departDate || departDate;
+    const adultsCt = Number(s.adults || adults || 1);
+    const cabinVal = s.cabin || cabin || 'economy';
+    if (!fromCode || !toCode || !depDate) return;
+
+    setLoading(true);
+    setSearchError('');
+    setFrom(fromCode);
+    setTo(toCode);
+    flightsAPI.search({
+      from: fromCode, to: toCode,
+      departureDate: depDate,
+      returnDate: s.tripType === 'return' ? (s.returnDate || '') : undefined,
+      adults: adultsCt,
+      cabin: cabinVal.toUpperCase(),
+    }).then(result => {
+      const results = result.flights || [];
+      setFlights(results);
+      if (results.length > 0) {
+        const best = results.find(f => (f.seatsLeft?.[selectedCabinKey] ?? 0) > 0) || results[0];
+        setSelectedFlight(best);
+        // Always show seat popup for voice bookings
+        setShowSeatPopup(true);
+        jumpToStepRef.current = 4;
+      } else {
+        setStep(2);
+        setSearchError('No flights found for this route and date. Please try different options.');
+      }
+    }).catch(err => {
+      setSearchError(err.message || 'Flight search failed. Please try again.');
+    }).finally(() => {
+      setLoading(false);
+      window.scrollTo(0, 0);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSearchTrigger]);
   const [paymentDetails, setPaymentDetails] = useState({
     cardNumber: '',
     cardName: '',
@@ -465,7 +706,7 @@ export default function BookFlight() {
           results.find(f => (f.seatsLeft?.[selectedCabinKey] ?? 0) > 0) || results[0];
         setSelectedFlight(bestFlight);
         // Voice booking: show seat popup, then jump to payment (step 4) directly
-        if (isVoiceBooking) {
+        if (isVoiceBookingRef.current || bookingSource === 'voice') {
           // Override jumpToStep to 4 so we skip past passenger form
           jumpToStepRef.current = 4;
           setShowSeatPopup(true);
@@ -492,10 +733,9 @@ export default function BookFlight() {
     setSelectedFlight(flight);
     const nextStep = jumpToStepRef.current || 3;
     jumpToStepRef.current = null; // consume it
-    // For voice bookings: show seat popup before proceeding to passenger step
-    if (isVoiceBooking) {
+    // For voice bookings: show seat popup before proceeding
+    if (isVoiceBookingRef.current || bookingSource === 'voice') {
       setShowSeatPopup(true);
-      // Store the next step so popup confirm can use it
       jumpToStepRef.current = nextStep;
     } else {
       setStep(nextStep);
@@ -533,17 +773,12 @@ export default function BookFlight() {
   const handlePassengerSubmit = (e) => {
     e.preventDefault();
 
-    // ── Voice booking fast-path ──────────────────────────────────────────
-    // For voice bookings: if the user has at least first+last name filled,
-    // allow proceeding even if phone/nationality are missing.
-    // They can complete those details on the payment page or use Quick Book.
-    if (isVoiceBooking) {
-      const lead = travelers[0];
-      if (lead.firstName?.trim() && lead.lastName?.trim()) {
-        setStep(4);
-        window.scrollTo(0, 0);
-        return;
-      }
+    // ── Voice booking fast-path ─────────────────────────────────
+    // isVoiceBookingRef.current is the stable flag — never stale
+    if (isVoiceBookingRef.current || bookingSource === 'voice') {
+      setStep(4);
+      window.scrollTo(0, 0);
+      return;
     }
 
     // Validate every traveler row
@@ -685,6 +920,7 @@ export default function BookFlight() {
           from={from}
           to={to}
           cabin={cabin}
+          preSelected={location.state?.selectedSeat || null}
           onConfirm={handleSeatPopupConfirm}
           onSkip={handleSeatPopupSkip}
         />

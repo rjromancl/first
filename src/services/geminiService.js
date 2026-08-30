@@ -554,37 +554,52 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     'south african':'ZA', bangladeshi:'BD', 'sri lankan':'LK', nigerian:'NG',
     kenyan:'KE', french:'FR', german:'DE', italian:'IT', spanish:'ES',
     dutch:'NL', emirati:'AE', saudi:'SA', egyptian:'EG',
+    // Spanish demonyms
+    británico:'GB', británica:'GB', inglés:'GB', inglesa:'GB',
+    indio:'IN', india:'IN', americano:'US', americana:'US',
+    australiano:'AU', australiana:'AU', canadiense:'CA',
+    francés:'FR', francesa:'FR', alemán:'DE', alemana:'DE',
+    italiano:'IT', italiana:'IT', español:'ES', española:'ES',
+    holandés:'NL', holandesa:'NL', emiratí:'AE', saudí:'SA',
   };
 
-  // Route detection
-  const ssRouteMatch = l.match(/(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|->|–)\s+(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
+  // Route detection — English + Spanish city names
+  const ssRouteMatch = l.match(/(london|heathrow|paris|dubai|dubái|chennai|mumbai|bombay|delhi|new york|nueva york|tokyo|tokio|sydney|sídney|barcelona|singapore|singapur|amsterdam|ámsterdam|rome|roma|madrid)\s+(?:to|a|hacia|->|–)\s+(london|heathrow|paris|dubai|dubái|chennai|mumbai|bombay|delhi|new york|nueva york|tokyo|tokio|sydney|sídney|barcelona|singapur|singapore|amsterdam|ámsterdam|rome|roma|madrid)/i);
   const ssCityMap = {
-    london:'LHR',heathrow:'LHR',gatwick:'LGW',paris:'CDG',newyork:'JFK','new york':'JFK',
-    dubai:'DXB',tokyo:'NRT',sydney:'SYD',mumbai:'BOM',chennai:'MAA',delhi:'DEL',
-    barcelona:'BCN',singapore:'SIN',amsterdam:'AMS',rome:'FCO',
+    london:'LHR',heathrow:'LHR',gatwick:'LGW',paris:'CDG',newyork:'JFK','new york':'JFK','nueva york':'JFK','nuevayork':'JFK',
+    dubai:'DXB',dubái:'DXB',tokyo:'NRT',tokio:'NRT',sydney:'SYD',sídney:'SYD',sidney:'SYD',
+    mumbai:'BOM',bombay:'BOM',chennai:'MAA',delhi:'DEL',
+    barcelona:'BCN',singapore:'SIN',singapur:'SIN',amsterdam:'AMS',ámsterdam:'AMS',rome:'FCO',roma:'FCO',madrid:'MAD',
   };
 
   // Phone number detection
-  const ssPhone = l.match(/(?:phone|number|mobile|tel|call)?\s*(?:is|:)?\s*(\+?[\d\s\-]{7,15})/i)?.[1]?.replace(/\s/g,'') || l.match(/\b(0\d{10}|\+\d{10,14})\b/)?.[1] || null;
+  const ssPhone = l.match(/(?:phone|number|mobile|tel|call|teléfono|móvil|número)?\s*(?:is|es|:)?\s*(\+?[\d\s\-]{7,15})/i)?.[1]?.replace(/\s/g,'') || l.match(/\b(0\d{10}|\+\d{10,14})\b/)?.[1] || null;
 
-  // Name detection — "for John Smith" / "my name is" / just two capitalised words
-  const ssNameMatch = (t || '').match(/(?:for|name(?:\s+is)?|passenger|pax)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)/i) || (t || '').match(/\b([A-Z][a-z]{1,20})\s+([A-Z][a-z]{1,20})\b/);
+  // Name detection — "for John Smith" / "my name is" / "me llamo" / "mi nombre es" / just two capitalised words
+  const ssNameMatch = (t || '').match(/(?:for|name(?:\s+is)?|passenger|pax|me llamo|mi nombre es|llamo|nombre)\s+([A-Za-z]+)\s+([A-Za-z]+)/i)
+    || (t || '').match(/(?:for|name(?:\s+is)?|passenger|pax)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)/i)
+    || (t || '').match(/\b([A-Z][a-z]{1,20})\s+([A-Z][a-z]{1,20})\b/);
   const ssFirstName = ssNameMatch?.[1] || null;
   const ssLastName  = ssNameMatch?.[2] || null;
 
-  // Nationality detection
+  // Nationality detection — English + Spanish demonyms
   const ssNatKey = Object.keys(NAT_MAP).find(k => l.includes(k));
-  const ssNat = ssNatKey ? NAT_MAP[ssNatKey] : null;
+  // Default to 'GB' if not detected — nationality is optional for single-shot
+  const ssNat = ssNatKey ? NAT_MAP[ssNatKey] : 'GB';
 
-  // Date detection
+  // Date detection — English + Spanish + fuzzy speech-recognition variants
   const today2 = new Date();
   const addD = (n) => { const d = new Date(today2); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; };
   let ssDate = null;
-  if (/christmas/i.test(l))      ssDate = `${today2.getFullYear()}-12-20`;
-  else if (/diwali/i.test(l))    ssDate = `${today2.getFullYear()}-11-08`;
-  else if (/new year/i.test(l))  ssDate = `${today2.getFullYear()}-12-29`;
-  else if (/tomorrow/i.test(l))  ssDate = addD(1);
-  else if (/next week/i.test(l)) ssDate = addD(7);
+  // Fuzzy Christmas: "navida", "navidad", "christmas", "xmas", "navida", "navi dad"
+  if (/christmas|xmas|navidad|navida\b|navi\s*dad|noël|noel|weihnachten/i.test(l))       ssDate = `${today2.getFullYear()}-12-20`;
+  else if (/diwali|dipawali/i.test(l))                                                    ssDate = `${today2.getFullYear()}-11-08`;
+  else if (/new year|año nuevo|ano nuevo|nouvel an|neujahr/i.test(l))                     ssDate = `${today2.getFullYear()}-12-29`;
+  else if (/tomorrow|mañana|manana|demain|morgen/i.test(l))                               ssDate = addD(1);
+  else if (/next week|proxima semana|próxima semana|semaine prochaine/i.test(l))           ssDate = addD(7);
+  else if (/next month|proximo mes|próximo mes/i.test(l))                                 ssDate = addD(30);
+  else if (/easter|semana santa|paques|pâques/i.test(l))                                  ssDate = `${today2.getFullYear()}-04-12`;
+  else if (/weekend|fin de semana/i.test(l))                                              ssDate = addD(((6 - today2.getDay()) + 7) % 7 || 7);
   else {
     const iso = l.match(/\b(20\d\d-\d{2}-\d{2})\b/)?.[1];
     const monthDay = l.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
@@ -595,19 +610,28 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     else if (dayMonth) ssDate = `${today2.getFullYear()}-${String(mmap[dayMonth[1].toLowerCase()]).padStart(2,'0')}-${String(dayMonth[2]).padStart(2,'0')}`;
   }
 
-  // Cabin
+  // Cabin — English + Spanish + fuzzy speech-recognition variants
+  // "clase económica", "economy", "glacia econo", "turista"
   let ssCabin = 'economy';
-  if (/business|club world/i.test(l)) ssCabin = 'business';
-  else if (/first class/i.test(l))    ssCabin = 'first';
-  else if (/premium economy/i.test(l)) ssCabin = 'premium_economy';
+  if (/business|club world|negocios|clase ejecutiva|ejecutiv/i.test(l))        ssCabin = 'business';
+  else if (/first class|primera clase|primera\s*clas/i.test(l))                ssCabin = 'first';
+  else if (/premium economy|turista superior|premium/i.test(l))                ssCabin = 'premium_economy';
+  // economy is default — also catches "econo", "económica", "economica", "turista"
 
-  // If ALL 8 fields present → FULL_BOOKING immediately
-  if (ssRouteMatch && ssDate && ssPhone && ssFirstName && ssLastName && ssNat) {
-    const fromCode = ssCityMap[ssRouteMatch[1].toLowerCase().replace(/\s+/g,'')] || 'LHR';
-    const toCode   = ssCityMap[ssRouteMatch[2].toLowerCase().replace(/\s+/g,'')] || 'CDG';
+  // Detect language for response localisation
+  const ssIsSpanish = /\b(quiero|reservar|vuelo|volar|desde|hasta|navidad|mañana|próxima|española?|británico|español)\b/i.test(l);
+
+  // If ALL fields present (nationality optional — defaults to GB) → FULL_BOOKING immediately
+  if (ssRouteMatch && ssDate && ssPhone && ssFirstName && ssLastName) {
+    const normalize = s => s.toLowerCase().replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/\s+/g,'');
+    const fromCode = ssCityMap[normalize(ssRouteMatch[1])] || 'LHR';
+    const toCode   = ssCityMap[normalize(ssRouteMatch[2])] || 'CDG';
+    const confirmText = ssIsSpanish
+      ? `¡Perfecto! Reservando clase ${ssCabin} de ${fromCode} a ${toCode} el ${ssDate} para ${ssFirstName} ${ssLastName}. ¡Te llevo al pago ahora!`
+      : `Perfect! Booking ${ssCabin} class from ${fromCode} to ${toCode} on ${ssDate} for ${ssFirstName} ${ssLastName}. Taking you to payment now!`;
     return {
       intent: 'BOOK_FLIGHT',
-      text: `Perfect! Booking ${ssCabin} class from ${fromCode} to ${toCode} on ${ssDate} for ${ssFirstName} ${ssLastName}. Taking you to payment now!`,
+      text: confirmText,
       quickReplies: [],
       action: { type: 'FULL_BOOKING', passenger: { firstName: ssFirstName, lastName: ssLastName, phone: ssPhone, nationality: ssNat } },
       entities: { from: fromCode, to: toCode, departureDate: ssDate, returnDate: '', adults: 1, cabin: ssCabin, tripType: 'return' },
@@ -620,9 +644,12 @@ async function fallbackResponse(t, errorReason = null, history = []) {
   if (ssRouteMatch && ssDate && ssFirstName && ssLastName) {
     const fromCode = ssCityMap[ssRouteMatch[1].toLowerCase().replace(/\s+/g,'')] || 'LHR';
     const toCode   = ssCityMap[ssRouteMatch[2].toLowerCase().replace(/\s+/g,'')] || 'CDG';
+    const searchText = ssIsSpanish
+      ? `¡Entendido! Buscando vuelos clase ${ssCabin} de ${fromCode} a ${toCode} el ${ssDate}...`
+      : `Got it! Searching ${ssCabin} class flights from ${fromCode} to ${toCode} on ${ssDate}...`;
     return {
       intent: 'BOOK_FLIGHT',
-      text: `Got it! Searching ${ssCabin} class flights from ${fromCode} to ${toCode} on ${ssDate}...`,
+      text: searchText,
       quickReplies: [],
       action: { type: 'PREFILL_BOOKING', passenger: { firstName: ssFirstName, lastName: ssLastName, phone: ssPhone || '', nationality: ssNat || '' } },
       entities: { from: fromCode, to: toCode, departureDate: ssDate, returnDate: '', adults: 1, cabin: ssCabin, tripType: 'return' },
@@ -933,6 +960,7 @@ async function fallbackResponse(t, errorReason = null, history = []) {
 
   // ── Route / City extraction matching ───────────────────────────────
   const cityMap = {
+    // English
     london: 'LHR', heathrow: 'LHR', gatwick: 'LGW',
     paris: 'CDG', cdg: 'CDG',
     newyork: 'JFK', 'new york': 'JFK', jfk: 'JFK',
@@ -945,14 +973,105 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     barcelona: 'BCN', bcn: 'BCN',
     singapore: 'SIN', sin: 'SIN',
     amsterdam: 'AMS', ams: 'AMS',
-    rome: 'FCO', fco: 'FCO'
+    rome: 'FCO', fco: 'FCO',
+    // Spanish city names
+    madrid: 'MAD', mad: 'MAD',
+    'nueva york': 'JFK', 'nueva-york': 'JFK',
+    tokio: 'NRT',
+    sídney: 'SYD', sidney: 'SYD',
+    bombay: 'BOM',
+    roma: 'FCO',
+    ámsterdam: 'AMS', amsterdam: 'AMS',
+    singapur: 'SIN',
+    dubái: 'DXB',
+    // French city names
+    londre: 'LHR', londres: 'LHR',
+    'new-york': 'JFK',
+    // German city names
+    london: 'LHR', newyork: 'JFK',
+  };
+
+  // Detect language from input for localised responses
+  const isSpanish = /\b(quiero|reservar|vuelo|volar|billete|asiento|pasajero|desde|hasta|a\s+\w+|mañana|próxim|navidad|economía|negocio|primera clase|cuánto|gracias|hola|necesito|viaje|origen|destino|fecha|ida|vuelta)\b/i.test(l);
+  const isFrench  = /\b(veux|réserver|vol|billet|siège|passager|demain|noël|économique|affaires|première|merci|bonjour|besoin|voyage|origine|destination|date|aller|retour)\b/i.test(l);
+  const isGerman  = /\b(möchte|buchen|flug|flugticket|sitz|passagier|morgen|weihnachten|wirtschaft|geschäft|erste klasse|danke|hallo|brauche|reise|herkunft|ziel|datum|hin|zurück)\b/i.test(l);
+
+  // Spanish responses
+  const resp = isSpanish ? {
+    askDate:    (from, to) => `¿Cuándo te gustaría volar de ${from} a ${to}?`,
+    searching:  (from, to, date) => `Buscando vuelos de ${from} a ${to} el ${date}...`,
+    found:      (n, from, to, date) => `Encontré ${n} vuelo${n !== 1 ? 's' : ''} de ${from} a ${to} el ${date}:`,
+    noFlights:  (from, to, date) => `Busqué ${from} → ${to} para el ${date} pero no hay vuelos disponibles. ¿Pruebas otra fecha?`,
+    quickReplies: {
+      bookCheapest: 'Reservar el más barato',
+      changeDate:   'Cambiar fecha',
+      changeCabin:  'Cambiar clase',
+      tomorrow:     'Mañana',
+      nextWeek:     'Próxima semana',
+      christmas:    'Navidad',
+      newYear:      'Año Nuevo',
+    },
+    shallBook: '¿Quieres que reserve uno de estos?',
+  } : isFrench ? {
+    askDate:    (from, to) => `Quand souhaitez-vous voler de ${from} à ${to} ?`,
+    searching:  (from, to, date) => `Recherche de vols de ${from} à ${to} le ${date}...`,
+    found:      (n, from, to, date) => `J'ai trouvé ${n} vol${n !== 1 ? 's' : ''} de ${from} à ${to} le ${date} :`,
+    noFlights:  (from, to, date) => `Aucun vol disponible de ${from} à ${to} le ${date}. Essayez une autre date ?`,
+    quickReplies: {
+      bookCheapest: 'Réserver le moins cher',
+      changeDate:   'Changer la date',
+      changeCabin:  'Changer la classe',
+      tomorrow:     'Demain',
+      nextWeek:     'La semaine prochaine',
+      christmas:    'Noël',
+      newYear:      'Nouvel An',
+    },
+    shallBook: 'Dois-je réserver l\'un de ces vols ?',
+  } : isGerman ? {
+    askDate:    (from, to) => `Wann möchten Sie von ${from} nach ${to} fliegen?`,
+    searching:  (from, to, date) => `Suche nach Flügen von ${from} nach ${to} am ${date}...`,
+    found:      (n, from, to, date) => `Ich habe ${n} Flug${n !== 1 ? 'flüge' : ''} von ${from} nach ${to} am ${date} gefunden:`,
+    noFlights:  (from, to, date) => `Keine Flüge von ${from} nach ${to} am ${date}. Anderen Termin versuchen?`,
+    quickReplies: {
+      bookCheapest: 'Günstigsten buchen',
+      changeDate:   'Datum ändern',
+      changeCabin:  'Klasse ändern',
+      tomorrow:     'Morgen',
+      nextWeek:     'Nächste Woche',
+      christmas:    'Weihnachten',
+      newYear:      'Neujahr',
+    },
+    shallBook: 'Soll ich einen dieser Flüge buchen?',
+  } : {
+    askDate:    (from, to) => `When would you like to fly from ${from} to ${to}?`,
+    searching:  (from, to, date) => `Searching flights from ${from} to ${to} on ${date}...`,
+    found:      (n, from, to, date) => `Found ${n} flight${n !== 1 ? 's' : ''} from ${from} to ${to} on ${date}:`,
+    noFlights:  (from, to, date) => `I searched ${from} → ${to} for ${date} but found no available flights. Try a different date?`,
+    quickReplies: {
+      bookCheapest: 'Book cheapest',
+      changeDate:   'Change date',
+      changeCabin:  'Change cabin',
+      tomorrow:     'Tomorrow',
+      nextWeek:     'Next week',
+      christmas:    'Christmas',
+      newYear:      'New Year',
+    },
+    shallBook: 'Shall I book one of these?',
   };
 
   // ── Single-city destination extraction (e.g. "fly to dubai", "dubai economy") ──
-  const singleCityRe = /(?:to|fly to|flight to|book.*?to|going to|travel to|poganum|venum)\s+(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i;
-  const singleMatch = l.match(singleCityRe);
+  const cityNames = Object.keys(cityMap).join('|').replace(/\s+/g, '\\s*');
+  const singleCityRe = new RegExp(
+    `(?:to|fly to|flight to|book.*?to|going to|travel to|poganum|venum|a|hacia|volar a|vuelo a|ir a)\s+(${Object.keys(cityMap).join('|')})`,
+    'i'
+  );
+  const singleMatch = l.match(singleCityRe) || l.match(
+    /(madrid|barcelona|nueva york|tokio|dubai|dubái|singapur|ámsterdam|roma|bombay|sídney)/i
+  );
 
-  const routeMatch = l.match(/(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|poganum|-)\s+(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
+  const routeMatch = l.match(
+    /(london|heathrow|gatwick|paris|madrid|barcelona|dubai|dubái|chennai|mumbai|bombay|delhi|new york|nueva york|tokyo|tokio|sydney|sídney|barcelona|singapore|singapur|amsterdam|ámsterdam|rome|roma)\s+(?:to|a|hacia|poganum|-)\s+(london|heathrow|gatwick|paris|madrid|barcelona|dubai|dubái|chennai|mumbai|bombay|delhi|new york|nueva york|tokyo|tokio|sydney|sídney|barcelona|singapore|singapur|amsterdam|ámsterdam|rome|roma)/i
+  );
 
   if (routeMatch || singleMatch) {
     let fromCode, toCode;
@@ -969,15 +1088,15 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     const addDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; };
     let departureDate = null; // null = user hasn't specified a date yet
 
-    if (/tomorrow|naalaiku/i.test(l))                          departureDate = addDays(1);
-    else if (/today|inniku/i.test(l))                          departureDate = addDays(0);
-    else if (/next week|adutha vaaram/i.test(l))               departureDate = addDays(7);
-    else if (/next month|adutha maasam/i.test(l))              departureDate = addDays(30);
-    else if (/christmas/i.test(l))                             departureDate = `${today.getFullYear()}-12-20`;
-    else if (/diwali/i.test(l))                                departureDate = `${today.getFullYear()}-11-08`;
-    else if (/new year/i.test(l))                              departureDate = `${today.getFullYear()}-12-29`;
-    else if (/easter/i.test(l))                                departureDate = `${today.getFullYear()}-04-12`;
-    else if (/weekend/i.test(l))                               departureDate = addDays(((6 - today.getDay()) + 7) % 7 || 7);
+    if (/tomorrow|naalaiku|mañana|demain|morgen/i.test(l))                 departureDate = addDays(1);
+    else if (/today|inniku|hoy|aujourd'hui|heute/i.test(l))                departureDate = addDays(0);
+    else if (/next week|adutha vaaram|próxima semana|semaine prochaine|nächste woche/i.test(l))  departureDate = addDays(7);
+    else if (/next month|adutha maasam|próximo mes|mois prochain|nächsten monat/i.test(l))       departureDate = addDays(30);
+    else if (/christmas|navidad|noël|weihnachten/i.test(l))                departureDate = `${today.getFullYear()}-12-20`;
+    else if (/diwali/i.test(l))                                            departureDate = `${today.getFullYear()}-11-08`;
+    else if (/new year|año nuevo|nouvel an|neujahr/i.test(l))              departureDate = `${today.getFullYear()}-12-29`;
+    else if (/easter|semana santa|pâques|ostern/i.test(l))                 departureDate = `${today.getFullYear()}-04-12`;
+    else if (/weekend|fin de semana|week-end|wochenende/i.test(l))         departureDate = addDays(((6 - today.getDay()) + 7) % 7 || 7);
     else {
       // Try to extract an explicit date like "20 december", "december 20", "2026-12-20"
       const isoMatch      = l.match(/\b(20\d\d-\d{2}-\d{2})\b/);

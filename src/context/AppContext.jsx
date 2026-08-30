@@ -59,15 +59,15 @@ function appReducer(state, action) {
 
 function loadInitialState() {
   try {
-    const savedUser     = localStorage.getItem('ba_user');
-    const savedBookings = localStorage.getItem('ba_bookings');
-    const savedLang     = localStorage.getItem('ba_lang');
+    // Clear any stale persisted data from previous sessions
+    localStorage.removeItem('ba_user');
+    localStorage.removeItem('ba_bookings');
+
+    // Only restore language preference
+    const savedLang  = localStorage.getItem('ba_lang');
     return {
       ...initialState,
-      language:        savedLang || 'en-GB',
-      user:            savedUser     ? JSON.parse(savedUser)     : null,
-      isAuthenticated: !!savedUser,
-      bookings:        savedBookings ? JSON.parse(savedBookings) : [],
+      language: savedLang || 'en-GB',
     };
   } catch {
     return initialState;
@@ -77,42 +77,33 @@ function loadInitialState() {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, undefined, loadInitialState);
 
-  // ── Persist user + bookings to localStorage ──────────────────
+  // ── Only persist language preference ────────────────────────
   useEffect(() => {
-    if (state.user) localStorage.setItem('ba_user', JSON.stringify(state.user));
-    else            localStorage.removeItem('ba_user');
-  }, [state.user]);
-
-  useEffect(() => {
-    localStorage.setItem('ba_bookings', JSON.stringify(state.bookings));
-  }, [state.bookings]);
+    localStorage.setItem('ba_lang', state.language || 'en-GB');
+  }, [state.language]);
 
   // ── Rehydrate user from API token on app load ─────────────────
+  // Only runs if a token exists — won't pre-fill static user data
   useEffect(() => {
     const token = localStorage.getItem('ba_token');
-    if (!token || state.user) return;
+    if (!token) return;
     authAPI.getMe()
       .then(user => dispatch({ type: 'LOGIN', payload: user }))
       .catch(() => {
         localStorage.removeItem('ba_token');
-        localStorage.removeItem('ba_user');
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    localStorage.setItem('ba_lang', state.language || 'en-GB');
-  }, [state.language]);
 
   // ── Actions ───────────────────────────────────────────────────
   const setLanguage = lang => dispatch({ type: 'SET_LANGUAGE', payload: lang });
   const updateUser  = data => dispatch({ type: 'UPDATE_USER',  payload: data });
   const login = (userData, token) => {
     if (token) localStorage.setItem('ba_token', token);
+    // Don't persist user object — only the token
     dispatch({ type: 'LOGIN', payload: userData });
   };
   const logout = () => {
     localStorage.removeItem('ba_token');
-    localStorage.removeItem('ba_user');
     dispatch({ type: 'LOGOUT' });
   };
   const setSearchParams     = p  => dispatch({ type: 'SET_SEARCH_PARAMS',  payload: p });

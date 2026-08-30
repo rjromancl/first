@@ -1,6 +1,6 @@
 /* ===== Voice Agent Panel ===== */
 
-/* Overlay */
+/* Overlay container — pointer-events none so ShieldX doesn't flag it */
 .va-overlay {
   position: fixed;
   inset: 0;
@@ -18,12 +18,14 @@
   padding: 16px;
 }
 
+/* Backdrop — sits behind panel, pointer-events only where visible */
 .va-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 26, 58, 0.35);
   backdrop-filter: blur(4px);
-  pointer-events: all;
+  pointer-events: auto;
+  z-index: -1;
   animation: backdropFade 0.2s ease;
 }
 

@@ -296,6 +296,26 @@ export default function VoiceAgent() {
   const { voiceAgentOpen, closeVoiceAgent, setSearchParams, setBookingSource, language, setLanguage } = useApp();
   const navigate = useNavigate();
 
+  // ── Catch any unhandled errors so the panel doesn't vanish silently ──────
+  useEffect(() => {
+    const handler = (e) => {
+      console.error('[VoiceAgent] Uncaught error:', e.error || e.message || e);
+    };
+    window.addEventListener('error', handler);
+    return () => window.removeEventListener('error', handler);
+  }, []);
+
+  // ── Guard backdrop clicks for 400ms after open so the opening click
+  //    doesn't immediately close the panel ─────────────────────────────────
+  const backdropReadyRef = useRef(false);
+  useEffect(() => {
+    if (voiceAgentOpen) {
+      backdropReadyRef.current = false;
+      const t = setTimeout(() => { backdropReadyRef.current = true; }, 400);
+      return () => clearTimeout(t);
+    }
+  }, [voiceAgentOpen]);
+
   // UI
   const [selectedLang,   setSelectedLang]   = useState(language || 'en-GB');
 
@@ -350,6 +370,7 @@ export default function VoiceAgent() {
   const selectedVoiceSeatRef = useRef(null);
   const currentFieldRef     = useRef(null);   // live ref for passenger collection field
   const pendingFlightForSeatRef = useRef(null); // alias for pendingFlightRef
+  const lastFlightResultsRef = useRef([]);     // last inline flight list shown to user
   useEffect(() => { capturedEntitiesRef.current = capturedEntities; }, [capturedEntities]);
   useEffect(() => { capturedPaxRef.current      = capturedPax;      }, [capturedPax]);
   useEffect(() => { selectingSeatRef.current    = selectingSeat;    }, [selectingSeat]);
@@ -402,6 +423,9 @@ export default function VoiceAgent() {
 
   const addAgentMsg = useCallback((text, quickReplies = [], action = null, flightResults = []) => {
     setMessages(p => [...p, { id: mkId(), role: 'agent', text, timestamp: new Date(), quickReplies, action, flightResults }]);
+    if (flightResults && flightResults.length > 0) {
+      lastFlightResultsRef.current = flightResults;
+    }
   }, []);
 
   const selectedLangRef = useRef(selectedLang);
@@ -447,12 +471,9 @@ export default function VoiceAgent() {
     addTelemetryLog('📢', `Speech output: ${selectedLangRef.current}`);
     try { await speak(clean, { rate: 1.05, pitch: 1.0, lang: selectedLangRef.current }); } catch (_) {}
     if (mountedRef.current) setIsSpeaking(false);
-
-    // Continuous hands-free dialogue: auto-restart listening after speech ends
-    if (mountedRef.current && handsFreeRef.current) {
-      setTimeout(() => { if (mountedRef.current) startListening(); }, 150);
-    }
-  }, [addTelemetryLog, startListening]);
+    // NOTE: mic restart is handled by the hands-free useEffect below,
+    // not here — prevents double-start after greeting
+  }, [addTelemetryLog]);
 
   // ── Interrupt TTS and start listening immediately ─────────────
   const interruptAndListen = useCallback(() => {
@@ -526,10 +547,14 @@ export default function VoiceAgent() {
     setSelectedVoiceSeat(null);
 
     const seatMsg = `Great choice! Before we continue, would you like to choose a seat? You can say "window", "aisle", a specific seat like "14A", or "skip" to choose later.`;
-    addAgentMsg(seatMsg, ['Window seat', 'Aisle seat', 'Skip seat selection']);
+    addAgentMsg(seatMsg, ['Window seat', 'Aisle seat', 'Middle seat', 'Skip seat selection']);
     speakMessage(seatMsg);
     addTelemetryLog('💺', 'Seat selection: Awaiting user preference');
   }, [addAgentMsg, speakMessage, addTelemetryLog]);
+
+  // Ref so handleQuickReply and processInput can call it without stale closure
+  const handleBookFlightRef = useRef(null);
+  useEffect(() => { handleBookFlightRef.current = handleBookFlight; }, [handleBookFlight]);
 
   // ── Core processing loop ──────────────────────────────────────
   const processInput = useCallback(async (text) => {
@@ -597,36 +622,81 @@ export default function VoiceAgent() {
       return;
     }
 
+    // ── FLIGHT NUMBER SELECTION — user says "book BA007" / "select BA009" ──
+    // Intercept BEFORE seat mode so flight selection always works
+    const flightSelectMatch = trimmed.match(/\b(?:book|select|choose|pick|take|i(?:'d| would) like(?: to)?(?: (?:book|select|take))?)\s+(?:flight\s+)?(?:ba|british airways)\s*0*(\d{2,4})\b/i)
+      || trimmed.match(/\b(?:ba|british airways)\s*0*(\d{2,4})\b/i);
+    if (flightSelectMatch && lastFlightResultsRef.current.length > 0) {
+      const requestedNum = flightSelectMatch[flightSelectMatch.length - 1]; // last capture group
+      const flights = lastFlightResultsRef.current;
+      // Find flight by number
+      const matched = flights.find(f => {
+        const fn = (f.flightNumber || f.id || '').replace(/\D/g, '');
+        return fn === requestedNum || fn === requestedNum.replace(/^0+/, '');
+      }) || null;
+
+      if (matched) {
+        addUserMsg(trimmed);
+        const ents = capturedEntitiesRef.current;
+        handleBookFlightRef.current(matched, {
+          from: ents.from || 'LHR',
+          to: ents.to || '',
+          departureDate: ents.departureDate || '',
+          cabin: ents.cabin || 'economy',
+        });
+        return;
+      }
+    }
+
     // ── SEAT SELECTION MODE — intercept input before NLP ────────
     if (selectingSeatRef.current) {
       if (mountedRef.current) setIsProcessing(true);
       addUserMsg(trimmed);
 
       const lower = trimmed.toLowerCase();
+
+      // ── If user says a flight number like "BA007" / "book BA 007" / "select BA007"
+      // they're trying to pick a flight, not a seat — exit seat mode and treat as NLP
+      const flightNumMatch = lower.match(/\b(ba|british airways)\s*0*(\d{2,4})\b/i);
+      if (flightNumMatch || /\b(book|select|choose|pick|take)\b.*\b(flight|ba)\b/i.test(lower)) {
+        // Exit seat mode silently and re-process through normal NLP
+        setSelectingSeat(false);
+        if (mountedRef.current) setIsProcessing(false);
+        // Re-run without the seat intercept
+        processInputRef.current(trimmed);
+        return;
+      }
+
       let seatCode = null;
 
       // Parse seat preference
-      if (/skip|no thanks|no seat|later|don'?t care/i.test(lower)) {
+      if (/skip|no thanks|no seat|later|don'?t care|any seat/i.test(lower)) {
         seatCode = 'SKIP';
       } else if (/window/i.test(lower)) {
-        seatCode = '10A'; // assign a window seat
+        seatCode = '10A';
       } else if (/aisle/i.test(lower)) {
-        seatCode = '10C'; // assign an aisle seat
+        seatCode = '10C';
       } else if (/middle/i.test(lower)) {
-        seatCode = '10B'; // assign a middle seat
+        seatCode = '10B';
+      } else if (/extra legroom|legroom/i.test(lower)) {
+        seatCode = '2A';
+      } else if (/front|first row/i.test(lower)) {
+        seatCode = '1A';
+      } else if (/back|rear|last row/i.test(lower)) {
+        seatCode = '21A';
       } else {
-        // Try to parse a specific seat code like "14A", "row 14 seat A"
-        const seatMatch = lower.match(/(\d{1,2})\s*([a-f])/i);
+        // Try to parse a specific seat code like "14A", "row 14 seat A", "seat 14 A"
+        const seatMatch = lower.match(/(?:seat\s*)?(?:row\s*)?(\d{1,2})\s*([a-f])\b/i);
         if (seatMatch) {
           seatCode = `${seatMatch[1]}${seatMatch[2].toUpperCase()}`;
         }
       }
 
       if (!seatCode) {
-        // Didn't understand — ask again
+        // Didn't understand — ask again with clearer prompt
         if (mountedRef.current) setIsProcessing(false);
-        const retryMsg = 'I didn\'t catch that. Say "window", "aisle", a seat like "14A", or "skip".';
-        addAgentMsg(retryMsg, ['Window seat', 'Aisle seat', 'Skip seat selection']);
+        const retryMsg = 'For seat selection say "window", "aisle", "middle", a specific seat like "14A", or "skip" to skip.';
+        addAgentMsg(retryMsg, ['Window seat', 'Aisle seat', 'Middle seat', 'Skip seat selection']);
         await speakMessage(retryMsg);
         return;
       }
@@ -642,7 +712,9 @@ export default function VoiceAgent() {
       } else {
         setSelectedVoiceSeat(seatCode);
         addTelemetryLog('💺', `Seat selection: User chose seat ${seatCode}`);
-        const confirmMsg = `Seat ${seatCode} selected! Now let me get your passenger details.`;
+        const seatLabel = { A:'window', B:'middle', C:'aisle', D:'aisle', E:'middle', F:'window' };
+        const label = seatLabel[seatCode.slice(-1)] || '';
+        const confirmMsg = `Seat ${seatCode}${label ? ` — ${label} seat` : ''} selected! Now let me get your passenger details.`;
         addAgentMsg(confirmMsg);
         await speakMessage(confirmMsg);
       }
@@ -816,9 +888,28 @@ export default function VoiceAgent() {
         // If LLM returned real flight results, show them inline — don't auto-navigate
         const flightResults = parsed.flightResults || response.flightResults || [];
         if (flightResults.length > 0) {
-          addAgentMsg(response.text, response.quickReplies, response.action, flightResults);
+          // Build quick replies from actual flight numbers so user can say the flight number
+          const flightQRs = flightResults.slice(0, 3).map(f => {
+            const num = f.flightNumber || f.id || '';
+            const price = f.price?.grandTotal || f.price?.total || '';
+            return num ? `Book ${num}${price ? ` £${price}` : ''}` : null;
+          }).filter(Boolean);
+          const qrs = flightQRs.length > 0
+            ? [...flightQRs, 'Book cheapest', 'Change date']
+            : (response.quickReplies || ['Book cheapest', 'Change date', 'Change cabin']);
+          addAgentMsg(response.text, qrs, response.action, flightResults);
           await speakMessage(response.text);
-          // hands-free: keep listening in case user says "book cheapest" etc.
+          // Speak flight options so user knows what to say
+          if (flightResults.length > 0) {
+            const optText = flightResults.slice(0, 3).map((f, i) => {
+              const num = f.flightNumber || f.id || `Flight ${i+1}`;
+              const price = f.price?.grandTotal || f.price?.total || '';
+              const dep = f.itineraries?.[0]?.segments?.[0]?.departure?.at || '';
+              const time = dep.includes('T') ? dep.split('T')[1].slice(0,5) : '';
+              return `${num}${time ? ` at ${time}` : ''}${price ? `, £${price}` : ''}`;
+            }).join('. ');
+            await speakMessage(`You can say: Book cheapest, or a specific flight like ${flightResults[0]?.flightNumber || 'BA 007'}. Options: ${optText}`);
+          }
           if (handsFreeRef.current) setTimeout(() => { if (mountedRef.current) startListening(); }, 200);
         } else if (!hasSpokenPax) {
           // No inline results AND passenger details missing → start seat + passenger collection in voice
@@ -905,16 +996,48 @@ export default function VoiceAgent() {
   useEffect(() => { processInputRef.current = processInput; }, [processInput]);
 
   // ── Lifecycle ─────────────────────────────────────────────────
+  const hasOpenedRef = useRef(false);
   useEffect(() => {
     if (voiceAgentOpen) {
-      // Open: speak short greeting then start listening immediately
+      hasOpenedRef.current = true;
+      // ── Full reset every time the agent opens — no stale history ──
+      setMessages([{
+        id: 'welcome', role: 'agent', timestamp: new Date(),
+        text: getTranslation(selectedLangRef.current, 'voiceWelcome'),
+        quickReplies: [
+          getTranslation(selectedLangRef.current, 'qrBookFlight'),
+          getTranslation(selectedLangRef.current, 'qrCheckIn'),
+          getTranslation(selectedLangRef.current, 'qrStatus'),
+          getTranslation(selectedLangRef.current, 'qrAvios'),
+        ],
+      }]);
+      setGeminiHistory([]);
+      setCompletedBooking(null);
+      setCapturedEntities({}); setCapturedPax({});
+      setPaxData({}); setCurrentField(null); setCurrentQ('');
+      setCollectingPax(false); setSelectingSeat(false);
+      setSelectedVoiceSeat(null); setPendingFlightForSeat(null);
+      setAwaitingTwoOpt(false); setInterimText(''); setIsProcessing(false);
+      setTelemetryLogs([{
+        time: new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+        icon: '🚀', text: 'Agent initialized — RAG vector engine ready'
+      }]);
+      capturedEntitiesRef.current = {};
+      capturedPaxRef.current = {};
+      lastFlightResultsRef.current = [];
+
+      // Speak greeting — hands-free effect will start mic automatically
+      // when isSpeaking flips to false (no double-start)
       const t = setTimeout(async () => {
         if (!mountedRef.current) return;
         await speakMessage(WELCOME_SPOKEN);
-        if (mountedRef.current) startListening();
+        // Don't call startListening() here — the hands-free useEffect
+        // fires as soon as isSpeaking becomes false and starts the mic
       }, 300);
       return () => clearTimeout(t);
     } else {
+      // Only run cleanup if it has actually been open before
+      if (!hasOpenedRef.current) return;
       stopSpeaking(); abortListening();
       setCollectingPax(false); setCurrentField(null); setCurrentQ('');
       setInterimText(''); setAwaitingTwoOpt(false);
@@ -966,6 +1089,26 @@ export default function VoiceAgent() {
     const ents = capturedEntitiesRef.current;
     const pax  = capturedPaxRef.current;
     const hasRoute = ents?.from && ents?.to;
+
+    // "Book BA007 £540" or "Book BA009" — specific flight from quick reply ──
+    const quickFlightMatch = reply.match(/^book\s+(ba|british airways)\s*0*(\d{2,4})/i);
+    if (quickFlightMatch && lastFlightResultsRef.current.length > 0) {
+      const requestedNum = quickFlightMatch[2];
+      const flights = lastFlightResultsRef.current;
+      const matched = flights.find(f => {
+        const fn = (f.flightNumber || f.id || '').replace(/\D/g, '');
+        return fn === requestedNum || fn === requestedNum.replace(/^0+/, '');
+      }) || flights[0];
+      if (matched) {
+        handleBookFlightRef.current(matched, {
+          from: ents.from || 'LHR',
+          to: ents.to || '',
+          departureDate: ents.departureDate || ents.departDate || '',
+          cabin: ents.cabin || 'economy',
+        });
+        return;
+      }
+    }
 
     // "Book cheapest" / "Book cheapest flight" ────────────────────────
     if (/book cheapest|cheapest|cheapest flight/i.test(reply) && hasRoute) {
@@ -1075,9 +1218,15 @@ export default function VoiceAgent() {
   // ── Render ────────────────────────────────────────────────────
   return (
     <div className={`va-overlay ${isExpanded ? 'va-overlay--expanded' : ''}`}
-         role="dialog" aria-modal="true" aria-label="B Airways Voice Assistant">
-      <div className="va-backdrop" onClick={closeVoiceAgent} />
-      <div className={`va-panel ${isExpanded ? 'va-panel--expanded' : ''}`}>
+         data-ba-component="voice-assistant">
+      <div
+        className="va-backdrop"
+        role="presentation"
+        onClick={() => { if (backdropReadyRef.current) closeVoiceAgent(); }}
+      />
+      <div className={`va-panel ${isExpanded ? 'va-panel--expanded' : ''}`}
+           role="dialog" aria-modal="true" aria-label="B Airways Voice Assistant"
+           onClick={e => e.stopPropagation()}>
 
         {/* ── Header ── */}
         <div className="va-header">
