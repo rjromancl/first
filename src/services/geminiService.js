@@ -544,6 +544,92 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     return out;
   }
 
+  // ── SINGLE-SHOT FULL BOOKING DETECTION ─────────────────────────────
+  // Before anything else — if the user said everything in one go, extract
+  // all 8 fields and return FULL_BOOKING immediately without asking anything.
+  // Example: "Book London to Dubai on Christmas economy, Raja Abilash, 07912345678, British"
+  const NAT_MAP = {
+    british:'GB', english:'GB', scottish:'GB', welsh:'GB', irish:'GB',
+    indian:'IN', pakistani:'PK', american:'US', australian:'AU', canadian:'CA',
+    'south african':'ZA', bangladeshi:'BD', 'sri lankan':'LK', nigerian:'NG',
+    kenyan:'KE', french:'FR', german:'DE', italian:'IT', spanish:'ES',
+    dutch:'NL', emirati:'AE', saudi:'SA', egyptian:'EG',
+  };
+
+  // Route detection
+  const ssRouteMatch = l.match(/(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|->|–)\s+(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
+  const ssCityMap = {
+    london:'LHR',heathrow:'LHR',gatwick:'LGW',paris:'CDG',newyork:'JFK','new york':'JFK',
+    dubai:'DXB',tokyo:'NRT',sydney:'SYD',mumbai:'BOM',chennai:'MAA',delhi:'DEL',
+    barcelona:'BCN',singapore:'SIN',amsterdam:'AMS',rome:'FCO',
+  };
+
+  // Phone number detection
+  const ssPhone = l.match(/(?:phone|number|mobile|tel|call)?\s*(?:is|:)?\s*(\+?[\d\s\-]{7,15})/i)?.[1]?.replace(/\s/g,'') || l.match(/\b(0\d{10}|\+\d{10,14})\b/)?.[1] || null;
+
+  // Name detection — "for John Smith" / "my name is" / just two capitalised words
+  const ssNameMatch = (t || '').match(/(?:for|name(?:\s+is)?|passenger|pax)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)/i) || (t || '').match(/\b([A-Z][a-z]{1,20})\s+([A-Z][a-z]{1,20})\b/);
+  const ssFirstName = ssNameMatch?.[1] || null;
+  const ssLastName  = ssNameMatch?.[2] || null;
+
+  // Nationality detection
+  const ssNatKey = Object.keys(NAT_MAP).find(k => l.includes(k));
+  const ssNat = ssNatKey ? NAT_MAP[ssNatKey] : null;
+
+  // Date detection
+  const today2 = new Date();
+  const addD = (n) => { const d = new Date(today2); d.setDate(d.getDate()+n); return d.toISOString().split('T')[0]; };
+  let ssDate = null;
+  if (/christmas/i.test(l))      ssDate = `${today2.getFullYear()}-12-20`;
+  else if (/diwali/i.test(l))    ssDate = `${today2.getFullYear()}-11-08`;
+  else if (/new year/i.test(l))  ssDate = `${today2.getFullYear()}-12-29`;
+  else if (/tomorrow/i.test(l))  ssDate = addD(1);
+  else if (/next week/i.test(l)) ssDate = addD(7);
+  else {
+    const iso = l.match(/\b(20\d\d-\d{2}-\d{2})\b/)?.[1];
+    const monthDay = l.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+    const dayMonth = l.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
+    const mmap = {january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+    if (iso) ssDate = iso;
+    else if (monthDay) ssDate = `${today2.getFullYear()}-${String(mmap[monthDay[2].toLowerCase()]).padStart(2,'0')}-${String(monthDay[1]).padStart(2,'0')}`;
+    else if (dayMonth) ssDate = `${today2.getFullYear()}-${String(mmap[dayMonth[1].toLowerCase()]).padStart(2,'0')}-${String(dayMonth[2]).padStart(2,'0')}`;
+  }
+
+  // Cabin
+  let ssCabin = 'economy';
+  if (/business|club world/i.test(l)) ssCabin = 'business';
+  else if (/first class/i.test(l))    ssCabin = 'first';
+  else if (/premium economy/i.test(l)) ssCabin = 'premium_economy';
+
+  // If ALL 8 fields present → FULL_BOOKING immediately
+  if (ssRouteMatch && ssDate && ssPhone && ssFirstName && ssLastName && ssNat) {
+    const fromCode = ssCityMap[ssRouteMatch[1].toLowerCase().replace(/\s+/g,'')] || 'LHR';
+    const toCode   = ssCityMap[ssRouteMatch[2].toLowerCase().replace(/\s+/g,'')] || 'CDG';
+    return {
+      intent: 'BOOK_FLIGHT',
+      text: `Perfect! Booking ${ssCabin} class from ${fromCode} to ${toCode} on ${ssDate} for ${ssFirstName} ${ssLastName}. Taking you to payment now!`,
+      quickReplies: [],
+      action: { type: 'FULL_BOOKING', passenger: { firstName: ssFirstName, lastName: ssLastName, phone: ssPhone, nationality: ssNat } },
+      entities: { from: fromCode, to: toCode, departureDate: ssDate, returnDate: '', adults: 1, cabin: ssCabin, tripType: 'return' },
+      passengerField: null,
+      diagnosticNotice: notice,
+    };
+  }
+
+  // If route + date + name present but no phone/nat → PREFILL_BOOKING
+  if (ssRouteMatch && ssDate && ssFirstName && ssLastName) {
+    const fromCode = ssCityMap[ssRouteMatch[1].toLowerCase().replace(/\s+/g,'')] || 'LHR';
+    const toCode   = ssCityMap[ssRouteMatch[2].toLowerCase().replace(/\s+/g,'')] || 'CDG';
+    return {
+      intent: 'BOOK_FLIGHT',
+      text: `Got it! Searching ${ssCabin} class flights from ${fromCode} to ${toCode} on ${ssDate}...`,
+      quickReplies: [],
+      action: { type: 'PREFILL_BOOKING', passenger: { firstName: ssFirstName, lastName: ssLastName, phone: ssPhone || '', nationality: ssNat || '' } },
+      entities: { from: fromCode, to: toCode, departureDate: ssDate, returnDate: '', adults: 1, cabin: ssCabin, tripType: 'return' },
+      passengerField: null,
+      diagnosticNotice: notice,
+    };
+  }
   // Passenger Field collection check from conversation history
   const lastModelMsg = Array.isArray(history)
     ? [...history].reverse().find(m => m && m.role === 'model')?.text || ''
