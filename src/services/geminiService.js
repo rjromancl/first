@@ -477,7 +477,7 @@ function parseResponse(raw) {
   }
 }
 
-function fallbackResponse(t, errorReason = null, history = []) {
+async function fallbackResponse(t, errorReason = null, history = []) {
   const l = (t || '').toLowerCase();
   const notice = errorReason === 429
     ? '⚠️ Notice: Groq LLM Rate Limit (HTTP 429) hit — switched to Local Intent Resolver.'
@@ -660,20 +660,105 @@ function fallbackResponse(t, errorReason = null, history = []) {
     rome: 'FCO', fco: 'FCO'
   };
 
+  // ── Single-city destination extraction (e.g. "fly to dubai", "dubai economy") ──
+  const singleCityRe = /(?:to|fly to|flight to|book.*?to|going to|travel to|poganum|venum)\s+(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i;
+  const singleMatch = l.match(singleCityRe);
+
   const routeMatch = l.match(/(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|poganum|-)\s+(london|heathrow|gatwick|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
 
-  if (routeMatch) {
-    const fromCode = cityMap[routeMatch[1].toLowerCase().replace(/\s+/g, '')] || 'LHR';
-    const toCode   = cityMap[routeMatch[2].toLowerCase().replace(/\s+/g, '')] || 'CDG';
+  if (routeMatch || singleMatch) {
+    let fromCode, toCode;
+    if (routeMatch) {
+      fromCode = cityMap[routeMatch[1].toLowerCase().replace(/\s+/g, '')] || 'LHR';
+      toCode   = cityMap[routeMatch[2].toLowerCase().replace(/\s+/g, '')] || 'CDG';
+    } else {
+      fromCode = 'LHR'; // default departure is London Heathrow
+      toCode   = cityMap[singleMatch[1].toLowerCase().replace(/\s+/g, '')] || 'CDG';
+    }
+
+    // ── Resolve departure date from query ──────────────────────────────
+    const today = new Date();
+    const addDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; };
+    let departureDate = addDays(30); // sensible default: 30 days from today
+
+    if (/tomorrow|naalaiku/i.test(l))                          departureDate = addDays(1);
+    else if (/today|inniku/i.test(l))                          departureDate = addDays(0);
+    else if (/next week|adutha vaaram/i.test(l))               departureDate = addDays(7);
+    else if (/next month|adutha maasam/i.test(l))              departureDate = addDays(30);
+    else if (/christmas/i.test(l))                             departureDate = `${today.getFullYear()}-12-20`;
+    else if (/diwali/i.test(l))                                departureDate = `${today.getFullYear()}-11-08`;
+    else if (/new year/i.test(l))                              departureDate = `${today.getFullYear()}-12-29`;
+    else if (/easter/i.test(l))                                departureDate = `${today.getFullYear()}-04-12`;
+    else if (/weekend/i.test(l))                               departureDate = addDays(((6 - today.getDay()) + 7) % 7 || 7);
+    else {
+      // Try to extract an explicit date like "20 december", "december 20", "2026-12-20"
+      const isoMatch     = l.match(/\b(20\d\d-\d{2}-\d{2})\b/);
+      const monthDayMatch = l.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+      const dayMonthMatch = l.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
+      const months = { january:1, february:2, march:3, april:4, may:5, june:6, july:7, august:8, september:9, october:10, november:11, december:12 };
+      if (isoMatch) {
+        departureDate = isoMatch[1];
+      } else if (monthDayMatch) {
+        const m = String(months[monthDayMatch[2].toLowerCase()]).padStart(2, '0');
+        const d = String(monthDayMatch[1]).padStart(2, '0');
+        departureDate = `${today.getFullYear()}-${m}-${d}`;
+      } else if (dayMonthMatch) {
+        const m = String(months[dayMonthMatch[1].toLowerCase()]).padStart(2, '0');
+        const d = String(dayMonthMatch[2]).padStart(2, '0');
+        departureDate = `${today.getFullYear()}-${m}-${d}`;
+      }
+    }
+
+    // ── Cabin ──────────────────────────────────────────────────────────
+    let cabin = 'economy';
+    if (/business|club world|club suite/i.test(l)) cabin = 'business';
+    else if (/first class|first/i.test(l))         cabin = 'first';
+    else if (/premium economy|premium/i.test(l))   cabin = 'premium_economy';
+
+    // ── Adults ─────────────────────────────────────────────────────────
+    const adultsMatch = l.match(/(\d+)\s*(?:adult|passenger|pax|people)/i);
+    const adults = adultsMatch ? Math.min(9, parseInt(adultsMatch[1], 10) || 1) : 1;
+
+    // ── Live flight search against backend ─────────────────────────────
+    let flightText = `Searching flights from ${fromCode} to ${toCode} on ${departureDate}...`;
+    let flightData = [];
+    try {
+      const res = await fetch(`/api/flights/search?from=${fromCode}&to=${toCode}&departureDate=${departureDate}&adults=${adults}&cabin=${cabin.toUpperCase()}`);
+      if (res.ok) {
+        const data = await res.json();
+        flightData = data?.data?.flights || data?.flights || [];
+        if (flightData.length > 0) {
+          const top3 = flightData.slice(0, 3);
+          const lines = top3.map(f => {
+            const price = f.price?.grandTotal || f.price?.total || '—';
+            // departure/arrival may be "HH:mm" (mock) or full ISO string
+            const depRaw = f.itineraries?.[0]?.segments?.[0]?.departure?.at || f.departure || '';
+            const arrRaw = f.itineraries?.[0]?.segments?.at(-1)?.arrival?.at  || f.arrival  || '';
+            const depTime = depRaw.includes('T') ? depRaw.split('T')[1].slice(0, 5) : depRaw.slice(0, 5) || '—';
+            const arrTime = arrRaw.includes('T') ? arrRaw.split('T')[1].slice(0, 5) : arrRaw.slice(0, 5) || '—';
+            const stops = (f.stops ?? f.numberOfStops ?? 0) === 0 ? 'Non-stop' : `${f.stops} stop`;
+            return `✈ ${f.flightNumber || f.id} · ${depTime}→${arrTime} · ${stops} · £${price}`;
+          }).join('\n');
+          flightText = `Found ${flightData.length} flight${flightData.length !== 1 ? 's' : ''} from ${fromCode} to ${toCode} on ${departureDate}:\n${lines}\nShall I book one of these?`;
+        } else {
+          flightText = `I searched ${fromCode} → ${toCode} for ${departureDate} but found no available flights. Try a different date?`;
+        }
+      }
+    } catch (_) {
+      // backend unreachable — keep generic message
+    }
 
     return {
       intent: 'BOOK_FLIGHT',
-      text: `Sure! Searching flights from ${fromCode} to ${toCode}...`,
-      quickReplies: ['London to Paris', 'London to New York', 'London to Dubai'],
-      action: { type: 'PREFILL_BOOKING', passenger: null },
-      entities: { from: fromCode, to: toCode, departureDate: '2026-12-28', cabin: 'economy', adults: 1 },
+      text: flightText,
+      quickReplies: flightData.length > 0
+        ? ['Book cheapest', 'Change date', 'Change cabin']
+        : ['Try different date', 'London to New York', 'London to Dubai'],
+      action: { type: 'PREFILL_BOOKING', passenger: { firstName: '', lastName: '', phone: '', nationality: '' } },
+      entities: { from: fromCode, to: toCode, departureDate, returnDate: '', adults, cabin, tripType: 'return' },
+      flightResults: flightData.slice(0, 3),
       passengerField: null,
-      diagnosticNotice: notice
+      diagnosticNotice: notice,
     };
   }
 
@@ -681,7 +766,7 @@ function fallbackResponse(t, errorReason = null, history = []) {
   if (/book|flight|fly|pannu|panren|venum|ticket|poganum|paris|chennai|mumbai|delhi|dubai|london|new york|december|christmas|diwali|holi/i.test(l)) {
     return {
       intent: 'BOOK_FLIGHT',
-      text: "Sure! Where would you like to fly?",
+      text: "Sure! Which city would you like to fly to?",
       quickReplies: ['London to New York', 'London to Dubai', 'London to Barcelona'],
       action: { type: 'NAVIGATE', path: '/book' },
       entities: {},
@@ -802,7 +887,7 @@ export async function sendToGemini(userMessage, history = []) {
     : String(userMessage ?? '').trim();
 
   if (!API_KEY || API_KEY === 'your_groq_api_key_here') {
-    return fallbackResponse(trimmedMessage, null, history);
+    return await fallbackResponse(trimmedMessage, null, history);
   }
 
   if (!trimmedMessage) {
@@ -848,12 +933,12 @@ export async function sendToGemini(userMessage, history = []) {
   }
 
   if (result.httpStatus === 429) {
-    return fallbackResponse(trimmedMessage, 429, history);
+    return await fallbackResponse(trimmedMessage, 429, history);
   }
 
   // Any other failure (network, timeout, non-retryable 4xx, exhausted retries)
   // -> graceful fallback so the user still gets something useful.
-  return fallbackResponse(trimmedMessage, 'network', history);
+  return await fallbackResponse(trimmedMessage, 'network', history);
 }
 
 // expose model name for the header display

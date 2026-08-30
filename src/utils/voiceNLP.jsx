@@ -11,7 +11,7 @@
  */
 
 import { sendToGemini } from '../services/geminiService';
-import { preprocessVoiceTranscript } from './smartNLPPreprocessor';
+import { preprocessVoiceTranscript } from './smartNLPPreprocessor.js';
 
 function parseVoiceInputFallback(text) {
   const l = (text || '').toLowerCase();

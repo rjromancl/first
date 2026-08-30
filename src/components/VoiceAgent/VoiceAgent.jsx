@@ -19,7 +19,7 @@ import {
   FaMicrophone, FaMicrophoneSlash, FaTimes, FaPlane,
   FaPaperPlane, FaVolumeUp, FaVolumeMute, FaKeyboard,
   FaRedo, FaCompress, FaExpand, FaUser, FaCheckCircle,
-  FaHeadphones, FaArrowRight, FaBolt,
+  FaHeadphones, FaArrowRight, FaBolt, FaSearch,
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { useVoiceRecognition } from '../../hooks/useVoiceRecognition';
@@ -112,6 +112,51 @@ function ProactiveDealsCard({ entities }) {
       <div className="va-proactive-body">
         <p className="va-proactive-deal">💡 {deal.text}</p>
         <span className="va-proactive-badge">✨ {deal.perk}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Inline Flight Results Card ──────────────────────────────────
+function FlightResultsCard({ flights, entities, onBook }) {
+  if (!flights || flights.length === 0) return null;
+  const { from = 'LHR', to = '', departureDate = '', cabin = 'economy' } = entities || {};
+  return (
+    <div className="va-flights-card">
+      <div className="va-flights-header">
+        <FaPlane size={11} className="va-flights-icon" />
+        <span>Available Flights — {from} → {to}</span>
+        <span className="va-flights-date">{departureDate}</span>
+      </div>
+      <div className="va-flights-list">
+        {flights.map((f, i) => {
+          const price     = f.price?.grandTotal || f.price?.total || '—';
+          const dep       = f.itineraries?.[0]?.segments?.[0]?.departure?.at || f.departure || '';
+          const arr       = f.itineraries?.[0]?.segments?.at(-1)?.arrival?.at  || f.arrival  || '';
+          const depTime   = dep.includes('T') ? dep.split('T')[1].slice(0, 5) : dep.slice(0, 5) || '—';
+          const arrTime   = arr.includes('T') ? arr.split('T')[1].slice(0, 5) : arr.slice(0, 5) || '—';
+          const stops     = (f.stops ?? f.numberOfStops ?? 0) === 0 ? 'Non-stop' : `${f.stops} stop`;
+          const flightNum = f.flightNumber || f.id || `Flight ${i + 1}`;
+          return (
+            <div key={f.id || i} className="va-flight-row">
+              <div className="va-flight-row-left">
+                <span className="va-flight-num">{flightNum}</span>
+                <span className="va-flight-times">{depTime || '—'} → {arrTime || '—'}</span>
+                <span className="va-flight-stops">{stops}</span>
+              </div>
+              <div className="va-flight-row-right">
+                <span className="va-flight-price">£{price}</span>
+                <button
+                  className="va-flight-book-btn"
+                  onClick={() => onBook(f, { from, to, departureDate, cabin })}
+                  aria-label={`Book ${flightNum} for £${price}`}
+                >
+                  Book <FaArrowRight size={9} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -333,8 +378,8 @@ export default function VoiceAgent() {
     setMessages(p => [...p, { id: mkId(), role: 'user', text, timestamp: new Date() }]);
   }, []);
 
-  const addAgentMsg = useCallback((text, quickReplies = [], action = null) => {
-    setMessages(p => [...p, { id: mkId(), role: 'agent', text, timestamp: new Date(), quickReplies, action }]);
+  const addAgentMsg = useCallback((text, quickReplies = [], action = null, flightResults = []) => {
+    setMessages(p => [...p, { id: mkId(), role: 'agent', text, timestamp: new Date(), quickReplies, action, flightResults }]);
   }, []);
 
   const selectedLangRef = useRef(selectedLang);
@@ -442,6 +487,33 @@ export default function VoiceAgent() {
       setTimeout(() => { if (mountedRef.current) startListening(); }, 150);
     }
   }, [addAgentMsg, speakMessage, startListening]);
+
+  // ── Book a specific inline flight result ─────────────────────
+  const handleBookFlight = useCallback((flight, flightEntities) => {
+    const navState = {
+      prefillPassenger: capturedPax || {},
+      from:       flightEntities.from       || 'LHR',
+      to:         flightEntities.to         || '',
+      departDate: flightEntities.departureDate || '',
+      returnDate: '',
+      adults:     1,
+      cabin:      flightEntities.cabin      || 'economy',
+      tripType:   'return',
+      autoSearch: true,
+      jumpToStep: 3,
+      selectedFlight: flight,
+    };
+    setSearchParams({
+      tripType: 'return',
+      from:      flightEntities.from       || 'LHR',
+      to:        flightEntities.to         || '',
+      departDate: flightEntities.departureDate || '',
+      returnDate: '',
+      adults: 1,
+      cabin: flightEntities.cabin || 'economy',
+    });
+    navigate('/book', { state: navState });
+  }, [capturedPax, navigate, setSearchParams]);
 
   // ── Core processing loop ──────────────────────────────────────
   const processInput = useCallback(async (text) => {
@@ -591,9 +663,20 @@ export default function VoiceAgent() {
         setSearchParams({ tripType: entities.tripType || 'return', from: entities.from || 'LHR', to: entities.to || 'JFK', departDate: entities.departureDate || '', returnDate: entities.returnDate || '', adults: entities.adults || 1, cabin: entities.cabin || 'economy' });
         setCapturedPax(voicePax);
         if (mountedRef.current) setIsProcessing(false);
-        addAgentMsg(response.text, response.quickReplies);
-        await speakMessage(response.text);
-        if (mountedRef.current) navigate('/book', { state: navState });
+
+        // If LLM returned real flight results, show them inline — don't auto-navigate
+        const flightResults = parsed.flightResults || response.flightResults || [];
+        if (flightResults.length > 0) {
+          addAgentMsg(response.text, response.quickReplies, response.action, flightResults);
+          await speakMessage(response.text);
+          // hands-free: keep listening in case user says "book cheapest" etc.
+          if (handsFreeRef.current) setTimeout(() => { if (mountedRef.current) startListening(); }, 200);
+        } else {
+          // No inline results — navigate immediately (original behaviour)
+          addAgentMsg(response.text, response.quickReplies, response.action);
+          await speakMessage(response.text);
+          if (mountedRef.current) navigate('/book', { state: navState });
+        }
         return;
       }
 
@@ -777,6 +860,14 @@ export default function VoiceAgent() {
                       <button key={r} className="va-quick-reply" onClick={() => handleQuickReply(r)} disabled={isProcessing}>{r}</button>
                     ))}
                   </div>
+                )}
+                {/* Inline flight results — shown when backend returned real flights */}
+                {msg.role === 'agent' && msg.flightResults?.length > 0 && (
+                  <FlightResultsCard
+                    flights={msg.flightResults}
+                    entities={capturedEntities}
+                    onBook={handleBookFlight}
+                  />
                 )}
               </div>
             </div>
