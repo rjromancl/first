@@ -50,6 +50,10 @@ const navItems = [
     label: 'Help',
     path: '/help',
   },
+  {
+    label: '🧠 RAG Admin',
+    path: '/rag-admin',
+  },
 ];
 
 export default function Header() {

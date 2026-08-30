@@ -17,6 +17,7 @@ import ExecutiveClub from './pages/ExecutiveClub/ExecutiveClub';
 import Login from './pages/Login/Login';
 import Profile from './pages/Profile/Profile';
 import HelpSupport from './pages/HelpSupport/HelpSupport';
+import RAGAdmin from './pages/RAGAdmin/RAGAdmin';
 
 import './App.css';
 
@@ -92,6 +93,7 @@ function AppLayout() {
             <Route path="/destinations" element={<Destinations />} />
             <Route path="/executive-club" element={<ExecutiveClub />} />
             <Route path="/help" element={<HelpSupport />} />
+            <Route path="/rag-admin" element={<RAGAdmin />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />

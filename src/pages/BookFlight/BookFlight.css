@@ -942,3 +942,411 @@
   font-size: 0.85rem;
   border-radius: 8px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOKING SOURCE BADGE  (Voice vs Normal)
+   ═══════════════════════════════════════════════════════════════ */
+
+.bookflight__source-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  flex-wrap: wrap;
+}
+
+/* Voice badge */
+.bookflight__source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  animation: badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.bookflight__source-badge--voice {
+  background: linear-gradient(135deg, #0d1b2a, #075aaa);
+  color: #fff;
+  border: 1.5px solid #2196f3;
+  box-shadow: 0 0 12px rgba(33,150,243,0.25);
+}
+
+.bookflight__source-badge--normal {
+  background: #f0f4f8;
+  color: #2c3e50;
+  border: 1.5px solid #c8d6e2;
+}
+
+.bookflight__source-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4fc3f7;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+.bookflight__source-badge--normal .bookflight__source-badge-dot {
+  background: #8395a7;
+  animation: none;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1);   }
+  50%       { opacity: 0.5; transform: scale(1.5); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOKING TIMER
+   ═══════════════════════════════════════════════════════════════ */
+
+.bookflight__timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 1px;
+}
+
+.bookflight__timer--voice {
+  color: #075aaa;
+}
+
+.bookflight__timer--normal {
+  color: #2c3e50;
+}
+
+.bookflight__timer-icon {
+  font-size: 14px;
+}
+
+.bookflight__timer-label {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.7;
+  margin-right: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VOICE SEAT SELECTION POPUP MODAL
+   ═══════════════════════════════════════════════════════════════ */
+
+.seatpopup__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 22, 39, 0.72);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.seatpopup {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 24px 60px rgba(1,22,39,0.35);
+  animation: popupSlideIn 0.3s cubic-bezier(0.34,1.3,0.64,1);
+  overflow: hidden;
+}
+
+@keyframes popupSlideIn {
+  from { transform: translateY(40px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
+}
+
+.seatpopup__header {
+  background: linear-gradient(135deg, #011627 0%, #075aaa 100%);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.seatpopup__header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.seatpopup__icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.seatpopup__title {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.seatpopup__subtitle {
+  color: rgba(255,255,255,0.6);
+  font-size: 0.76rem;
+  margin: 2px 0 0;
+}
+
+.seatpopup__voice-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #90caf9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.seatpopup__voice-dot {
+  width: 6px;
+  height: 6px;
+  background: #4fc3f7;
+  border-radius: 50%;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+.seatpopup__body {
+  padding: 22px;
+}
+
+/* Flight info strip inside popup */
+.seatpopup__flight-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f0f4f8;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 0.82rem;
+  color: #2c3e50;
+  flex-wrap: wrap;
+}
+
+.seatpopup__flight-code {
+  font-weight: 800;
+  color: #075aaa;
+  font-size: 0.9rem;
+}
+
+.seatpopup__flight-sep {
+  color: #8395a7;
+  font-size: 1rem;
+}
+
+/* Seat map grid */
+.seatpopup__cabin-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8395a7;
+  margin-bottom: 8px;
+}
+
+.seatpopup__map {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.seatpopup__row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.seatpopup__row-num {
+  width: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8395a7;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.seatpopup__aisle {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.seatpopup__seat {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px 7px 4px 4px;
+  border: 1.5px solid;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  position: relative;
+}
+
+.seatpopup__seat--available {
+  border-color: #aac4e0;
+  background: #ebf3fb;
+  color: #075aaa;
+}
+
+.seatpopup__seat--available:hover {
+  border-color: #075aaa;
+  background: #075aaa;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.seatpopup__seat--selected {
+  border-color: #075aaa;
+  background: #075aaa;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(7,90,170,0.22);
+  transform: scale(1.08);
+}
+
+.seatpopup__seat--occupied {
+  border-color: #d0dbe5;
+  background: #f0f4f8;
+  color: #c8d6e2;
+  cursor: not-allowed;
+}
+
+.seatpopup__seat--extra-legroom {
+  border-color: #c8a951;
+  background: #fdf8ec;
+  color: #9a7a1a;
+}
+
+.seatpopup__seat--extra-legroom:hover,
+.seatpopup__seat--extra-legroom.seatpopup__seat--selected {
+  background: #c8a951;
+  color: #fff;
+  border-color: #c8a951;
+}
+
+/* Seat legend */
+.seatpopup__legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.seatpopup__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #6b7a8d;
+  font-weight: 600;
+}
+
+.seatpopup__legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1.5px solid;
+  flex-shrink: 0;
+}
+
+.seatpopup__legend-dot--available   { border-color: #aac4e0; background: #ebf3fb; }
+.seatpopup__legend-dot--selected    { border-color: #075aaa; background: #075aaa; }
+.seatpopup__legend-dot--occupied    { border-color: #d0dbe5; background: #f0f4f8; }
+.seatpopup__legend-dot--legroom     { border-color: #c8a951; background: #fdf8ec; }
+
+/* Selected seat summary */
+.seatpopup__selected-summary {
+  background: #e8f4fd;
+  border: 1.5px solid #075aaa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 0.84rem;
+}
+
+.seatpopup__selected-summary-icon { font-size: 1.1rem; flex-shrink: 0; }
+.seatpopup__selected-summary strong { color: #075aaa; font-weight: 800; font-size: 1rem; }
+.seatpopup__selected-summary span   { color: #2c3e50; }
+
+/* Footer actions */
+.seatpopup__footer {
+  padding: 14px 22px 20px;
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #f0f4f8;
+}
+
+.seatpopup__confirm-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.seatpopup__skip-btn {
+  padding: 12px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7a8d;
+  background: none;
+  border: 1.5px solid #c8d6e2;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.seatpopup__skip-btn:hover {
+  background: #f5f8fc;
+  border-color: #aac4e0;
+  color: #2c3e50;
+}
+
+/* Steps bar inside popup */
+.bookflight__steps-container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}

@@ -485,6 +485,65 @@ async function fallbackResponse(t, errorReason = null, history = []) {
       ? '⚠️ Notice: LLM Network Connection failed — switched to Local Intent Resolver.'
       : null;
 
+  // ── Shared date helper ──────────────────────────────────────────────
+  const addDays = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split('T')[0];
+  };
+
+  // ── Extract previously-captured entities from conversation history ──
+  const HIST_CITY_MAP = {
+    london:'LHR', heathrow:'LHR', gatwick:'LGW', paris:'CDG',
+    newyork:'JFK', 'new york':'JFK', dubai:'DXB', tokyo:'NRT',
+    sydney:'SYD', mumbai:'BOM', chennai:'MAA', delhi:'DEL',
+    barcelona:'BCN', singapore:'SIN', amsterdam:'AMS', rome:'FCO',
+    jfk:'JFK', dxb:'DXB', lhr:'LHR', bcn:'BCN', bom:'BOM',
+    maa:'MAA', sin:'SIN', cdg:'CDG', nrt:'NRT', syd:'SYD',
+  };
+
+  function extractEntitiesFromHistory(hist) {
+    const out = { from: null, to: null, departureDate: null, cabin: 'economy', adults: 1 };
+    if (!Array.isArray(hist)) return out;
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const turn = hist[i];
+      if (!turn?.text) continue;
+      const txt = turn.text;
+
+      // IATA pair: "LHR → DXB", "LHR to DXB", "from LHR to DXB"
+      const iataRoute = txt.match(/\b([A-Z]{3})\s*(?:→|->|to)\s*([A-Z]{3})\b/);
+      if (iataRoute && !out.from) {
+        out.from = iataRoute[1].toUpperCase();
+        out.to   = iataRoute[2].toUpperCase();
+      }
+
+      // City route
+      const cityRoute = txt.match(/(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)\s+(?:to|→)\s+(london|heathrow|paris|dubai|chennai|mumbai|delhi|new york|tokyo|sydney|barcelona|singapore|amsterdam|rome)/i);
+      if (cityRoute && !out.from) {
+        out.from = HIST_CITY_MAP[cityRoute[1].toLowerCase().replace(/\s+/g, '')] || 'LHR';
+        out.to   = HIST_CITY_MAP[cityRoute[2].toLowerCase().replace(/\s+/g, '')] || 'CDG';
+      }
+
+      // "Available Flights — LHR → DXB" (our own message format)
+      const avail = txt.match(/Available Flights[^\w]+([A-Z]{3})[^\w]+([A-Z]{3})/);
+      if (avail && !out.from) {
+        out.from = avail[1]; out.to = avail[2];
+      }
+
+      // ISO date
+      const isoDate = txt.match(/\b(20\d\d-\d{2}-\d{2})\b/);
+      if (isoDate && !out.departureDate) out.departureDate = isoDate[1];
+
+      // Cabin
+      if (/business/i.test(txt) && out.cabin === 'economy') out.cabin = 'business';
+      if (/first class/i.test(txt)) out.cabin = 'first';
+      if (/premium economy/i.test(txt)) out.cabin = 'premium_economy';
+
+      if (out.from && out.to) break;
+    }
+    return out;
+  }
+
   // Passenger Field collection check from conversation history
   const lastModelMsg = Array.isArray(history)
     ? [...history].reverse().find(m => m && m.role === 'model')?.text || ''
@@ -643,7 +702,150 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     };
   }
 
-  // Route / City extraction matching (e.g. "london to paris", "london to dubai", "london to chennai", "paris", "chennai")
+  // ── "Book cheapest" / "book the cheapest [on <festival>]" ──────────────
+  // Must be checked BEFORE the generic booking keywords so we don't lose
+  // the route that was captured in the conversation history.
+  if (/cheapest|book cheapest|book the cheapest/i.test(l)) {
+    // Pull route from conversation history
+    const histEntities = extractEntitiesFromHistory(history);
+    if (histEntities.from && histEntities.to) {
+      // If the user also mentioned a new date ("on Christmas"), resolve it
+      let departureDate = histEntities.departureDate || addDays(30);
+      if (/christmas/i.test(l))   departureDate = `${new Date().getFullYear()}-12-20`;
+      if (/diwali/i.test(l))      departureDate = `${new Date().getFullYear()}-11-08`;
+      if (/new year/i.test(l))    departureDate = `${new Date().getFullYear()}-12-29`;
+      if (/tomorrow/i.test(l))    departureDate = addDays(1);
+      if (/next week/i.test(l))   departureDate = addDays(7);
+
+      const { from: fromCode, to: toCode, cabin = 'economy', adults = 1 } = histEntities;
+
+      // Live flight search
+      let flightText = `Searching for the cheapest flight from ${fromCode} to ${toCode} on ${departureDate}...`;
+      let flightData = [];
+      try {
+        const res = await fetch(`/api/flights/search?from=${fromCode}&to=${toCode}&departureDate=${departureDate}&adults=${adults}&cabin=${(cabin || 'economy').toUpperCase()}`);
+        if (res.ok) {
+          const data = await res.json();
+          const allFlights = data?.data?.flights || data?.flights || [];
+          if (allFlights.length > 0) {
+            // Sort by price to find cheapest
+            const sorted = [...allFlights].sort((a, b) => {
+              const pa = parseFloat(a.price?.grandTotal || a.price?.total || a.prices?.economy || 9999);
+              const pb = parseFloat(b.price?.grandTotal || b.price?.total || b.prices?.economy || 9999);
+              return pa - pb;
+            });
+            flightData = sorted.slice(0, 3);
+            const cheapest = sorted[0];
+            const price = cheapest.price?.grandTotal || cheapest.price?.total || cheapest.prices?.economy || '—';
+            const dep   = cheapest.departure || '';
+            const arr   = cheapest.arrival   || '';
+            flightText = `Found the cheapest flight: ${cheapest.flightNumber || cheapest.id} at £${price} departing ${dep}${arr ? ' → arriving ' + arr : ''}. Shall I book it?`;
+          } else {
+            flightText = `No flights found from ${fromCode} to ${toCode} on ${departureDate}. Try a different date?`;
+          }
+        }
+      } catch (_) {}
+
+      return {
+        intent: 'BOOK_FLIGHT',
+        text: flightText,
+        quickReplies: flightData.length > 0
+          ? ['Yes, book it', 'Change date', 'Change cabin']
+          : ['Try different date', `${fromCode} to ${toCode}`],
+        action: { type: 'PREFILL_BOOKING', passenger: { firstName: '', lastName: '', phone: '', nationality: '' } },
+        entities: { from: fromCode, to: toCode, departureDate, returnDate: '', adults, cabin, tripType: 'return' },
+        flightResults: flightData,
+        passengerField: null,
+        diagnosticNotice: notice,
+      };
+    }
+    // No history route — fall through to ask for city
+  }
+
+  // ── "Book cheapest" / "book the cheapest [on <festival/date]" ────────
+  // Detected BEFORE generic route-matching so we don't lose history context.
+  if (/cheapest|book cheapest|book the cheapest/i.test(l)) {
+    const histEnts = extractEntitiesFromHistory(history);
+    if (histEnts.from && histEnts.to) {
+      // Allow user to change the date in the same utterance
+      let departureDate = histEnts.departureDate || addDays(30);
+      if (/christmas/i.test(l))  departureDate = `${new Date().getFullYear()}-12-20`;
+      if (/diwali/i.test(l))     departureDate = `${new Date().getFullYear()}-11-08`;
+      if (/new year/i.test(l))   departureDate = `${new Date().getFullYear()}-12-29`;
+      if (/tomorrow/i.test(l))   departureDate = addDays(1);
+      if (/next week/i.test(l))  departureDate = addDays(7);
+
+      const { from: fromCode, to: toCode, cabin = 'economy', adults = 1 } = histEnts;
+
+      let flightText = `Searching cheapest from ${fromCode} → ${toCode} on ${departureDate}...`;
+      let flightData = [];
+      try {
+        const res = await fetch(`/api/flights/search?from=${fromCode}&to=${toCode}&departureDate=${departureDate}&adults=${adults}&cabin=${(cabin || 'economy').toUpperCase()}`);
+        if (res.ok) {
+          const data = await res.json();
+          const allFlights = data?.data?.flights || data?.flights || [];
+          if (allFlights.length > 0) {
+            // Sort ascending by price
+            const sorted = [...allFlights].sort((a, b) => {
+              const pa = parseFloat(a.price?.grandTotal || a.price?.total || a.prices?.economy || 9999);
+              const pb = parseFloat(b.price?.grandTotal || b.price?.total || b.prices?.economy || 9999);
+              return pa - pb;
+            });
+            flightData = sorted.slice(0, 3);
+            const cheapest = sorted[0];
+            const price = cheapest.price?.grandTotal || cheapest.price?.total || cheapest.prices?.economy || '—';
+            const dep   = cheapest.departure || '';
+            const arr   = cheapest.arrival   || '';
+            flightText = `The cheapest flight is ${cheapest.flightNumber || cheapest.id} at £${price}${dep ? ', departing ' + dep : ''}${arr ? ' arriving ' + arr : ''}. Shall I book it?`;
+          } else {
+            flightText = `No flights found from ${fromCode} to ${toCode} on ${departureDate}. Try a different date?`;
+          }
+        }
+      } catch (_) { /* backend unreachable */ }
+
+      return {
+        intent: 'BOOK_FLIGHT',
+        text: flightText,
+        quickReplies: flightData.length > 0
+          ? ['Yes, book it', 'Change date', 'Change cabin']
+          : ['Try different date'],
+        action: { type: 'PREFILL_BOOKING', passenger: { firstName: '', lastName: '', phone: '', nationality: '' } },
+        entities: { from: fromCode, to: toCode, departureDate, returnDate: '', adults, cabin, tripType: 'return' },
+        flightResults: flightData,
+        passengerField: null,
+        diagnosticNotice: notice,
+      };
+    }
+    // No route in history → fall through to generic booking handler below
+  }
+
+  // "Yes, book it" after cheapest flight shown ───────────────────────
+  if (/^yes,?\s*book\s*it$/i.test(l) || /^yes,?\s*book\s*the\s*cheapest$/i.test(l)) {
+    const histEnts = extractEntitiesFromHistory(history);
+    if (histEnts.from && histEnts.to) {
+      const navState = {
+        prefillPassenger: {},
+        from: histEnts.from, to: histEnts.to,
+        departDate: histEnts.departureDate || addDays(30),
+        returnDate: '', adults: histEnts.adults || 1,
+        cabin: histEnts.cabin || 'economy',
+        tripType: 'return', autoSearch: true, jumpToStep: 3, isVoiceBooking: true,
+      };
+      return {
+        intent: 'BOOK_FLIGHT',
+        text: `Booking the cheapest flight from ${histEnts.from} to ${histEnts.to}!`,
+        quickReplies: [],
+        action: { type: 'PREFILL_BOOKING', passenger: { firstName: '', lastName: '', phone: '', nationality: '' } },
+        entities: { from: histEnts.from, to: histEnts.to, departureDate: histEnts.departureDate || addDays(30), cabin: histEnts.cabin || 'economy', adults: histEnts.adults || 1, tripType: 'return' },
+        flightResults: [],
+        passengerField: null,
+        diagnosticNotice: notice,
+        _navState: navState,
+      };
+    }
+  }
+
+  // ── Route / City extraction matching ───────────────────────────────
   const cityMap = {
     london: 'LHR', heathrow: 'LHR', gatwick: 'LGW',
     paris: 'CDG', cdg: 'CDG',

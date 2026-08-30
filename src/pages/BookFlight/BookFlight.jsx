@@ -4,23 +4,15 @@ import {
   FaPlane, FaSearch, FaExchangeAlt, FaMapMarkerAlt,
   FaCalendarAlt, FaUsers, FaChevronRight, FaCheck,
   FaWifi, FaUtensils, FaTv, FaBriefcase, FaTimes,
-  FaShieldAlt, FaStar, FaChair,
+  FaShieldAlt, FaStar, FaChair, FaMicrophone, FaStopwatch,
 } from 'react-icons/fa';
 import { useApp } from '../../context/AppContext';
 import { flightsAPI, airportsAPI, bookingsAPI } from '../../services/api';
 import {
-  validatePassenger,
-  validateFirstName,
-  validateLastName,
-  validatePhone,
-  validateNationality,
-  validatePaymentDetails,
-  validateCardNumber,
-  validateCVV,
-  validateExpiry,
-  validateCardName,
-  formatCardNumber,
-  sanitizeInput,
+  validatePassenger, validateFirstName, validateLastName,
+  validatePhone, validateNationality, validatePaymentDetails,
+  validateCardNumber, validateCVV, validateExpiry, validateCardName,
+  formatCardNumber, sanitizeInput,
 } from '../../utils/validation';
 import './BookFlight.css';
 
@@ -31,6 +23,212 @@ function useDebounce(fn, delay) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => fn(...args), delay);
   }, [fn, delay]);
+}
+
+// ── Stopwatch hook ─────────────────────────────────────────────────────────
+function useStopwatch(running) {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(null);
+  const rafRef   = useRef(null);
+
+  useEffect(() => {
+    if (running) {
+      startRef.current = Date.now() - elapsed * 1000;
+      const tick = () => {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+        rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      cancelAnimationFrame(rafRef.current);
+    }
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [running]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const reset = () => { setElapsed(0); startRef.current = null; };
+  const fmt = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+  return { elapsed, formatted: fmt(elapsed), reset };
+}
+
+// ── Booking Source + Timer badge ───────────────────────────────────────────
+function BookingSourceBar({ source, formatted }) {
+  if (!source) return null;
+  const isVoice = source === 'voice';
+  return (
+    <div className="bookflight__source-bar">
+      <span className={`bookflight__source-badge bookflight__source-badge--${isVoice ? 'voice' : 'normal'}`}>
+        <span className="bookflight__source-badge-dot" />
+        {isVoice ? <FaMicrophone size={11} /> : <FaSearch size={11} />}
+        {isVoice ? 'Voice Booking' : 'Manual Booking'}
+      </span>
+      <span className={`bookflight__timer bookflight__timer--${isVoice ? 'voice' : 'normal'}`}>
+        <span className="bookflight__timer-icon"><FaStopwatch size={13} /></span>
+        <span className="bookflight__timer-label">Time</span>
+        {formatted}
+      </span>
+    </div>
+  );
+}
+
+// ── Voice Seat Selection Popup ─────────────────────────────────────────────
+// Full interactive seat map shown immediately when voice navigates to /book
+const SEAT_MAP = [
+  // [row, cols, type]  type: 'standard' | 'legroom' | 'occupied'
+  { row: 1,  cols: ['A','C','D','F'], type: 'legroom'  },
+  { row: 2,  cols: ['A','C','D','F'], type: 'legroom'  },
+  { row: 10, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['B','E'] },
+  { row: 11, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['A'] },
+  { row: 12, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['D','F'] },
+  { row: 14, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['C'] },
+  { row: 15, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['B','E'] },
+  { row: 20, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['A','D'] },
+  { row: 21, cols: ['A','B','C','D','E','F'], type: 'standard', occupied: ['C','F'] },
+];
+
+const SEAT_LABELS = { A:'Window', B:'Middle', C:'Aisle', D:'Aisle', E:'Middle', F:'Window' };
+
+function VoiceSeatPopup({ flight, from, to, cabin, onConfirm, onSkip }) {
+  const [selected, setSelected] = useState(null);
+
+  const handleSeat = (code, isOccupied) => {
+    if (isOccupied) return;
+    setSelected(code);
+  };
+
+  const selectedLabel = selected
+    ? `Row ${selected.replace(/[A-F]/,'')}, Seat ${selected.slice(-1)} (${SEAT_LABELS[selected.slice(-1)] || ''})`
+    : null;
+
+  return (
+    <div className="seatpopup__overlay" role="dialog" aria-modal="true" aria-label="Select your seat">
+      <div className="seatpopup">
+        {/* Header */}
+        <div className="seatpopup__header">
+          <div className="seatpopup__header-left">
+            <div className="seatpopup__icon">💺</div>
+            <div>
+              <h2 className="seatpopup__title">Select Your Seat</h2>
+              <p className="seatpopup__subtitle">Voice booking — choose before confirming</p>
+            </div>
+          </div>
+          <div className="seatpopup__voice-badge">
+            <span className="seatpopup__voice-dot" />
+            Voice
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="seatpopup__body">
+          {/* Flight strip */}
+          <div className="seatpopup__flight-info">
+            <span className="seatpopup__flight-code">{flight?.flightNumber || 'BA—'}</span>
+            <span className="seatpopup__flight-sep">·</span>
+            <span>{from || 'LHR'}</span>
+            <FaPlane size={11} style={{ color: '#075aaa', margin: '0 2px' }} />
+            <span>{to || 'JFK'}</span>
+            <span className="seatpopup__flight-sep">·</span>
+            <span style={{ textTransform: 'capitalize' }}>{cabin || 'Economy'}</span>
+          </div>
+
+          {/* Legend */}
+          <div className="seatpopup__legend">
+            {[
+              { cls: 'available', label: 'Available' },
+              { cls: 'selected',  label: 'Selected'  },
+              { cls: 'occupied',  label: 'Occupied'  },
+              { cls: 'legroom',   label: 'Extra Legroom (+£25)' },
+            ].map(l => (
+              <span key={l.cls} className="seatpopup__legend-item">
+                <span className={`seatpopup__legend-dot seatpopup__legend-dot--${l.cls}`} />
+                {l.label}
+              </span>
+            ))}
+          </div>
+
+          {/* Cabin label */}
+          <div className="seatpopup__cabin-label">Economy Cabin — B Airways</div>
+
+          {/* Seat map */}
+          <div className="seatpopup__map">
+            {SEAT_MAP.map(({ row, cols, type, occupied = [] }) => (
+              <div key={row} className="seatpopup__row">
+                <span className="seatpopup__row-num">{row}</span>
+                {['A','B','C'].map(col => {
+                  if (!cols.includes(col)) return <span key={col} style={{ width: 34 }} />;
+                  const code = `${row}${col}`;
+                  const isOcc = occupied.includes(col);
+                  const isSel = selected === code;
+                  const cls = [
+                    'seatpopup__seat',
+                    isOcc ? 'seatpopup__seat--occupied' : type === 'legroom' ? 'seatpopup__seat--extra-legroom' : 'seatpopup__seat--available',
+                    isSel ? 'seatpopup__seat--selected' : '',
+                  ].filter(Boolean).join(' ');
+                  return (
+                    <button key={col} className={cls} onClick={() => handleSeat(code, isOcc)}
+                      title={isOcc ? 'Occupied' : `${code} — ${SEAT_LABELS[col] || ''}`}
+                      disabled={isOcc} aria-label={`Seat ${code}`}>
+                      {isSel ? '✓' : col}
+                    </button>
+                  );
+                })}
+                <span className="seatpopup__aisle" />
+                {['D','E','F'].map(col => {
+                  if (!cols.includes(col)) return <span key={col} style={{ width: 34 }} />;
+                  const code = `${row}${col}`;
+                  const isOcc = occupied.includes(col);
+                  const isSel = selected === code;
+                  const cls = [
+                    'seatpopup__seat',
+                    isOcc ? 'seatpopup__seat--occupied' : type === 'legroom' ? 'seatpopup__seat--extra-legroom' : 'seatpopup__seat--available',
+                    isSel ? 'seatpopup__seat--selected' : '',
+                  ].filter(Boolean).join(' ');
+                  return (
+                    <button key={col} className={cls} onClick={() => handleSeat(code, isOcc)}
+                      title={isOcc ? 'Occupied' : `${code} — ${SEAT_LABELS[col] || ''}`}
+                      disabled={isOcc} aria-label={`Seat ${code}`}>
+                      {isSel ? '✓' : col}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {/* Selected summary */}
+          {selected && (
+            <div className="seatpopup__selected-summary">
+              <span className="seatpopup__selected-summary-icon">💺</span>
+              <div>
+                <strong>{selected}</strong>{' '}
+                <span>— {selectedLabel}</span>
+                {SEAT_MAP.find(r => r.row === Number(selected.replace(/[A-F]/,'')) && r.type === 'legroom') && (
+                  <span style={{ color:'#9a7a1a', fontWeight:700, marginLeft:6 }}>+£25 (Extra Legroom)</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="seatpopup__footer">
+          <button className="seatpopup__skip-btn" onClick={() => onSkip()}>
+            Skip for now
+          </button>
+          <button
+            className="btn btn-primary seatpopup__confirm-btn"
+            disabled={!selected}
+            onClick={() => onConfirm(selected)}
+          >
+            <FaCheck size={13} /> Confirm Seat {selected || ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const steps = ['Search', 'Select Flight', 'Passenger Details', 'Review & Pay', 'Confirmation'];
@@ -46,7 +244,28 @@ export default function BookFlight() {
   const navigate = useNavigate();
   const location = useLocation();
   const [urlParams] = useSearchParams();
-  const { searchParams, setSearchParams, addBooking, addNotification, user } = useApp();
+  const { searchParams, setSearchParams, addBooking, addNotification, user,
+          bookingSource, bookingStartedAt, setBookingSource, clearBookingSource } = useApp();
+
+  // Detect voice booking from location state or context
+  const isVoiceBooking = location.state?.isVoiceBooking || bookingSource === 'voice';
+
+  // Set source on mount if coming from voice nav state
+  useEffect(() => {
+    if (location.state?.isVoiceBooking && bookingSource !== 'voice') {
+      setBookingSource('voice');
+    } else if (!location.state?.isVoiceBooking && !bookingSource) {
+      setBookingSource('normal');
+    }
+    // Reset on unmount
+    return () => clearBookingSource();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Stopwatch — starts when component mounts
+  const { formatted: timerFormatted } = useStopwatch(true);
+
+  // Voice seat popup state
+  const [showSeatPopup, setShowSeatPopup] = useState(false);
 
   const [step, setStep] = useState(1);
   const [tripType, setTripType] = useState(searchParams.tripType || 'return');
@@ -244,8 +463,14 @@ export default function BookFlight() {
         const bestFlight =
           results.find(f => (f.seatsLeft?.[selectedCabinKey] ?? 0) > 0) || results[0];
         setSelectedFlight(bestFlight);
-        setStep(jumpToStepRef.current);
-        jumpToStepRef.current = null; // consume it
+        // Voice: show seat popup first
+        if (isVoiceBooking) {
+          setShowSeatPopup(true);
+          // jumpToStepRef already holds the target step — popup confirm will consume it
+        } else {
+          setStep(jumpToStepRef.current);
+          jumpToStepRef.current = null;
+        }
       } else if (results.length === 0) {
         // No flights matched — surface that instead of silently sitting on
         // an empty Step 2 with no explanation.
@@ -265,7 +490,14 @@ export default function BookFlight() {
     setSelectedFlight(flight);
     const nextStep = jumpToStepRef.current || 3;
     jumpToStepRef.current = null; // consume it
-    setStep(nextStep);
+    // For voice bookings: show seat popup before proceeding to passenger step
+    if (isVoiceBooking) {
+      setShowSeatPopup(true);
+      // Store the next step so popup confirm can use it
+      jumpToStepRef.current = nextStep;
+    } else {
+      setStep(nextStep);
+    }
     window.scrollTo(0, 0);
   };
 
@@ -411,8 +643,38 @@ export default function BookFlight() {
     }
   };
 
+  // Seat popup callbacks (voice booking only)
+  const handleSeatPopupConfirm = (seatCode) => {
+    setSelectedSeat(seatCode);
+    setShowSeatPopup(false);
+    const nextStep = jumpToStepRef.current || 3;
+    jumpToStepRef.current = null;
+    setStep(nextStep);
+    window.scrollTo(0, 0);
+  };
+
+  const handleSeatPopupSkip = () => {
+    setShowSeatPopup(false);
+    const nextStep = jumpToStepRef.current || 3;
+    jumpToStepRef.current = null;
+    setStep(nextStep);
+    window.scrollTo(0, 0);
+  };
+
   return (
     <div className="bookflight">
+      {/* Voice Seat Popup — shown when voice booking selects a flight */}
+      {showSeatPopup && (
+        <VoiceSeatPopup
+          flight={selectedFlight}
+          from={from}
+          to={to}
+          cabin={cabin}
+          onConfirm={handleSeatPopupConfirm}
+          onSkip={handleSeatPopupSkip}
+        />
+      )}
+
       {/* Page Header */}
       <div className="page-header">
         <div className="container">
@@ -440,6 +702,13 @@ export default function BookFlight() {
           </div>
         </div>
       </div>
+
+      {/* Booking Source + Timer bar */}
+      {(bookingSource) && (
+        <div className="container">
+          <BookingSourceBar source={bookingSource} formatted={timerFormatted} />
+        </div>
+      )}
 
       <div className="container bookflight__content">
 
@@ -565,7 +834,14 @@ export default function BookFlight() {
             <div className="bookflight__results-header">
               <div>
                 <h2>{from} <FaPlane size={14} style={{color:'var(--ba-blue)',margin:'0 6px'}} /> {to}</h2>
-                <p>{departDate} · {adults} Adult{adults>1?'s':''} · {cabinOptions.find(c=>c.value===cabin)?.label}</p>
+                <p>
+                  {departDate} · {adults} Adult{adults>1?'s':''} · {cabinOptions.find(c=>c.value===cabin)?.label}
+                  {isVoiceBooking && (
+                    <span style={{marginLeft:10,background:'#075aaa',color:'#fff',borderRadius:20,padding:'2px 10px',fontSize:11,fontWeight:700}}>
+                      <FaMicrophone size={9} style={{marginRight:4}} />Voice Search
+                    </span>
+                  )}
+                </p>
               </div>
               <button className="btn btn-secondary btn-sm" onClick={() => setStep(1)}>
                 Modify Search
@@ -1086,6 +1362,19 @@ export default function BookFlight() {
               </div>
               <h2>Booking Confirmed!</h2>
               <p>Thank you, {passenger.firstName}. Your booking is confirmed.</p>
+              {/* Show booking method + time taken */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:12}}>
+                <span style={{
+                  display:'inline-flex',alignItems:'center',gap:6,padding:'5px 14px',
+                  borderRadius:20,fontSize:12,fontWeight:700,
+                  background: isVoiceBooking ? 'linear-gradient(135deg,#011627,#075aaa)' : '#f0f4f8',
+                  color: isVoiceBooking ? '#fff' : '#2c3e50',
+                  border: isVoiceBooking ? '1px solid #2196f3' : '1px solid #c8d6e2',
+                }}>
+                  {isVoiceBooking ? <FaMicrophone size={11} /> : <FaSearch size={11} />}
+                  {isVoiceBooking ? 'Voice Booking' : 'Manual Booking'} · {timerFormatted}
+                </span>
+              </div>
 
               <div className="bookflight__confirm-ref">
                 <span>Booking Reference</span>

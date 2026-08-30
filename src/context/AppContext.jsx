@@ -16,6 +16,8 @@ const initialState = {
   selectedFlight: null,
   notifications: [],
   voiceAgentOpen: false,
+  bookingSource: null,   // 'voice' | 'normal' | null
+  bookingStartedAt: null, // ISO timestamp when booking page was entered
 };
 
 function appReducer(state, action) {
@@ -26,6 +28,10 @@ function appReducer(state, action) {
       return { ...state, user: { ...state.user, ...action.payload } };
     case 'LOGOUT':
       return { ...state, user: null, isAuthenticated: false, bookings: [] };
+    case 'SET_BOOKING_SOURCE':
+      return { ...state, bookingSource: action.payload.source, bookingStartedAt: action.payload.startedAt || new Date().toISOString() };
+    case 'CLEAR_BOOKING_SOURCE':
+      return { ...state, bookingSource: null, bookingStartedAt: null };
     case 'SET_SEARCH_PARAMS':
       return { ...state, searchParams: { ...state.searchParams, ...action.payload } };
     case 'SET_SELECTED_FLIGHT':
@@ -110,6 +116,8 @@ export function AppProvider({ children }) {
     dispatch({ type: 'LOGOUT' });
   };
   const setSearchParams     = p  => dispatch({ type: 'SET_SEARCH_PARAMS',  payload: p });
+  const setBookingSource    = (source) => dispatch({ type: 'SET_BOOKING_SOURCE', payload: { source, startedAt: new Date().toISOString() } });
+  const clearBookingSource  = ()       => dispatch({ type: 'CLEAR_BOOKING_SOURCE' });
   const setSelectedFlight   = f  => dispatch({ type: 'SET_SELECTED_FLIGHT', payload: f });
   const addBooking          = b  => dispatch({ type: 'ADD_BOOKING',         payload: b });
   const updateBooking       = b  => dispatch({ type: 'UPDATE_BOOKING',      payload: b });
@@ -125,6 +133,7 @@ export function AppProvider({ children }) {
       ...state,
       setLanguage, login, logout, updateUser,
       setSearchParams, setSelectedFlight,
+      setBookingSource, clearBookingSource,
       addBooking, updateBooking, setBookings,
       addNotification, dismissNotification,
       toggleVoiceAgent, openVoiceAgent, closeVoiceAgent,

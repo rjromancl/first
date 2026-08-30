@@ -591,7 +591,14 @@ function buildKnowledgeDocsPolicies() {
 }
 
 function getAllKnowledgeDocs() {
-  return [...buildKnowledgeDocs(), ...buildKnowledgeDocsExtended(), ...buildKnowledgeDocsPolicies()];
+  const base = [...buildKnowledgeDocs(), ...buildKnowledgeDocsExtended(), ...buildKnowledgeDocsPolicies()];
+  // Merge in any PDF-uploaded chunks at runtime (lazy-require to avoid circular dep)
+  try {
+    const { getPDFChunks } = require('./pdfIngestionService');
+    return [...base, ...getPDFChunks()];
+  } catch (_) {
+    return base;
+  }
 }
 
 

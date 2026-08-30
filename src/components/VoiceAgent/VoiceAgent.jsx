@@ -293,7 +293,7 @@ function TwoOptions({ options, onChoose, disabled }) {
 }
 
 export default function VoiceAgent() {
-  const { voiceAgentOpen, closeVoiceAgent, setSearchParams, language, setLanguage } = useApp();
+  const { voiceAgentOpen, closeVoiceAgent, setSearchParams, setBookingSource, language, setLanguage } = useApp();
   const navigate = useNavigate();
 
   // UI
@@ -336,6 +336,23 @@ export default function VoiceAgent() {
   const [capturedEntities, setCapturedEntities] = useState({});
   const [capturedPax,      setCapturedPax]      = useState({});
   const [completedBooking, setCompletedBooking] = useState(null);
+
+  // Seat selection state — voice-driven seat pick before passenger collection
+  const [selectingSeat,       setSelectingSeat]       = useState(false);
+  const [selectedVoiceSeat,   setSelectedVoiceSeat]   = useState(null);
+  const [pendingFlightForSeat, setPendingFlightForSeat] = useState(null); // { flight, entities }
+
+  // Live refs so callbacks always see current values
+  const capturedEntitiesRef = useRef({});
+  const capturedPaxRef      = useRef({});
+  const selectingSeatRef    = useRef(false);
+  const pendingFlightRef    = useRef(null);
+  const selectedVoiceSeatRef = useRef(null);
+  useEffect(() => { capturedEntitiesRef.current = capturedEntities; }, [capturedEntities]);
+  useEffect(() => { capturedPaxRef.current      = capturedPax;      }, [capturedPax]);
+  useEffect(() => { selectingSeatRef.current    = selectingSeat;    }, [selectingSeat]);
+  useEffect(() => { pendingFlightRef.current    = pendingFlightForSeat; }, [pendingFlightForSeat]);
+  useEffect(() => { selectedVoiceSeatRef.current = selectedVoiceSeat; }, [selectedVoiceSeat]);
 
   // Gemini history
   const [geminiHistory, setGeminiHistory] = useState([]);
@@ -489,41 +506,108 @@ export default function VoiceAgent() {
   }, [addAgentMsg, speakMessage, startListening]);
 
   // ── Book a specific inline flight result ─────────────────────
+  // Instead of immediately navigating, start seat selection → passenger collection flow
   const handleBookFlight = useCallback((flight, flightEntities) => {
-    const navState = {
-      prefillPassenger: capturedPax || {},
-      from:       flightEntities.from       || 'LHR',
-      to:         flightEntities.to         || '',
-      departDate: flightEntities.departureDate || '',
-      returnDate: '',
-      adults:     1,
-      cabin:      flightEntities.cabin      || 'economy',
-      tripType:   'return',
-      autoSearch: true,
-      jumpToStep: 3,
-      selectedFlight: flight,
+    // Store flight + entities for later navigation after seat + passenger collection
+    const mergedEntities = {
+      from:          flightEntities.from          || 'LHR',
+      to:            flightEntities.to            || '',
+      departureDate: flightEntities.departureDate || '',
+      cabin:         flightEntities.cabin         || 'economy',
     };
-    setSearchParams({
-      tripType: 'return',
-      from:      flightEntities.from       || 'LHR',
-      to:        flightEntities.to         || '',
-      departDate: flightEntities.departureDate || '',
-      returnDate: '',
-      adults: 1,
-      cabin: flightEntities.cabin || 'economy',
-    });
-    navigate('/book', { state: navState });
-  }, [capturedPax, navigate, setSearchParams]);
+    setPendingFlightForSeat({ flight, entities: mergedEntities });
+    setCapturedEntities(prev => ({ ...prev, ...mergedEntities }));
+    setSelectingSeat(true);
+    setSelectedVoiceSeat(null);
+
+    const seatMsg = `Great choice! Before we continue, would you like to choose a seat? You can say "window", "aisle", a specific seat like "14A", or "skip" to choose later.`;
+    addAgentMsg(seatMsg, ['Window seat', 'Aisle seat', 'Skip seat selection']);
+    speakMessage(seatMsg);
+    addTelemetryLog('💺', 'Seat selection: Awaiting user preference');
+  }, [addAgentMsg, speakMessage, addTelemetryLog]);
 
   // ── Core processing loop ──────────────────────────────────────
   const processInput = useCallback(async (text) => {
     if (!text || !text.trim() || isProcessingRef.current) return;
     const trimmed = text.trim();
+
+    // ── SEAT SELECTION MODE — intercept input before NLP ────────
+    if (selectingSeatRef.current) {
+      if (mountedRef.current) setIsProcessing(true);
+      addUserMsg(trimmed);
+
+      const lower = trimmed.toLowerCase();
+      let seatCode = null;
+
+      // Parse seat preference
+      if (/skip|no thanks|no seat|later|don'?t care/i.test(lower)) {
+        seatCode = 'SKIP';
+      } else if (/window/i.test(lower)) {
+        seatCode = '10A'; // assign a window seat
+      } else if (/aisle/i.test(lower)) {
+        seatCode = '10C'; // assign an aisle seat
+      } else if (/middle/i.test(lower)) {
+        seatCode = '10B'; // assign a middle seat
+      } else {
+        // Try to parse a specific seat code like "14A", "row 14 seat A"
+        const seatMatch = lower.match(/(\d{1,2})\s*([a-f])/i);
+        if (seatMatch) {
+          seatCode = `${seatMatch[1]}${seatMatch[2].toUpperCase()}`;
+        }
+      }
+
+      if (!seatCode) {
+        // Didn't understand — ask again
+        if (mountedRef.current) setIsProcessing(false);
+        const retryMsg = 'I didn\'t catch that. Say "window", "aisle", a seat like "14A", or "skip".';
+        addAgentMsg(retryMsg, ['Window seat', 'Aisle seat', 'Skip seat selection']);
+        await speakMessage(retryMsg);
+        return;
+      }
+
+      // Seat selected (or skipped)
+      setSelectingSeat(false);
+      if (seatCode === 'SKIP') {
+        setSelectedVoiceSeat(null);
+        addTelemetryLog('💺', 'Seat selection: Skipped by user');
+        const skipMsg = 'No problem, you can choose a seat later. Let me collect your passenger details.';
+        addAgentMsg(skipMsg);
+        await speakMessage(skipMsg);
+      } else {
+        setSelectedVoiceSeat(seatCode);
+        addTelemetryLog('💺', `Seat selection: User chose seat ${seatCode}`);
+        const confirmMsg = `Seat ${seatCode} selected! Now let me get your passenger details.`;
+        addAgentMsg(confirmMsg);
+        await speakMessage(confirmMsg);
+      }
+
+      // Start passenger collection
+      setCollectingPax(true);
+      setPaxData({});
+      if (mountedRef.current) setIsProcessing(false);
+      await askNextField('firstName', PAX_FIELDS[0].q);
+      return;
+    }
     if (mountedRef.current) setIsProcessing(true);
     addUserMsg(trimmed);
     addTelemetryLog('🔍', `RAG Vector DB: Searching context for "${trimmed.substring(0, 30)}..."`);
 
     const updatedHistory = [...geminiHistoryRef.current, { role: 'user', text: trimmed }];
+
+    // ── Inject captured route into history so fallbackResponse can always find it ──
+    // If we already have a route from a previous turn, prepend a synthetic model
+    // message so extractEntitiesFromHistory picks it up even when API is offline.
+    const ents = capturedEntitiesRef.current;
+    if (ents?.from && ents?.to) {
+      const synth = {
+        role: 'model',
+        text: `Available Flights — ${ents.from} → ${ents.to} on ${ents.departureDate || ''}`,
+      };
+      // Only add if not already present
+      if (!updatedHistory.some(m => m.text?.includes(`${ents.from} → ${ents.to}`))) {
+        updatedHistory.unshift(synth);
+      }
+    }
 
     try {
       const parsed =
@@ -585,6 +669,7 @@ export default function VoiceAgent() {
         if (passengerField.allCollected) {
           setCollectingPax(false); setCurrentField(null); setCurrentQ('');
           const ents = { ...capturedEntities, ...entities };
+          const pending = pendingFlightRef.current;
           const navState = {
             prefillPassenger: newData,
             ...(ents.from          && { from:       ents.from }),
@@ -593,11 +678,21 @@ export default function VoiceAgent() {
             ...(ents.returnDate    && { returnDate: ents.returnDate }),
             ...(ents.adults        && { adults:     ents.adults }),
             ...(ents.cabin         && { cabin:      ents.cabin }),
+            ...(selectedVoiceSeatRef.current && { selectedSeat: selectedVoiceSeatRef.current }),
+            ...(pending?.flight    && { selectedFlight: pending.flight }),
+            autoSearch: true,
+            jumpToStep: 3,
+            isVoiceBooking: true,
           };
           if (mountedRef.current) setIsProcessing(false);
           addAgentMsg(response.text, response.quickReplies);
           await speakMessage(response.text);
-          if (mountedRef.current) navigate('/book', { state: navState });
+          stopSpeaking();
+          stopListening();
+          setBookingSource('voice');
+          if (mountedRef.current) {
+            setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 350);
+          }
           return;
         }
 
@@ -614,32 +709,31 @@ export default function VoiceAgent() {
         const pnrCode = 'BA-' + Math.floor(10000 + Math.random() * 90000);
         const paxName = `${response.action.passenger?.firstName || 'Passenger'} ${response.action.passenger?.lastName || ''}`.trim();
         setCompletedBooking({
-          pnr: pnrCode,
-          paxName,
-          from: entities.from || 'LHR',
-          to: entities.to || 'JFK',
+          pnr: pnrCode, paxName,
+          from: entities.from || 'LHR', to: entities.to || 'JFK',
           departureDate: entities.departureDate || '2026-12-28',
-          cabin: entities.cabin || 'Economy',
-          seat: '14A'
+          cabin: entities.cabin || 'Economy', seat: '14A'
         });
         const navState = {
           prefillPassenger: response.action.passenger,
-          from:       entities.from         || '',
-          to:         entities.to           || '',
-          departDate: entities.departureDate || '',
-          returnDate: entities.returnDate   || '',
-          adults:     entities.adults       || 1,
-          cabin:      entities.cabin        || 'economy',
-          tripType:   entities.tripType     || 'return',
-          autoSearch: true,
-          jumpToStep: 4,
+          from: entities.from || '', to: entities.to || '',
+          departDate: entities.departureDate || '', returnDate: entities.returnDate || '',
+          adults: entities.adults || 1, cabin: entities.cabin || 'economy',
+          tripType: entities.tripType || 'return',
+          autoSearch: true, jumpToStep: 4,
+          isVoiceBooking: true,
         };
         setSearchParams({ tripType: entities.tripType || 'return', from: entities.from || '', to: entities.to || '', departDate: entities.departureDate || '', returnDate: entities.returnDate || '', adults: entities.adults || 1, cabin: entities.cabin || 'economy' });
         setCapturedPax(response.action.passenger || {});
+        setBookingSource('voice');
         if (mountedRef.current) setIsProcessing(false);
         addAgentMsg(response.text, response.quickReplies);
         await speakMessage(response.text);
-        if (mountedRef.current) navigate('/book', { state: navState });
+        stopSpeaking();
+        stopListening();
+        if (mountedRef.current) {
+          setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 350);
+        }
         return;
       }
 
@@ -648,18 +742,7 @@ export default function VoiceAgent() {
         setCollectingPax(false); setCurrentField(null); setCurrentQ(''); setPaxData({});
         const voicePax = response.action.passenger || capturedPax || {};
         const hasSpokenPax = voicePax.firstName && voicePax.lastName;
-        const navState = {
-          prefillPassenger: voicePax,
-          from:       entities.from         || 'LHR',
-          to:         entities.to           || 'JFK',
-          departDate: entities.departureDate || '',
-          returnDate: entities.returnDate   || '',
-          adults:     entities.adults       || 1,
-          cabin:      entities.cabin        || 'economy',
-          tripType:   entities.tripType     || 'return',
-          autoSearch: true,
-          jumpToStep: hasSpokenPax ? 4 : 3,
-        };
+        setCapturedEntities(prev => ({ ...prev, ...entities }));
         setSearchParams({ tripType: entities.tripType || 'return', from: entities.from || 'LHR', to: entities.to || 'JFK', departDate: entities.departureDate || '', returnDate: entities.returnDate || '', adults: entities.adults || 1, cabin: entities.cabin || 'economy' });
         setCapturedPax(voicePax);
         if (mountedRef.current) setIsProcessing(false);
@@ -671,11 +754,43 @@ export default function VoiceAgent() {
           await speakMessage(response.text);
           // hands-free: keep listening in case user says "book cheapest" etc.
           if (handsFreeRef.current) setTimeout(() => { if (mountedRef.current) startListening(); }, 200);
-        } else {
-          // No inline results — navigate immediately (original behaviour)
+        } else if (!hasSpokenPax) {
+          // No inline results AND passenger details missing → start seat + passenger collection in voice
           addAgentMsg(response.text, response.quickReplies, response.action);
           await speakMessage(response.text);
-          if (mountedRef.current) navigate('/book', { state: navState });
+
+          // Store flight context for later navigation
+          setPendingFlightForSeat({ flight: null, entities });
+          setSelectingSeat(true);
+          setSelectedVoiceSeat(null);
+
+          const seatMsg = `Would you like to choose a seat? Say "window", "aisle", a specific seat like "14A", or "skip".`;
+          addAgentMsg(seatMsg, ['Window seat', 'Aisle seat', 'Skip seat selection']);
+          await speakMessage(seatMsg);
+          addTelemetryLog('💺', 'Seat selection: Awaiting user preference');
+        } else {
+          // Has passenger data already — navigate directly
+          const navState = {
+            prefillPassenger: voicePax,
+            from:       entities.from         || 'LHR',
+            to:         entities.to           || 'JFK',
+            departDate: entities.departureDate || '',
+            returnDate: entities.returnDate   || '',
+            adults:     entities.adults       || 1,
+            cabin:      entities.cabin        || 'economy',
+            tripType:   entities.tripType     || 'return',
+            autoSearch: true,
+            jumpToStep: 4,
+            isVoiceBooking: true,
+          };
+          addAgentMsg(response.text, response.quickReplies, response.action);
+          await speakMessage(response.text);
+          stopSpeaking();
+          stopListening();
+          setBookingSource('voice');
+          if (mountedRef.current) {
+            setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 350);
+          }
         }
         return;
       }
@@ -738,6 +853,7 @@ export default function VoiceAgent() {
       setCollectingPax(false); setCurrentField(null); setCurrentQ('');
       setInterimText(''); setAwaitingTwoOpt(false);
       setCapturedEntities({}); setCapturedPax({});
+      setSelectingSeat(false); setSelectedVoiceSeat(null); setPendingFlightForSeat(null);
     }
   }, [voiceAgentOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -776,8 +892,101 @@ export default function VoiceAgent() {
   const handleQuickReply = useCallback((reply) => {
     if (isProcessingRef.current) return;
     setAwaitingTwoOpt(false);
+
+    const r = reply.toLowerCase().trim();
+
+    // ── Context-aware quick replies ──────────────────────────────────
+    // Use refs so we always see the latest capturedEntities / capturedPax
+    const ents = capturedEntitiesRef.current;
+    const pax  = capturedPaxRef.current;
+    const hasRoute = ents?.from && ents?.to;
+
+    // "Book cheapest" / "Book cheapest flight" ────────────────────────
+    if (/book cheapest|cheapest|cheapest flight/i.test(reply) && hasRoute) {
+      const navState = {
+        prefillPassenger: pax || {},
+        from:       ents.from,
+        to:         ents.to,
+        departDate: ents.departureDate || ents.departDate || '',
+        returnDate: ents.returnDate || '',
+        adults:     ents.adults || 1,
+        cabin:      ents.cabin || 'economy',
+        tripType:   ents.tripType || 'return',
+        autoSearch: true,
+        jumpToStep: 3,
+        isVoiceBooking: true,
+      };
+      setSearchParams({
+        tripType: ents.tripType || 'return',
+        from: ents.from, to: ents.to,
+        departDate: ents.departureDate || ents.departDate || '',
+        returnDate: ents.returnDate || '',
+        adults: ents.adults || 1,
+        cabin: ents.cabin || 'economy',
+      });
+      setBookingSource('voice');
+      addAgentMsg(`Booking the cheapest flight from ${ents.from} → ${ents.to}. Taking you to the booking page!`);
+      // Stop listening + close drawer BEFORE navigating to prevent re-trigger
+      stopSpeaking();
+      stopListening();
+      setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 400);
+      return;
+    }
+
+    // "Yes, book it" ───────────────────────────────────────────────────
+    if (/^yes,?\s*book\s*it$/i.test(reply) && hasRoute) {
+      const navState = {
+        prefillPassenger: pax || {},
+        from: ents.from, to: ents.to,
+        departDate: ents.departureDate || ents.departDate || '',
+        returnDate: '', adults: ents.adults || 1,
+        cabin: ents.cabin || 'economy',
+        tripType: 'return', autoSearch: true, jumpToStep: 3, isVoiceBooking: true,
+      };
+      setBookingSource('voice');
+      addAgentMsg(`Booking from ${ents.from} → ${ents.to}!`);
+      stopSpeaking();
+      stopListening();
+      setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 400);
+      return;
+    }
+
+    // "Change date" ────────────────────────────────────────────────────
+    if (/change date|different date|another date/i.test(reply) && hasRoute) {
+      addAgentMsg(
+        `Which date would you like to fly from ${ents.from} to ${ents.to}?`,
+        ['Tomorrow', 'Next week', 'Christmas', 'New Year']
+      );
+      return;
+    }
+
+    // "Change cabin" ───────────────────────────────────────────────────
+    if (/change cabin|different cabin|upgrade cabin/i.test(reply) && hasRoute) {
+      addAgentMsg(
+        `Which cabin class for ${ents.from} → ${ents.to}?`,
+        ['Economy', 'Business Class', 'First Class', 'Premium Economy']
+      );
+      return;
+    }
+
+    // Cabin selection after "Change cabin" prompt ─────────────────────
+    if (/^(economy|business class|first class|premium economy)$/i.test(reply) && hasRoute) {
+      const cabinMap = { 'economy':'economy', 'business class':'business', 'first class':'first', 'premium economy':'premium_economy' };
+      const newCabin = cabinMap[r] || 'economy';
+      setCapturedEntities(prev => ({ ...prev, cabin: newCabin }));
+      processInputRef.current(`${ents.from} to ${ents.to} ${newCabin}`);
+      return;
+    }
+
+    // Date selection after "Change date" prompt ───────────────────────
+    if (/^(tomorrow|next week|christmas|new year)$/i.test(reply) && hasRoute) {
+      processInputRef.current(`${ents.from} to ${ents.to} ${reply}`);
+      return;
+    }
+
+    // All other replies → normal NLP flow
     processInputRef.current(reply);
-  }, []);
+  }, [navigate, setSearchParams, setBookingSource, addAgentMsg, stopListening, closeVoiceAgent]);
 
   const handleClearChat = useCallback(() => {
     stopSpeaking();
@@ -785,6 +994,7 @@ export default function VoiceAgent() {
     setIsSpeaking(false); setIsProcessing(false);
     setCollectingPax(false); setPaxData({}); setCurrentField(null); setCurrentQ('');
     setAwaitingTwoOpt(false); setCapturedEntities({}); setCapturedPax({});
+    setSelectingSeat(false); setSelectedVoiceSeat(null); setPendingFlightForSeat(null);
   }, []);
 
   // Status label

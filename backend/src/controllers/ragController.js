@@ -286,12 +286,96 @@ function statsHandler(req, res) {
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
   }, {});
+
+  const { getUploadedDocStats } = require('../services/pdfIngestionService');
+  const pdfStats = getUploadedDocStats();
+
   return success(res, {
-    totalDocs:  docs.length,
+    totalDocs:    docs.length,
     byCategory,
-    intents:    19,
-    tools:      AGENTIC_TOOLS.length,
+    intents:      19,
+    tools:        AGENTIC_TOOLS.length,
+    uploadedPDFs: pdfStats,
   });
+}
+
+// ── POST /api/rag/upload-pdf ─────────────────────────────────────────────────
+const multer  = require('multer');
+const path    = require('path');
+const fsSync  = require('fs');
+
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+if (!fsSync.existsSync(UPLOADS_DIR)) fsSync.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename:    (_req, file, cb) => {
+    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}_${safe}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },   // 10 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are accepted.'));
+    }
+  },
+});
+
+// multer middleware exposed so routes can use it
+const pdfUploadMiddleware = upload.single('file');
+
+async function uploadPDFHandler(req, res, next) {
+  pdfUploadMiddleware(req, res, async (err) => {
+    if (err) return error(res, err.message, 400);
+    if (!req.file) return error(res, 'No file uploaded. Send a PDF as form-data field "file".', 400);
+
+    try {
+      const { ingestPDF } = require('../services/pdfIngestionService');
+      const result = await ingestPDF(req.file.path, req.file.originalname);
+
+      logger.info('[ragController] PDF uploaded & ingested', {
+        filename: req.file.originalname,
+        chunks:   result.chunks,
+        pages:    result.pages,
+      });
+
+      return success(res, {
+        message:  `PDF ingested successfully. ${result.chunks} chunks indexed across ${result.pages} pages.`,
+        filename: result.filename,
+        chunks:   result.chunks,
+        pages:    result.pages,
+        docIds:   result.docIds.slice(0, 5),   // sample only
+      }, 201);
+    } catch (ingestionErr) {
+      logger.error('[ragController] PDF ingestion error', { error: ingestionErr.message });
+      next(ingestionErr);
+    }
+  });
+}
+
+// ── GET /api/rag/pdfs ────────────────────────────────────────────────────────
+function listPDFsHandler(req, res) {
+  const { listUploadedDocs } = require('../services/pdfIngestionService');
+  return success(res, { docs: listUploadedDocs() });
+}
+
+// ── DELETE /api/rag/pdfs/:filename ───────────────────────────────────────────
+async function deletePDFHandler(req, res, next) {
+  try {
+    const name = decodeURIComponent(req.params.filename);
+    const { deleteUploadedDoc } = require('../services/pdfIngestionService');
+    const result = await deleteUploadedDoc(name);
+    return success(res, result);
+  } catch (err) {
+    if (err.message.startsWith('No uploaded doc')) return error(res, err.message, 404);
+    next(err);
+  }
 }
 
 module.exports = {
@@ -299,4 +383,7 @@ module.exports = {
   agenticAsk:   agenticAskHandler,
   health:       healthHandler,
   stats:        statsHandler,
+  uploadPDF:    uploadPDFHandler,
+  listPDFs:     listPDFsHandler,
+  deletePDF:    deletePDFHandler,
 };
