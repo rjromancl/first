@@ -881,7 +881,7 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     // ── Resolve departure date from query ──────────────────────────────
     const today = new Date();
     const addDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0]; };
-    let departureDate = addDays(30); // sensible default: 30 days from today
+    let departureDate = null; // null = user hasn't specified a date yet
 
     if (/tomorrow|naalaiku/i.test(l))                          departureDate = addDays(1);
     else if (/today|inniku/i.test(l))                          departureDate = addDays(0);
@@ -894,7 +894,7 @@ async function fallbackResponse(t, errorReason = null, history = []) {
     else if (/weekend/i.test(l))                               departureDate = addDays(((6 - today.getDay()) + 7) % 7 || 7);
     else {
       // Try to extract an explicit date like "20 december", "december 20", "2026-12-20"
-      const isoMatch     = l.match(/\b(20\d\d-\d{2}-\d{2})\b/);
+      const isoMatch      = l.match(/\b(20\d\d-\d{2}-\d{2})\b/);
       const monthDayMatch = l.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i);
       const dayMonthMatch = l.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i);
       const months = { january:1, february:2, march:3, april:4, may:5, june:6, july:7, august:8, september:9, october:10, november:11, december:12 };
@@ -909,6 +909,20 @@ async function fallbackResponse(t, errorReason = null, history = []) {
         const d = String(dayMonthMatch[2]).padStart(2, '0');
         departureDate = `${today.getFullYear()}-${m}-${d}`;
       }
+    }
+
+    // ── If no date given, ask instead of defaulting to 30 days ─────────
+    if (!departureDate) {
+      return {
+        intent: 'BOOK_FLIGHT',
+        text: `When would you like to fly from ${fromCode} to ${toCode}?`,
+        quickReplies: ['Tomorrow', 'Next week', 'Christmas', 'New Year', 'Diwali'],
+        action: null,
+        entities: { from: fromCode, to: toCode, departureDate: '', returnDate: '', adults: 1, cabin: 'economy', tripType: 'return' },
+        flightResults: [],
+        passengerField: null,
+        diagnosticNotice: notice,
+      };
     }
 
     // ── Cabin ──────────────────────────────────────────────────────────

@@ -348,10 +348,12 @@ export default function VoiceAgent() {
   const selectingSeatRef    = useRef(false);
   const pendingFlightRef    = useRef(null);
   const selectedVoiceSeatRef = useRef(null);
+  const currentFieldRef     = useRef(null);   // live ref for passenger collection field
+  const pendingFlightForSeatRef = useRef(null); // alias for pendingFlightRef
   useEffect(() => { capturedEntitiesRef.current = capturedEntities; }, [capturedEntities]);
   useEffect(() => { capturedPaxRef.current      = capturedPax;      }, [capturedPax]);
   useEffect(() => { selectingSeatRef.current    = selectingSeat;    }, [selectingSeat]);
-  useEffect(() => { pendingFlightRef.current    = pendingFlightForSeat; }, [pendingFlightForSeat]);
+  useEffect(() => { pendingFlightRef.current    = pendingFlightForSeat; pendingFlightForSeatRef.current = pendingFlightForSeat; }, [pendingFlightForSeat]);
   useEffect(() => { selectedVoiceSeatRef.current = selectedVoiceSeat; }, [selectedVoiceSeat]);
 
   // Gemini history
@@ -368,6 +370,9 @@ export default function VoiceAgent() {
   const inputRef       = useRef(null);
   const pendingNavRef  = useRef(null);
   const mountedRef     = useRef(true);
+
+  // Keep currentFieldRef in sync so passenger intercept always sees current field
+  useEffect(() => { currentFieldRef.current = currentField; }, [currentField]);
 
   // Live refs — avoid stale closures
   const geminiHistoryRef = useRef(geminiHistory);
@@ -530,6 +535,67 @@ export default function VoiceAgent() {
   const processInput = useCallback(async (text) => {
     if (!text || !text.trim() || isProcessingRef.current) return;
     const trimmed = text.trim();
+
+    // ── PASSENGER COLLECTION MODE — intercept BEFORE NLP ────────
+    // When we're actively collecting passenger fields, treat the raw
+    // transcript as the answer — don't send through NLP at all.
+    if (collectingRef.current && currentFieldRef.current) {
+      if (mountedRef.current) setIsProcessing(true);
+      addUserMsg(trimmed);
+
+      const field = currentFieldRef.current;
+      const val   = trimmed.trim().replace(/^(my (name is|first name is|last name is|phone (number )?is|nationality is)|i am|call me)\s+/i, '').trim();
+
+      const newData = { ...paxDataRef.current, [field]: val };
+      setPaxData(newData);
+      paxDataRef.current = newData;
+      setCapturedPax(newData);
+
+      const fieldOrder = ['firstName', 'lastName', 'phone', 'nationality'];
+      const nextIndex  = fieldOrder.indexOf(field) + 1;
+
+      if (nextIndex < fieldOrder.length) {
+        // Ask the next field
+        const nextField = fieldOrder[nextIndex];
+        const nextQ = PAX_FIELDS.find(f => f.key === nextField)?.q || `Your ${nextField}?`;
+        if (mountedRef.current) setIsProcessing(false);
+        await askNextField(nextField, nextQ);
+      } else {
+        // All 4 fields collected — navigate to booking
+        setCollectingPax(false);
+        setCurrentField(null);
+        setCurrentQ('');
+
+        const pending = pendingFlightForSeatRef.current;
+        const ents    = capturedEntitiesRef.current;
+        const doneMsg = `Got it! Booking your flight from ${ents.from || 'LHR'} to ${ents.to || ''} for ${val}. Taking you to payment!`;
+        addAgentMsg(doneMsg);
+        await speakMessage(doneMsg);
+
+        const navState = {
+          prefillPassenger: newData,
+          from:       ents.from         || 'LHR',
+          to:         ents.to           || '',
+          departDate: ents.departureDate || '',
+          returnDate: '',
+          adults:     ents.adults       || 1,
+          cabin:      ents.cabin        || 'economy',
+          tripType:   'return',
+          autoSearch: true,
+          jumpToStep: 4,
+          isVoiceBooking: true,
+          selectedFlight: pending?.flight || null,
+        };
+        setBookingSource('voice');
+        stopSpeaking();
+        stopListening();
+        if (mountedRef.current) {
+          setIsProcessing(false);
+          setTimeout(() => { closeVoiceAgent(); navigate('/book', { state: navState }); }, 400);
+        }
+      }
+      return;
+    }
 
     // ── SEAT SELECTION MODE — intercept input before NLP ────────
     if (selectingSeatRef.current) {
@@ -834,7 +900,7 @@ export default function VoiceAgent() {
       addAgentMsg(msg, ['Try again', 'Book a flight']);
       await speakMessage(msg);
     }
-  }, [addUserMsg, addAgentMsg, speakMessage, askNextField, startListening, navigate, setSearchParams, capturedEntities]);
+  }, [addUserMsg, addAgentMsg, speakMessage, askNextField, startListening, navigate, setSearchParams, capturedEntities, stopListening, closeVoiceAgent, setBookingSource]);
 
   useEffect(() => { processInputRef.current = processInput; }, [processInput]);
 
