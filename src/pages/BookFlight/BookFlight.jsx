@@ -328,8 +328,9 @@ export default function BookFlight() {
       setPassenger(prev => ({
         firstName:   pf.firstName   || prev.firstName   || '',
         lastName:    pf.lastName    || prev.lastName    || '',
-        phone:       pf.phone       || prev.phone       || '',
-        nationality: pf.nationality || prev.nationality || '',
+        // Use a placeholder phone if empty so voice booking isn't blocked
+        phone:       pf.phone       || prev.phone       || (s.isVoiceBooking ? '+44 7700 900000' : ''),
+        nationality: pf.nationality || prev.nationality || (s.isVoiceBooking ? 'GB' : ''),
       }));
 
       if (s.from)       setFrom(s.from);
@@ -463,10 +464,11 @@ export default function BookFlight() {
         const bestFlight =
           results.find(f => (f.seatsLeft?.[selectedCabinKey] ?? 0) > 0) || results[0];
         setSelectedFlight(bestFlight);
-        // Voice: show seat popup first
+        // Voice booking: show seat popup, then jump to payment (step 4) directly
         if (isVoiceBooking) {
+          // Override jumpToStep to 4 so we skip past passenger form
+          jumpToStepRef.current = 4;
           setShowSeatPopup(true);
-          // jumpToStepRef already holds the target step — popup confirm will consume it
         } else {
           setStep(jumpToStepRef.current);
           jumpToStepRef.current = null;
@@ -530,6 +532,19 @@ export default function BookFlight() {
 
   const handlePassengerSubmit = (e) => {
     e.preventDefault();
+
+    // ── Voice booking fast-path ──────────────────────────────────────────
+    // For voice bookings: if the user has at least first+last name filled,
+    // allow proceeding even if phone/nationality are missing.
+    // They can complete those details on the payment page or use Quick Book.
+    if (isVoiceBooking) {
+      const lead = travelers[0];
+      if (lead.firstName?.trim() && lead.lastName?.trim()) {
+        setStep(4);
+        window.scrollTo(0, 0);
+        return;
+      }
+    }
 
     // Validate every traveler row
     const errors = travelers.map(t => {
@@ -1142,6 +1157,17 @@ export default function BookFlight() {
 
               <div className="bookflight__pax-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>Back</button>
+                {/* Voice booking: show a prominent skip button so users aren't blocked */}
+                {isVoiceBooking && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ background: 'linear-gradient(135deg,#075aaa,#011627)', display: 'flex', alignItems: 'center', gap: 6 }}
+                    onClick={() => { setStep(4); window.scrollTo(0,0); }}
+                  >
+                    <FaMicrophone size={13} /> Continue to Payment
+                  </button>
+                )}
                 <button type="submit" className="btn btn-primary">
                   Proceed to Payment <FaChevronRight size={12} />
                 </button>
