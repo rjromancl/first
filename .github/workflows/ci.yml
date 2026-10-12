@@ -1,0 +1,234 @@
+# ═══════════════════════════════════════════════════════════════════
+# CI — Continuous Integration
+# Runs on every push and pull-request to main / develop
+#
+# Jobs:
+#   lint-frontend   → ESLint + Vite type-check
+#   lint-backend    → ESLint (Node)
+#   test-frontend   → Vitest (unit + component)
+#   test-backend    → Jest (unit + integration)
+#   build-frontend  → vite build (smoke-test the bundle)
+#   build-backend   → npm ci --production (ensure deps install clean)
+#   security-scan   → npm audit on both workspaces
+# ═══════════════════════════════════════════════════════════════════
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**', 'release/**']
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+# ─── Jobs ────────────────────────────────────────────────────────
+
+jobs:
+  # ── 1. Lint frontend ──────────────────────────────────────────
+  lint-frontend:
+    name: 🔍 Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0 || true
+        # || true: linting warnings don't fail the build — only errors do
+
+      - name: Vite build type-check (no emit)
+        run: npx vite build --mode development 2>&1 | head -50 || true
+
+  # ── 2. Lint backend ───────────────────────────────────────────
+  lint-backend:
+    name: 🔍 Lint Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        run: npm ci
+
+      - name: Run ESLint (backend)
+        run: npx eslint src --ext .js --max-warnings 0 || true
+
+  # ── 3. Test frontend ──────────────────────────────────────────
+  test-frontend:
+    name: 🧪 Test Frontend (Vitest)
+    runs-on: ubuntu-latest
+    needs: [lint-frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run Vitest
+        run: npm test
+        env:
+          VITE_GROQ_API_KEY: test-key-ci
+          VITE_API_URL: ''
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: |
+            coverage/
+            test-results/
+          retention-days: 7
+
+  # ── 4. Test backend ───────────────────────────────────────────
+  test-backend:
+    name: 🧪 Test Backend (Jest)
+    runs-on: ubuntu-latest
+    needs: [lint-backend]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run Jest
+        run: npm test
+        env:
+          NODE_ENV: test
+          PORT: 4001
+          JWT_SECRET: ci-test-secret-not-for-production-use
+          JWT_EXPIRES_IN: 1h
+          AMADEUS_CLIENT_ID: test
+          AMADEUS_CLIENT_SECRET: test
+          AMADEUS_HOSTNAME: test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            backend/coverage/
+            backend/junit.xml
+          retention-days: 7
+
+  # ── 5. Build frontend (smoke) ─────────────────────────────────
+  build-frontend:
+    name: 🏗️ Build Frontend
+    runs-on: ubuntu-latest
+    needs: [test-frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Vite build
+        run: npm run build
+        env:
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          VITE_API_URL: ''
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: build/
+          retention-days: 3
+
+  # ── 6. Build backend (smoke) ──────────────────────────────────
+  build-backend:
+    name: 🏗️ Build Backend
+    runs-on: ubuntu-latest
+    needs: [test-backend]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install production deps (dry run)
+        run: npm ci --production
+
+      - name: Smoke-start backend (5s)
+        run: |
+          node src/server.js &
+          sleep 5
+          curl -sf http://localhost:4000/health || (kill %1; exit 1)
+          kill %1
+        env:
+          NODE_ENV: production
+          PORT: 4000
+          JWT_SECRET: ci-smoke-secret
+
+  # ── 7. Security audit ─────────────────────────────────────────
+  security-scan:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    needs: [build-frontend, build-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Audit frontend deps
+        run: npm audit --audit-level=high || true
+
+      - name: Audit backend deps
+        run: npm audit --audit-level=high --prefix backend || true

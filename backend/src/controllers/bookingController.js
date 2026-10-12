@@ -87,8 +87,18 @@ async function selectSeat(req, res, next) {
     const { seat, segment = 'outbound' } = req.body;
     if (!seat) return error(res, 'seat is required', 400);
 
+    // Ownership check
+    const existing = getBooking(reference);
+    if (!existing) return error(res, 'Booking not found', 404);
+    if (existing.userEmail && req.user?.email &&
+        existing.userEmail.toLowerCase() !== req.user.email.toLowerCase()) {
+      return error(res, 'You are not authorised to modify this booking.', 403);
+    }
+
+    // Spread existing segment safely — guard against null/undefined
+    const existingSegment = existing[segment] || {};
     const booking = updateBooking(reference, {
-      [segment]: { ...require('../models/inMemoryStore').BookingStore.findByRef(reference)?.[segment], seat },
+      [segment]: { ...existingSegment, seat },
     });
     if (!booking) return error(res, 'Booking not found', 404);
 
@@ -103,6 +113,14 @@ async function updateBags(req, res, next) {
   try {
     const { reference } = req.params;
     const { checked, cabin } = req.body;
+
+    // Ownership check
+    const existing = getBooking(reference);
+    if (!existing) return error(res, 'Booking not found', 404);
+    if (existing.userEmail && req.user?.email &&
+        existing.userEmail.toLowerCase() !== req.user.email.toLowerCase()) {
+      return error(res, 'You are not authorised to modify this booking.', 403);
+    }
 
     const booking = updateBooking(reference, { bags: { checked: checked ?? 0, cabin: cabin ?? 1 } });
     if (!booking) return error(res, 'Booking not found', 404);

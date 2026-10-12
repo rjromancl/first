@@ -22,6 +22,8 @@ const initialState = {
 
 function appReducer(state, action) {
   switch (action.type) {
+    case 'LOGIN':
+      return { ...state, user: action.payload, isAuthenticated: true };
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
     case 'UPDATE_USER':

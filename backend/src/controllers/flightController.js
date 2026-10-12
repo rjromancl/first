@@ -10,6 +10,9 @@ async function search(req, res, next) {
       adults = 1, cabin = 'ECONOMY', nonStop = 'false', max = '20',
     } = req.query;
 
+    if (!from || !to) return error(res, 'from and to query parameters are required', 400);
+    if (!departureDate) return error(res, 'departureDate query parameter is required', 400);
+
     const result = await searchFlights({
       originLocationCode: from.toUpperCase(),
       destinationLocationCode: to.toUpperCase(),
@@ -23,7 +26,7 @@ async function search(req, res, next) {
     });
 
     return success(res, result, 200, {
-      count: result.flights.length,
+      count: result?.flights?.length ?? 0,
       from, to, departureDate,
     });
   } catch (err) {

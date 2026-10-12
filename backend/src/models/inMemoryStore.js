@@ -111,6 +111,15 @@ const UserStore = {
     return user;
   },
 
+  /** Explicitly persist a new password hash for a user. */
+  updatePasswordHash: (email, hash) => {
+    const user = users.get(email.toLowerCase());
+    if (!user) return null;
+    user.passwordHash = hash;
+    users.set(email.toLowerCase(), user);
+    return true;
+  },
+
   updateAvios: (email, amount) => {
     const user = users.get(email.toLowerCase());
     if (user) {
@@ -198,7 +207,7 @@ const BookingStore = {
     ),
 
   create: (bookingData) => {
-    const ref = bookingData.reference || generateRef();
+    const ref = bookingData.reference || generateUniqueRef(bookings);
     const booking = {
       id: uuidv4(),
       ...bookingData,
@@ -227,4 +236,16 @@ function generateRef() {
   return ref;
 }
 
-module.exports = { UserStore, BookingStore, generateRef };
+/** Generate a booking reference that is not already in use. */
+function generateUniqueRef(existingMap) {
+  let ref;
+  let attempts = 0;
+  do {
+    ref = generateRef();
+    attempts++;
+    if (attempts > 100) throw new Error('generateUniqueRef: too many collisions — store may be full');
+  } while (existingMap.has(ref.toUpperCase()));
+  return ref;
+}
+
+module.exports = { UserStore, BookingStore, generateRef, generateUniqueRef };

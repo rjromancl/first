@@ -12,6 +12,7 @@ const {
   classifyQueryIntent,
   isReady,
   AGENTIC_TOOLS,
+  getAllKnowledgeDocs,
 } = require('../services/ragService');
 
 const { searchFlights }      = require('../services/flightService');
@@ -278,7 +279,6 @@ function healthHandler(req, res) {
 }
 
 // ── GET /api/rag/stats ───────────────────────────────────────────────────────
-const { getAllKnowledgeDocs } = require('../services/ragService');
 function statsHandler(req, res) {
   const docs = getAllKnowledgeDocs();
   const byCategory = docs.reduce((acc, d) => {

@@ -14,6 +14,7 @@ import {
   validateCardNumber, validateCVV, validateExpiry, validateCardName,
   formatCardNumber, sanitizeInput,
 } from '../../utils/validation';
+import VoiceBookingAnimator from '../../components/VoiceBookingAnimator/VoiceBookingAnimator';
 import './BookFlight.css';
 
 // debounce helper — avoids hammering the airport API on every keystroke
@@ -515,11 +516,21 @@ export default function BookFlight() {
   const voiceNavRef = useRef(location.state || null);
   const [autoSearchTrigger, setAutoSearchTrigger] = useState(false);
 
+  // ── Voice Booking Animator ─────────────────────────────────────
+  // Show the animated fill overlay whenever voice navigates here.
+  // Fields are applied immediately (needed for auto-search), but the
+  // animator overlays the page and plays the typewriter sequence so
+  // the user sees each field being "filled" one by one.
+  const [showAnimator, setShowAnimator]     = useState(false);
+  const [animatorNavState, setAnimatorNavState] = useState(null);
+
   useEffect(() => {
     const s = voiceNavRef.current;
     if (!s) return;
     if (s.prefillPassenger || s.autoSearch || s.from) {
       const pf = s.prefillPassenger || {};
+
+      // 1. Apply all field values immediately so auto-search has them
       setPassenger(prev => ({
         firstName:   pf.firstName   || prev.firstName   || '',
         lastName:    pf.lastName    || prev.lastName    || '',
@@ -527,20 +538,25 @@ export default function BookFlight() {
         nationality: pf.nationality || prev.nationality || (s.isVoiceBooking ? 'GB' : ''),
       }));
 
-      if (s.from)       setFrom(s.from);
-      if (s.to)         setTo(s.to);
-      if (s.departDate) setDepartDate(s.departDate);
-      if (s.returnDate) setReturnDate(s.returnDate);
-      if (s.adults)     setAdults(Number(s.adults));
-      if (s.cabin)      setCabin(s.cabin);
-      if (s.tripType)   setTripType(s.tripType);
+      if (s.from)           setFrom(s.from);
+      if (s.to)             setTo(s.to);
+      if (s.departDate)     setDepartDate(s.departDate);
+      if (s.returnDate)     setReturnDate(s.returnDate);
+      if (s.adults)         setAdults(Number(s.adults));
+      if (s.cabin)          setCabin(s.cabin);
+      if (s.tripType)       setTripType(s.tripType);
       if (s.selectedFlight) setSelectedFlight(s.selectedFlight);
-      if (s.jumpToStep) jumpToStepRef.current = s.jumpToStep;
+      if (s.jumpToStep)     jumpToStepRef.current = s.jumpToStep;
 
-      if (s.autoSearch) {
-        // Trigger auto-search on next render after state is committed
+      // 2. Show the animator overlay for voice bookings
+      if (s.isVoiceBooking) {
+        setAnimatorNavState(s);
+        setShowAnimator(true);
+        // Delay auto-search until the animation finishes (onComplete fires it)
+        // Non-voice bookings still trigger immediately below
+      } else if (s.autoSearch) {
         setAutoSearchTrigger(true);
-      } else if (s.jumpToStep) {
+      } else if (s.jumpToStep && !s.isVoiceBooking) {
         setStep(s.jumpToStep);
       }
     }
@@ -913,6 +929,24 @@ export default function BookFlight() {
 
   return (
     <div className="bookflight">
+      {/* Voice Booking Animator — animated field-fill overlay */}
+      {showAnimator && (
+        <VoiceBookingAnimator
+          navState={animatorNavState}
+          visible={showAnimator}
+          onComplete={() => {
+            setShowAnimator(false);
+            // Now trigger the auto-search / step jump that was deferred
+            const s = voiceNavRef.current;
+            if (s?.autoSearch) {
+              setAutoSearchTrigger(true);
+            } else if (s?.jumpToStep) {
+              setStep(s.jumpToStep);
+            }
+          }}
+        />
+      )}
+
       {/* Voice Seat Popup — shown when voice booking selects a flight */}
       {showSeatPopup && (
         <VoiceSeatPopup

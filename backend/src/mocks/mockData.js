@@ -64,10 +64,29 @@ function makeFlight({ from, to, dep, arr, flightNum, aircraft, price, stops = 0,
       duration: `PT${durationH}H${durationM}M`,
       segments: stops === 0
         ? [{ departure: { iataCode: from, at: `${dateStr}T${dep}:00` }, arrival: { iataCode: to, at: `${dateStr}T${arr}:00` }, carrierCode: 'BA', number: flightNum.replace('BA',''), aircraft: { code: aircraft }, operatingCarrierCode: 'BA' }]
-        : [
-            { departure: { iataCode: from, at: `${dateStr}T${dep}:00` }, arrival: { iataCode: stopAt, at: `${dateStr}T${arr}:00` }, carrierCode: 'BA', number: flightNum.replace('BA','') + '1', aircraft: { code: aircraft } },
-            { departure: { iataCode: stopAt, at: `${dateStr}T${arr}:00` }, arrival: { iataCode: to, at: `${dateStr}T${arr}:00` }, carrierCode: 'BA', number: flightNum.replace('BA','') + '2', aircraft: { code: aircraft } },
-          ],
+        : (() => {
+            // For stop flights: first leg dep→stopAt arriving at `arr`,
+            // then a 2-hour layover, then second leg stopAt→to.
+            // Compute second-leg departure and arrival times properly.
+            const [arrH, arrM] = arr.split(':').map(Number);
+            const stopDepTotalMins = arrH * 60 + arrM + 120; // +2h layover
+            const stopDepH = String(Math.floor(stopDepTotalMins / 60) % 24).padStart(2, '0');
+            const stopDepM = String(stopDepTotalMins % 60).padStart(2, '0');
+            // Second leg takes ~1/3 of total journey duration
+            const seg2Mins = Math.round((durationH * 60 + durationM) / 3);
+            const arrTotalMins = stopDepTotalMins + seg2Mins;
+            const arr2H = String(Math.floor(arrTotalMins / 60) % 24).padStart(2, '0');
+            const arr2M = String(arrTotalMins % 60).padStart(2, '0');
+            // Destination arrival may be next day for very long hauls
+            const nextDay = arrTotalMins >= 1440;
+            const arr2Date = nextDay
+              ? new Date(new Date(dateStr).getTime() + 86400000).toISOString().split('T')[0]
+              : dateStr;
+            return [
+              { departure: { iataCode: from,   at: `${dateStr}T${dep}:00` },        arrival: { iataCode: stopAt, at: `${dateStr}T${arr}:00` },        carrierCode: 'BA', number: flightNum.replace('BA','') + '1', aircraft: { code: aircraft } },
+              { departure: { iataCode: stopAt, at: `${dateStr}T${stopDepH}:${stopDepM}:00` }, arrival: { iataCode: to,     at: `${arr2Date}T${arr2H}:${arr2M}:00` }, carrierCode: 'BA', number: flightNum.replace('BA','') + '2', aircraft: { code: aircraft } },
+            ];
+          })(),
     }],
     travelerPricings: [{ fareDetailsBySegment: [{ cabin: 'ECONOMY' }] }],
   };

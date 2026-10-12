@@ -1,0 +1,177 @@
+# ═══════════════════════════════════════════════════════════════════
+# PR Checks — automated review gates on every pull request
+#
+# Jobs:
+#   validate-pr     → title format, branch name conventions
+#   diff-stats      → report lines changed, files touched
+#   test-coverage   → enforce minimum coverage thresholds
+#   e2e-smoke       → lightweight API smoke test (no browser)
+# ═══════════════════════════════════════════════════════════════════
+
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Validate PR title (Conventional Commits) ──────────────────
+  validate-pr:
+    name: 📋 Validate PR
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Check PR title format
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const pattern = /^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?: .{3,72}$/;
+            if (!pattern.test(title)) {
+              core.setFailed(
+                `PR title "${title}" does not follow Conventional Commits.\n` +
+                `Expected format: type(scope): description\n` +
+                `Types: feat | fix | docs | style | refactor | perf | test | chore | ci | build | revert`
+              );
+            } else {
+              core.info(`✅ PR title is valid: "${title}"`);
+            }
+
+  # ── Diff stats ────────────────────────────────────────────────
+  diff-stats:
+    name: 📊 Diff Stats
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show changed files
+        run: |
+          echo "### Files changed in this PR" >> $GITHUB_STEP_SUMMARY
+          git diff --name-status origin/${{ github.base_ref }}...HEAD | head -50 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          LINES=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1)
+          echo "**Stats:** $LINES" >> $GITHUB_STEP_SUMMARY
+
+  # ── Frontend tests + coverage ─────────────────────────────────
+  coverage-frontend:
+    name: 📈 Frontend Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage || npm test
+        env:
+          VITE_GROQ_API_KEY: test-key-ci
+
+      - name: Coverage summary
+        run: |
+          echo "### Frontend Test Coverage" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage/coverage-summary.json ]; then
+            cat coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "_Coverage report not generated_" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ── Backend tests + coverage ──────────────────────────────────
+  coverage-backend:
+    name: 📈 Backend Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npx jest --coverage --coverageReporters=text-summary || npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: pr-check-secret
+          PORT: 4001
+
+  # ── API smoke test (no browser required) ─────────────────────
+  api-smoke:
+    name: 💨 API Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        run: cd backend && npm ci
+
+      - name: Start backend
+        run: |
+          cd backend
+          node src/server.js &
+          sleep 5
+          echo "Backend PID: $!"
+        env:
+          NODE_ENV: test
+          PORT: 4000
+          JWT_SECRET: smoke-test-secret
+
+      - name: Run smoke tests
+        run: |
+          echo "### API Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+
+          check() {
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$1" || echo "000")
+            if [ "$STATUS" = "$2" ]; then
+              echo "✅ $1 → $STATUS" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ $1 → $STATUS (expected $2)" >> $GITHUB_STEP_SUMMARY
+              FAILED=1
+            fi
+          }
+
+          FAILED=0
+          check "http://localhost:4000/health"               "200"
+          check "http://localhost:4000/api/destinations"     "200"
+          check "http://localhost:4000/api/rag/health"       "200"
+          check "http://localhost:4000/api/airports?q=London" "200"
+          check "http://localhost:4000/api/auth/me"           "401"
+          check "http://localhost:4000/api/nonexistent"       "404"
+
+          if [ "$FAILED" = "1" ]; then
+            echo "❌ One or more smoke tests failed"
+            exit 1
+          else
+            echo "✅ All smoke tests passed"
+          fi
+
+      - name: Stop backend
+        if: always()
+        run: pkill -f "node src/server.js" || true

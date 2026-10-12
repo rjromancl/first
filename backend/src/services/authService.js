@@ -74,7 +74,10 @@ async function changePassword(userId, { currentPassword, newPassword }) {
   if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 });
   const valid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!valid) throw Object.assign(new Error('Current password is incorrect'), { statusCode: 401 });
-  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  // Write the new hash back through UserStore so the change is explicit
+  // and won't silently break if findById ever returns a copy instead of a ref.
+  const newHash = await bcrypt.hash(newPassword, 10);
+  UserStore.updatePasswordHash(user.email, newHash);
   return { changed: true };
 }
 

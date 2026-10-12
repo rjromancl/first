@@ -1,7 +1,21 @@
 const express = require('express');
 const router = express.Router();
 
-const WSDL_XML = `<?xml version="1.0" encoding="UTF-8"?>
+// Escape special XML characters to prevent XML/SOAP injection
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Build WSDL dynamically so the service address reflects the actual host
+function buildWsdl(req) {
+  const baseUrl = process.env.BASE_URL ||
+    `${req.protocol}://${req.get('host')}`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <wsdl:definitions name="BAirwaysService"
     targetNamespace="http://bairways.com/soap"
     xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
@@ -57,15 +71,16 @@ const WSDL_XML = `<?xml version="1.0" encoding="UTF-8"?>
 
     <wsdl:service name="BAirwaysService">
         <wsdl:port name="BAirwaysPort" binding="tns:BAirwaysBinding">
-            <soap:address location="http://localhost:4000/soap"/>
+            <soap:address location="${baseUrl}/soap"/>
         </wsdl:port>
     </wsdl:service>
 </wsdl:definitions>`;
+}
 
 // WSDL Contract endpoint
 router.get('/wsdl', (req, res) => {
   res.type('application/xml');
-  res.send(WSDL_XML);
+  res.send(buildWsdl(req));
 });
 
 // SOAP Endpoint
@@ -78,10 +93,11 @@ router.post('/', express.text({ type: ['text/xml', 'application/xml', 'applicati
   if (xmlBody.includes('GetAvios')) action = 'GetAvios';
 
   const flightMatch = xmlBody.match(/<flightNumber>(.*?)<\/flightNumber>/i);
-  const flightNum = flightMatch ? flightMatch[1] : 'BA117';
+  // Sanitise extracted values before embedding in XML response
+  const flightNum = escapeXml(flightMatch ? flightMatch[1] : 'BA117');
 
   const pnrMatch = xmlBody.match(/<pnr>(.*?)<\/pnr>/i);
-  const pnr = pnrMatch ? pnrMatch[1] : 'BA-89241';
+  const pnr = escapeXml(pnrMatch ? pnrMatch[1] : 'BA-89241');
 
   let responseBodyXml = '';
 

@@ -5,7 +5,7 @@
  */
 
 const logger = require('../config/logger');
-const { BookingStore, generateRef } = require('../models/inMemoryStore');
+const { BookingStore } = require('../models/inMemoryStore');
 const { UserStore } = require('../models/inMemoryStore');
 
 const CABIN_MAP = {
@@ -85,10 +85,9 @@ async function createBooking({ flightOffer, travelers, contacts, userEmail }) {
 
   const details = extractOfferDetails(flightOffer);
   const traveler = travelers[0] || {};
-  const reference = generateRef();
+  // Reference is generated with collision-check inside BookingStore.create
 
   const booking = BookingStore.create({
-    reference,
     amadeusOrderId: null, // no Amadeus order in mock mode
     status: 'confirmed',
     userEmail,
@@ -133,6 +132,7 @@ async function createBooking({ flightOffer, travelers, contacts, userEmail }) {
     }
   }
 
+  const { reference } = booking;
   logger.info('[MOCK] Booking created', { reference });
   return booking;
 }
@@ -172,7 +172,7 @@ async function cancelBooking(reference, userEmail) {
   }
   const booking = BookingStore.findByRef(reference);
   if (!booking) return null;
-  if (booking.userEmail !== userEmail) throw new Error('Unauthorized');
+  if (booking.userEmail?.toLowerCase() !== userEmail.toLowerCase()) throw new Error('Unauthorized');
   return BookingStore.update(reference, {
     status: 'cancelled',
     cancelledAt: new Date().toISOString(),

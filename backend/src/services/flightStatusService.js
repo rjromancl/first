@@ -31,7 +31,10 @@ async function getFlightStatus({ carrierCode = 'BA', flightNumber, scheduledDepa
 
   // Mock status generator for BA flights
   const statusList = ['ON_TIME', 'ON_TIME', 'ON_TIME', 'BOARDING', 'SCHEDULED', 'DEPARTED'];
-  const statusIndex = Math.abs((cleanNum.charCodeAt(0) || 0) + parseInt(cleanNum, 10) || 1) % statusList.length;
+  // Use char-code sum of all digits to avoid NaN from parseInt on non-numeric prefixes
+  const numericPart = parseInt(cleanNum.replace(/\D/g, ''), 10) || 0;
+  const charSum = cleanNum.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  const statusIndex = (charSum + numericPart) % statusList.length;
   const statusStr = statusList[statusIndex];
 
   const departureDateStr = scheduledDepartureDate || new Date().toISOString().split('T')[0];
@@ -99,4 +102,4 @@ async function getFlightsByRoute({ origin, destination, departureDate }) {
   return { origin, destination, date: depDate, count: flights.length, flights };
 }
 
-module.exports = { getFlightStatus, getFlightsByRoute };
+module.exports = { getFlightStatus, getFlightsByRoute };

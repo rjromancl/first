@@ -1,0 +1,404 @@
+/* ================================================================
+   VoiceBookingAnimator — animated voice form-fill overlay
+   ================================================================ */
+
+/* ── Overlay backdrop ── */
+.vba-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(1, 22, 39, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: vba-backdrop-in 0.35s ease forwards;
+}
+
+.vba-overlay--exit {
+  animation: vba-backdrop-out 0.4s ease forwards;
+}
+
+@keyframes vba-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes vba-backdrop-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Panel ── */
+.vba-panel {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow:
+    0 32px 80px rgba(1, 22, 39, 0.28),
+    0 0 0 1px rgba(7, 90, 170, 0.12);
+  overflow: hidden;
+  animation: vba-panel-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: center bottom;
+}
+
+.vba-panel--exit {
+  animation: vba-panel-out 0.4s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+.vba-panel--done {
+  box-shadow:
+    0 32px 80px rgba(1, 22, 39, 0.28),
+    0 0 0 2px rgba(16, 185, 129, 0.5);
+}
+
+@keyframes vba-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88) translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes vba-panel-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.92) translateY(-16px);
+  }
+}
+
+/* ── Header ── */
+.vba-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px 14px;
+  background: linear-gradient(135deg, #011627 0%, #075aaa 100%);
+}
+
+.vba-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vba-mic-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  animation: vba-mic-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes vba-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+}
+
+.vba-title {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.vba-subtitle {
+  color: rgba(255,255,255,0.65);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ── Animated dots ── */
+.vba-dot-group {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.vba-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  animation: vba-dot-bounce 1.2s ease-in-out infinite;
+}
+.vba-dot--1 { animation-delay: 0s; }
+.vba-dot--2 { animation-delay: 0.2s; }
+.vba-dot--3 { animation-delay: 0.4s; }
+
+@keyframes vba-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40%           { transform: scale(1.2); opacity: 1; }
+}
+
+/* ── Progress bar ── */
+.vba-progress-track {
+  height: 4px;
+  background: #e8f0f8;
+  overflow: hidden;
+}
+
+.vba-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #075aaa, #10b981);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.vba-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6));
+  animation: vba-shimmer 1.2s ease infinite;
+}
+
+@keyframes vba-shimmer {
+  0%   { opacity: 0; transform: translateX(-20px); }
+  50%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(20px); }
+}
+
+.vba-progress-label {
+  padding: 7px 22px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #075aaa;
+  letter-spacing: 0.2px;
+}
+
+/* ── Fields list ── */
+.vba-fields {
+  padding: 8px 22px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Single field row ── */
+.vba-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  transition: background 0.25s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.vba-field--waiting {
+  opacity: 0.45;
+}
+
+.vba-field--filling {
+  background: linear-gradient(135deg, #eef5ff, #f0fdf9);
+  box-shadow: 0 0 0 1.5px rgba(7, 90, 170, 0.25),
+              inset 0 0 20px rgba(7, 90, 170, 0.04);
+  animation: vba-field-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes vba-field-glow {
+  0%, 100% { box-shadow: 0 0 0 1.5px rgba(7, 90, 170, 0.25); }
+  50%       { box-shadow: 0 0 0 3px rgba(7, 90, 170, 0.18), 0 4px 18px rgba(7, 90, 170, 0.12); }
+}
+
+.vba-field--filling::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #075aaa, #10b981);
+  border-radius: 0 2px 2px 0;
+}
+
+.vba-field--done {
+  background: #f0fdf9;
+}
+
+.vba-field--done::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #10b981;
+  border-radius: 0 2px 2px 0;
+}
+
+.vba-field-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #e8f0f8;
+  color: #075aaa;
+  transition: background 0.25s, color 0.25s;
+}
+
+.vba-field--filling .vba-field-icon {
+  background: #075aaa;
+  color: #ffffff;
+  animation: vba-icon-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.vba-field--done .vba-field-icon {
+  background: #d1fae5;
+  color: #059669;
+}
+
+@keyframes vba-icon-pop {
+  0%   { transform: scale(0.7); }
+  100% { transform: scale(1); }
+}
+
+.vba-field-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vba-field-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #7b92a8;
+  margin-bottom: 2px;
+}
+
+.vba-field-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #011627;
+  min-height: 20px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.vba-field-dash {
+  color: #c0cdd8;
+  font-family: inherit;
+}
+
+.vba-field-done-val {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  animation: vba-done-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes vba-done-pop {
+  0%   { opacity: 0; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.vba-check {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+/* ── Blinking cursor ── */
+.vba-cursor {
+  display: inline-block;
+  color: #075aaa;
+  font-weight: 300;
+  animation: vba-blink 0.7s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes vba-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Field done tick (right side) ── */
+.vba-field-tick {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: vba-tick-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.vba-field-tick::after {
+  content: '✓';
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@keyframes vba-tick-in {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Footer ── */
+.vba-footer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px 16px;
+  font-size: 11px;
+  color: #8da4b4;
+  border-top: 1px solid #f0f4f8;
+  margin-top: 4px;
+}
+
+.vba-footer-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+  animation: vba-footer-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes vba-footer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50%       { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .vba-panel {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .vba-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+}

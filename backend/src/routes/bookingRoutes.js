@@ -39,6 +39,7 @@ router.patch('/:reference', requireAuth, ctrl.update);
 // ─ PATCH /api/bookings/:reference/seat — seat selection ──────────
 router.patch(
   '/:reference/seat',
+  requireAuth,
   [body('seat').notEmpty().withMessage('seat is required')],
   validate,
   ctrl.selectSeat
@@ -47,6 +48,7 @@ router.patch(
 // ─ PATCH /api/bookings/:reference/bags — add baggage ─────────────
 router.patch(
   '/:reference/bags',
+  requireAuth,
   [
     body('checked').isInt({ min: 0, max: 10 }).withMessage('checked bags must be 0–10'),
     body('cabin').isInt({ min: 1, max: 2 }).withMessage('cabin bags must be 1–2'),

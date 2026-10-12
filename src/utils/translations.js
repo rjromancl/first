@@ -78,6 +78,11 @@ export const translations = {
     proactiveDealsTitle: 'Proactive Agent Insights',
     telemetryTitle: 'Agent Telemetry & CoT Trace',
 
+    // Talkback
+    talkbackOn: 'Talkback enabled — I will read all messages aloud',
+    talkbackOff: 'Talkback disabled',
+    langChanged: 'Language changed to English',
+
     // Quick Replies
     qrBookFlight: 'Book a flight to London',
     qrCheckIn: 'Check in for my flight',
@@ -148,6 +153,10 @@ export const translations = {
     telemetryTitle: 'ஏஜென்ட் கணக்கீட்டு பதிவு',
 
     // Quick Replies
+    talkbackOn: 'தொக்பேக் இயக்கப்பட்டது — எல்லா செய்திகளையும் சத்தமாக படிக்கிறேன்',
+    talkbackOff: 'தொக்பேக் நிறுத்தப்பட்டது',
+    langChanged: 'மொழி தமிழுக்கு மாற்றப்பட்டது',
+
     qrBookFlight: 'லண்டன் செல்ல டிக்கெட் பதிவு செய்',
     qrCheckIn: 'எனக்கு செக்-இன் செய்',
     qrStatus: 'விமான நிலை அறிந்துகொள்',
@@ -217,6 +226,10 @@ export const translations = {
     telemetryTitle: 'Agent Telemetry Trace',
 
     // Quick Replies
+    talkbackOn: 'Talkback on — Naan ellaa messages-um onnaa padippean',
+    talkbackOff: 'Talkback off pannirukken',
+    langChanged: 'Tanglish-ku switch aachchu',
+
     qrBookFlight: 'London-ku flight book pannu',
     qrCheckIn: 'Enakkum check-in pannu',
     qrStatus: 'Flight status ennachu?',
@@ -282,6 +295,10 @@ export const translations = {
     proactiveDealsTitle: 'विशेष ऑफ़र',
     telemetryTitle: 'एजेंट ट्रेस',
 
+    talkbackOn: 'टॉकबैक चालू — मैं सभी संदेश ज़ोर से पढ़ूँगा',
+    talkbackOff: 'टॉकबैक बंद',
+    langChanged: 'भाषा हिंदी में बदल दी गई',
+
     qrBookFlight: 'लंदन की उड़ान बुक करें',
     qrCheckIn: 'चेक इन करें',
     qrStatus: 'उड़ान स्थिति जाँचें',
@@ -346,6 +363,10 @@ export const translations = {
     proactiveDealsTitle: 'Ofertas sugeridas',
     telemetryTitle: 'Telemetría del Agente',
 
+    talkbackOn: 'Talkback activado — leeré todos los mensajes en voz alta',
+    talkbackOff: 'Talkback desactivado',
+    langChanged: 'Idioma cambiado a español',
+
     qrBookFlight: 'Reservar vuelo a Londres',
     qrCheckIn: 'Hacer check-in',
     qrStatus: 'Estado de mi vuelo',
@@ -409,6 +430,10 @@ export const translations = {
     seatLabel: 'Siège',
     proactiveDealsTitle: 'Offres Proactives',
     telemetryTitle: 'Trace de l’Agent',
+
+    talkbackOn: 'Talkback activé — je lirai tous les messages à voix haute',
+    talkbackOff: 'Talkback désactivé',
+    langChanged: 'Langue changée en français',
 
     qrBookFlight: 'Réserver un vol pour Londres',
     qrCheckIn: 'S’enregistrer',

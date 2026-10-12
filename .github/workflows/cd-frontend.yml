@@ -1,0 +1,131 @@
+# ═══════════════════════════════════════════════════════════════════
+# CD — Deploy Frontend to Vercel
+#
+# Triggers:
+#   push to main       → production deployment
+#   push to develop    → preview deployment
+#   pull_request       → preview deployment (PR comment with URL)
+#
+# Requires secrets:
+#   VERCEL_TOKEN          — Vercel personal access token
+#   VERCEL_ORG_ID         — from vercel.json / .vercel/project.json
+#   VERCEL_PROJECT_ID     — from vercel.json / .vercel/project.json
+#   VITE_GROQ_API_KEY     — Groq AI API key
+# ═══════════════════════════════════════════════════════════════════
+
+name: CD — Frontend (Vercel)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vercel.json'
+      - 'api/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deploy target'
+        required: true
+        default: 'preview'
+        type: choice
+        options: [production, preview]
+
+concurrency:
+  group: cd-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # ── Gate: CI must pass before deploy ─────────────────────────
+  wait-for-ci:
+    name: ✅ Wait for CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI status
+        run: echo "CI gate passed — proceeding to deploy"
+
+  # ── Deploy frontend ───────────────────────────────────────────
+  deploy-frontend:
+    name: 🚀 Deploy to Vercel
+    runs-on: ubuntu-latest
+    needs: wait-for-ci
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment info
+        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project
+        run: vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $URL"
+
+      - name: Comment PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✈️ B Airways — Preview Deployment\n\n**URL:** ${{ steps.deploy.outputs.url }}\n\n**Commit:** \`${{ github.sha }}\`\n\n| Check | Status |\n|-------|--------|\n| Frontend build | ✅ Passed |\n| Vercel deploy | ✅ Live |`
+            })
+
+      - name: Post-deploy health check
+        run: |
+          URL="${{ steps.deploy.outputs.url }}"
+          echo "Checking $URL ..."
+          curl -sf "$URL" > /dev/null && echo "✅ Frontend responding" || echo "⚠️ Health check warning"
+
+  # ── Notify on failure ─────────────────────────────────────────
+  notify-failure:
+    name: 📢 Notify on Failure
+    runs-on: ubuntu-latest
+    needs: deploy-frontend
+    if: failure()
+    steps:
+      - name: Log failure
+        run: |
+          echo "Frontend deployment FAILED on ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"

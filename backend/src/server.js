@@ -29,11 +29,8 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(compression());
 
 // ─── CORS ─────────────────────────────────────────────────────────
-// In production (Railway) we accept any HTTPS origin so the Vercel
-// frontend can reach the API regardless of its preview/prod URL.
-// In development we restrict to the explicit allowlist.
-const isProduction = process.env.NODE_ENV === 'production';
-
+// Always use an explicit allowlist. Add your Vercel / production URLs
+// to the ALLOWED_ORIGINS env var as a comma-separated list.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
   .split(',')
   .map((o) => o.trim());
@@ -43,9 +40,9 @@ app.use(
     origin: (origin, cb) => {
       // Always allow requests with no origin (curl, Postman, mobile apps)
       if (!origin) return cb(null, true);
-      // In production: allow any HTTPS origin (Vercel, custom domains, etc.)
-      if (isProduction && origin.startsWith('https://')) return cb(null, true);
-      // In development: restrict to allowlist
+      // Restrict to the explicit allowlist in all environments.
+      // Set ALLOWED_ORIGINS in .env / Railway to a comma-separated list of
+      // permitted origins (e.g. https://your-app.vercel.app,https://bairways.com)
       if (allowedOrigins.includes(origin)) return cb(null, true);
       cb(new Error(`CORS blocked for origin: ${origin}`));
     },
